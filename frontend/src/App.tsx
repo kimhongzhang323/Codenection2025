@@ -1,34 +1,28 @@
 import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
+import { LinkIcon } from './components/url_icon'
 import './App.css'
 
 function App() {
-  const [count, setCount] = useState(0)
+  const [repoUrl, setRepoUrl] = useState('')
 
   return (
-    <>
-      <div>
-        <a href="https://vite.dev" target="_blank">
-          <img src={viteLogo} className="logo" alt="Vite logo" />
-        </a>
-        <a href="https://react.dev" target="_blank">
-          <img src={reactLogo} className="logo react" alt="React logo" />
-        </a>
+    <main className="home">
+      <img src="/logo.png" alt="App logo" className="home__logo" />
+      <h1 className="home__title">AutoDocX</h1>
+      <p className="home__subtitle">Enter your GitHub repository URL to get started</p>
+      <div className="home__input-wrapper">
+        <input
+          className="home__input"
+          type="url"
+          inputMode="url"
+          placeholder="https://github.com/owner/repo"
+          aria-label="GitHub repository URL"
+          value={repoUrl}
+          onChange={(e) => setRepoUrl(e.target.value)}
+        />
+        <LinkIcon className="home__input-icon--right" size={18} />
       </div>
-      <h1>Vite + React</h1>
-      <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
-        <p>
-          Edit <code>src/App.tsx</code> and save to test HMR
-        </p>
-      </div>
-      <p className="read-the-docs">
-        Click on the Vite and React logos to learn more
-      </p>
-    </>
+    </main>
   )
 }
 
