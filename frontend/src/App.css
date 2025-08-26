@@ -1,0 +1,83 @@
+.home {
+  height: 100vh; 
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  text-align: center;
+  background-color: #121212;
+  color: #ffffff;
+  padding: 24px;
+  transform: translateY(-72px); 
+}
+
+.home__logo {
+  width: 260px;
+  height: 260px;
+  object-fit: contain;
+}
+
+.home__title {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 700;
+}
+
+.home__subtitle {
+  margin: 0 0 8px 0;
+  color: #bdbdbd;
+}
+
+.home__input {
+  width: min(560px, 90vw);
+  padding: 12px 14px;
+  border-radius: 8px;
+  border: 1px solid #2a2a2a;
+  background: #1b1b1b;
+  color: #ffffff;
+  transition: border-color 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
+}
+
+.home__input::placeholder {
+  color: #8a8a8a;
+}
+
+/* Hover and focus states with no white outline */
+.home__input:hover {
+  border-color: #343434;
+}
+
+.home__input:focus,
+.home__input:focus-visible {
+  outline: none;
+  border-color: #09334e; /* subtle bluish accent */
+  box-shadow: 0 0 0 3px rgba(59, 59, 255, 0.18);
+  background: #191919;
+}
+
+/* Wrap input to position the icon at the right edge */
+.home__input-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+/* Generic icon styles inside input */
+.home__input-icon {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  color: #9aa0a6;
+}
+
+/* Right alignment and spacing */
+.home__input-icon--right {
+  right: 16px;
+}
+
+/* Add right padding so text doesn't overlap the icon */
+.home__input-wrapper .home__input {
+  padding-right: 40px;
+}
