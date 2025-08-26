@@ -1,5 +1,5 @@
 .home {
-  min-height: 100vh;
+  height: 100vh; 
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -9,7 +9,7 @@
   background-color: #121212;
   color: #ffffff;
   padding: 24px;
-  transform: translateY(-86px);
+  transform: translateY(-72px); 
 }
 
 .home__logo {
@@ -36,10 +36,24 @@
   border: 1px solid #2a2a2a;
   background: #1b1b1b;
   color: #ffffff;
+  transition: border-color 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
 }
 
 .home__input::placeholder {
   color: #8a8a8a;
+}
+
+/* Hover and focus states with no white outline */
+.home__input:hover {
+  border-color: #343434;
+}
+
+.home__input:focus,
+.home__input:focus-visible {
+  outline: none;
+  border-color: #09334e; /* subtle bluish accent */
+  box-shadow: 0 0 0 3px rgba(59, 59, 255, 0.18);
+  background: #191919;
 }
 
 /* Wrap input to position the icon at the right edge */
