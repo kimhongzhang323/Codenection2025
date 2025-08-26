@@ -31,3 +31,20 @@ build/
 
 ### VS Code ###
 .vscode/
+
+### Node/React ###
+node_modules/
+dist/
+build/
+*.log
+.env
+.env.*.local
+
+### Tooling ###
+.coverage/
+coverage/
+.vite/
+.eslintcache 
+*.local
+
+/todo.md
