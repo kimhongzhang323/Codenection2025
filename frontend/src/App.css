@@ -1,42 +1,69 @@
-#root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
+.home {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
   text-align: center;
+  background-color: #121212;
+  color: #ffffff;
+  padding: 24px;
+  transform: translateY(-86px);
 }
 
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
+.home__logo {
+  width: 260px;
+  height: 260px;
+  object-fit: contain;
 }
 
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+.home__title {
+  margin: 0;
+  font-size: 28px;
+  font-weight: 700;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
-  }
+.home__subtitle {
+  margin: 0 0 8px 0;
+  color: #bdbdbd;
 }
 
-.card {
-  padding: 2em;
+.home__input {
+  width: min(560px, 90vw);
+  padding: 12px 14px;
+  border-radius: 8px;
+  border: 1px solid #2a2a2a;
+  background: #1b1b1b;
+  color: #ffffff;
 }
 
-.read-the-docs {
-  color: #888;
+.home__input::placeholder {
+  color: #8a8a8a;
+}
+
+/* Wrap input to position the icon at the right edge */
+.home__input-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+/* Generic icon styles inside input */
+.home__input-icon {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  color: #9aa0a6;
+}
+
+/* Right alignment and spacing */
+.home__input-icon--right {
+  right: 16px;
+}
+
+/* Add right padding so text doesn't overlap the icon */
+.home__input-wrapper .home__input {
+  padding-right: 40px;
 }
