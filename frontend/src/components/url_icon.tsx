@@ -1,9 +1,3 @@
-/*
-  LinkIcon component: animated link icon for use inside inputs.
-  - Uses framer-motion v12 (imported from 'framer-motion').
-  - Exposes imperative controls via ref if needed, but also animates on hover.
-*/
-
 import type { Variants } from 'framer-motion';
 import { motion, useAnimation } from 'framer-motion';
 import type { HTMLAttributes, MouseEvent } from 'react';
