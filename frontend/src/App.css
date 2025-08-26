@@ -13,9 +13,10 @@
 }
 
 .home__logo {
-  width: 260px;
-  height: 260px;
+  width: 220px;
+  height: 220px;
   object-fit: contain;
+  transform: translateY(-20px);
 }
 
 .home__title {
@@ -77,7 +78,33 @@
   right: 16px;
 }
 
+/* Make right icon clickable like a button */
+.home__input-icon-button {
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+}
+
+/* Left alignment and spacing */
+.home__input-icon--left {
+  left: 12px;
+}
+
 /* Add right padding so text doesn't overlap the icon */
 .home__input-wrapper .home__input {
   padding-right: 40px;
+  padding-left: 40px;
 }
+
+/* Loading animation for the search icon */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.is-loading > svg {
+  animation: spin 1s linear infinite;
+}
+
+/* Utility colors */
+.text-success { color: #22c55e; }
+.text-danger { color: #ef4444; }
