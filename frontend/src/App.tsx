@@ -1,9 +1,10 @@
-import { useState } from 'react'
-import { checkGithubUrlPublic } from './lib/utils'
+import { useState, useEffect } from 'react'
+import { checkGithubUrlPublic, fetchGithubRepoDetails, type GithubRepoDetails } from './lib/utils'
 import { LinkIcon } from './components/url_icon'
 import { SearchIcon } from './components/search_icon'
 import { CheckIcon } from './components/check_icon'
 import { XIcon } from './components/close_icon'
+import { ArrowRightIcon } from './components/arrow_icon'
 import './App.css'
 
 function App() {
@@ -11,7 +12,46 @@ function App() {
   const [isLoading, setIsLoading] = useState(false)
   const [isSuccess, setIsSuccess] = useState(false)
   const [isError, setIsError] = useState(false)
+  const [showRepoDetails, setShowRepoDetails] = useState(false)
+  const [repoData, setRepoData] = useState<GithubRepoDetails | null>(null)
+  const [showTooltip, setShowTooltip] = useState(false)
   
+  // Show repo details after 1 second when success
+  useEffect(() => {
+    if (isSuccess) {
+      const timer = setTimeout(async () => {
+        setShowRepoDetails(true)
+        
+        // Fetch real repository data from GitHub API
+        const result = await checkGithubUrlPublic(repoUrl)
+        if (result.valid && result.repo) {
+          const details = await fetchGithubRepoDetails(result.repo)
+          if (details) {
+            setRepoData(details)
+          }
+        }
+      }, 1000)
+      return () => clearTimeout(timer)
+    } else {
+      setShowRepoDetails(false)
+      setRepoData(null)
+    }
+  }, [isSuccess, repoUrl])
+
+  // Show tooltip when error occurs
+  useEffect(() => {
+    if (isError) {
+      setShowTooltip(true)
+      // Hide tooltip after 5 seconds
+      const timer = setTimeout(() => {
+        setShowTooltip(false)
+      }, 5000)
+      return () => clearTimeout(timer)
+    } else {
+      setShowTooltip(false)
+    }
+  }, [isError])
+
   async function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
     if (e.key !== 'Enter') return
     await submitCheck()
@@ -45,6 +85,16 @@ function App() {
 
   return (
     <main className="home">
+      <div className="home__signup-container">
+        <button className="home__signup-btn">
+          Sign Up
+        </button>
+        {showTooltip && (
+          <div className="home__tooltip">
+            <img src="/tooltip.png" alt="Tooltip" className="home__tooltip-image" />
+          </div>
+        )}
+      </div>
       <img src="/logo.png" alt="App logo" className="home__logo" />
       <h1 className="home__title">AutoDocX</h1>
       <p className="home__subtitle">Enter your GitHub repository URL to get started</p>
@@ -79,6 +129,27 @@ function App() {
           />
         )}
       </div>
+      
+      {/* Repository Details Container */}
+      {showRepoDetails && repoData && (
+        <div className="repo-details">
+          <div className="repo-details__header">
+            <div className="repo-details__name">{repoData.name}</div>
+            <div className="repo-details__full-name">{repoData.fullName}</div>
+          </div>
+          <div className="repo-details__description">{repoData.description}</div>
+          <div className="repo-details__footer">
+            <div className="repo-details__stars">
+              <img src="/star.png" alt="Star" className="repo-details__star-icon" />
+              {repoData.stars}
+            </div>
+            <ArrowRightIcon 
+              className="repo-details__arrow-icon" 
+              size={20}
+            />
+          </div>
+        </div>
+      )}
     </main>
   )
 }
