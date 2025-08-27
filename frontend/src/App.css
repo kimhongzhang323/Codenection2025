@@ -1,33 +1,101 @@
 .home {
-  height: 100vh; 
+  min-height: 100vh; 
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-start;
   gap: 16px;
-  text-align: center;
   background-color: #121212;
   color: #ffffff;
   padding: 24px;
-  transform: translateY(-72px); 
+  padding-top: calc(50vh - 280px); /* Position the main content in the center */
+  position: relative;
+}
+
+.home__signup-container {
+  position: absolute;
+  top: 24px;
+  right: 80px;
+  z-index: 10;
+}
+
+.home__signup-btn {
+  background: #1b1b1b;
+  color: #ffffff;
+  border: 1px solid #2a2a2a;
+  border-radius: 8px;
+  padding: 10px 22px;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.2;
+  cursor: pointer;
+  transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.home__tooltip {
+  position: absolute;
+  top: 50%;
+  left: -150px;
+  transform: translateX(-50%);
+  margin-top: 2px;
+  animation: tooltipSlideIn 0.3s ease-out;
+  z-index: 20;
+}
+
+.home__tooltip-image {
+  max-width: 240px;
+  height: auto;
+  border-radius: 6px;
+}
+
+@keyframes tooltipSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+  }
+}
+
+.home__signup-btn:hover {
+  background: #2a2a2a;
+  border-color: #343434;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  transform: translateY(-1px);
+}
+
+.home__signup-btn:active {
+  background: #1b1b1b;
+  border-color: #2a2a2a;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  transform: translateY(0);
 }
 
 .home__logo {
   width: 220px;
   height: 220px;
   object-fit: contain;
-  transform: translateY(-20px);
+  margin-top: -20px;
+  text-align: center;
 }
 
 .home__title {
   margin: 0;
   font-size: 28px;
   font-weight: 700;
+  text-align: center;
 }
 
 .home__subtitle {
   margin: 0 0 8px 0;
   color: #bdbdbd;
+  text-align: center;
 }
 
 .home__input {
@@ -38,6 +106,7 @@
   background: #1b1b1b;
   color: #ffffff;
   transition: border-color 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
+  box-sizing: border-box;
 }
 
 .home__input::placeholder {
@@ -108,3 +177,115 @@
 /* Utility colors */
 .text-success { color: #22c55e; }
 .text-danger { color: #ef4444; }
+
+/* Repository Details Container */
+.home .repo-details {
+  width: min(560px, 90vw);
+  margin-top: 24px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  border: 1px solid #2a2a2a;
+  background: #1b1b1b;
+  color: #ffffff;
+  animation: slideInUp 0.4s ease-out;
+  text-align: left !important;
+  box-sizing: border-box;
+}
+
+/* Force left alignment with maximum specificity */
+.home .repo-details,
+.home .repo-details * {
+  text-align: left !important;
+}
+
+@keyframes slideInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.repo-details__header {
+  margin-bottom: 8px;
+}
+
+.home .repo-details__name {
+  font-size: 16px;
+  font-weight: 600;
+  color: #ffffff;
+  margin-bottom: 2px;
+  text-align: left !important;
+}
+
+.home .repo-details__full-name {
+  font-size: 13px;
+  color: #bdbdbd;
+  font-weight: 400;
+  text-align: left !important;
+}
+
+.home .repo-details__description {
+  font-size: 13px;
+  line-height: 1.4;
+  color: #e0e0e0;
+  margin-bottom: 16px;
+  min-height: 60px;
+  text-align: left !important;
+}
+
+.home .repo-details__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.home .repo-details__stars {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  color: #bdbdbd;
+  text-align: left !important;
+  justify-content: flex-start !important;
+}
+
+.home .repo-details__star-icon {
+  width: 12px;
+  height: 12px;
+  object-fit: contain;
+}
+
+.home .repo-details__arrow-icon {
+  color: #ffffff;
+  cursor: pointer;
+  transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.home .repo-details__arrow-icon:hover {
+  color: #e0e0e0;
+  transform: scale(1.05);
+}
+
+/* Responsive adjustments */
+@media (max-width: 640px) {
+  .repo-details {
+    padding: 16px;
+  }
+  
+  .repo-details__meta {
+    gap: 12px;
+  }
+  
+  .repo-details__name {
+    font-size: 16px;
+  }
+  
+  .repo-details__description {
+    font-size: 13px;
+  }
+}
