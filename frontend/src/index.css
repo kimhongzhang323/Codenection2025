@@ -1,13 +1,36 @@
 @import '@fontsource/geist-sans/400.css';
 @import '@fontsource/geist-sans/500.css';
 @import '@fontsource/geist-sans/600.css';
+
+/* Light theme variables */
+:root {
+  --background-color: #ffffff;
+  --text-color: #1a1a1a;
+  --link-color: #646cff;
+  --link-hover-color: #535bf2;
+  --button-bg: #f5f5f5;
+  --button-border: #e0e0e0;
+  --button-hover-border: #646cff;
+}
+
+/* Dark theme variables */
+:root.dark {
+  --background-color: #121212;
+  --text-color: rgba(255, 255, 255, 0.95);
+  --link-color: #646cff;
+  --link-hover-color: #535bf2;
+  --button-bg: #1a1a1a;
+  --button-border: transparent;
+  --button-hover-border: #646cff;
+}
+
 :root {
   font-family: 'Geist Sans', system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, sans-serif;
   line-height: 1.5;
   font-weight: 400;
-  color-scheme: dark;
-  color: rgba(255, 255, 255, 0.95);
-  background-color: #121212;
+  color-scheme: light dark;
+  color: var(--text-color);
+  background-color: var(--background-color);
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -16,11 +39,11 @@
 
 a {
   font-weight: 500;
-  color: #646cff;
+  color: var(--link-color);
   text-decoration: inherit;
 }
 a:hover {
-  color: #535bf2;
+  color: var(--link-hover-color);
 }
 
 body {
@@ -28,6 +51,8 @@ body {
   min-width: 320px;
   min-height: 100vh;
   overflow: hidden; /* prevent page scroll; single-view layout */
+  background-color: var(--background-color);
+  color: var(--text-color);
 }
 
 h1 {
@@ -37,21 +62,27 @@ h1 {
 
 button {
   border-radius: 8px;
-  border: 1px solid transparent;
+  border: 1px solid var(--button-border);
   padding: 0.6em 1.2em;
   font-size: 1em;
   font-weight: 500;
   font-family: inherit;
-  background-color: #1a1a1a;
+  background-color: var(--button-bg);
+  color: var(--text-color);
   cursor: pointer;
   transition: border-color 0.25s;
 }
 button:hover {
-  border-color: #646cff;
+  border-color: var(--button-hover-border);
 }
 button:focus,
 button:focus-visible {
   outline: 4px auto -webkit-focus-ring-color;
 }
 
-/* Force dark theme for the requested 121212 background */
+/* View transition styles for theme toggle animation */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation: none;
+  mix-blend-mode: normal;
+}
