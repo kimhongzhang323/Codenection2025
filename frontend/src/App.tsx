@@ -172,6 +172,7 @@ function App() {
     <Routes>
       <Route path="/" element={<HomePage />} />
       <Route path="/:repo" element={<DocumentationPage />} />
+      <Route path="/:repo/:file" element={<DocumentationPage />} />
       <Route path="/documentation" element={<DocumentationPage />} />
     </Routes>
   )
