@@ -2,8 +2,6 @@ import { useEffect, useRef, useState } from 'react'
 import './DocumentationPage.css'
 import { GithubIcon } from '../components/github_icon'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
-import { SunIcon } from '../components/light_icon'
-import { MoonIcon } from '../components/dark_icon'
 import Markdown from '../components/markdown'
 import { AnimatedThemeToggler } from '../components/theme'
 
