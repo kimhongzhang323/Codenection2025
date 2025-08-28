@@ -4,11 +4,15 @@ import { GithubIcon } from '../components/github_icon'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { SunIcon } from '../components/light_icon'
 import { MoonIcon } from '../components/dark_icon'
+import Markdown from '../components/markdown'
 
 type DocItem =
   | { type: 'separator'; label: string }
   | { type: 'file'; label: string; href?: string }
   | { type: 'folder'; label: string; children: DocItem[] }
+
+// Load all markdown files under docs once; reuse for routing and content loading
+const MD_MODULES = import.meta.glob('./docs/*.md', { as: 'raw' }) as Record<string, () => Promise<string>>
 
 function Collapsible({ label, children, defaultOpen = false }: { label: string; children: React.ReactNode; defaultOpen?: boolean }) {
   const [open, setOpen] = useState(defaultOpen)
@@ -99,6 +103,15 @@ function slugify(label: string) {
   return label.trim().toLowerCase().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-')
 }
 
+function basenameFromPath(path: string) {
+  const m = path.match(/\/docs\/([^/]+)\.md$/)
+  return m ? m[1] : null
+}
+
+function normalizeKey(s: string) {
+  return s.toLowerCase().replace(/[^a-z0-9]/g, '')
+}
+
 function renderItem(item: DocItem, idx: number, onFileClick: (label: string) => void, activeLabel: string | null) {
   if (item.type === 'separator') {
     return (
@@ -142,6 +155,7 @@ function DocumentationPage() {
 
   const [isDarkSelected, setIsDarkSelected] = useState(true)
   const [activeLabel, setActiveLabel] = useState<string | null>(null)
+  const [markdownContent, setMarkdownContent] = useState<string>('')
   const [isScrolling, setIsScrolling] = useState(false)
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
     const saved = localStorage.getItem('sidebarCollapsed')
@@ -181,14 +195,69 @@ function DocumentationPage() {
   function handleFileClick(label: string) {
     setActiveLabel(label)
     const isOverview = label.trim().toLowerCase() === 'overview'
-    if (isOverview) {
-      const basePath = `/${repoSlug}`
-      navigate(basePath, { state: location.state })
-      return
-    }
-    const path = `/${slugify(label)}`
+    // Prefer matching actual filenames over slug to support quickstart.md vs "Quick Start"
+    let next = isOverview ? 'overview' : slugify(label)
+    const basenames = Object.keys(MD_MODULES).map(basenameFromPath).filter(Boolean) as string[]
+    const normalizedLabel = normalizeKey(label)
+    const matched = basenames.find((b) => normalizeKey(b) === normalizedLabel)
+    if (matched) next = matched
+    const path = `/${repoSlug}/${next}`
     navigate(path, { state: location.state })
   }
+
+  // On first load or URL changes, ensure we are at /:repo/:file and sync active label
+  useEffect(() => {
+    const pathname = window.location.pathname.replace(/\/+$/, '')
+    const parts = pathname.split('/').filter(Boolean)
+    // parts example: [repo, file]
+    const repoPart = parts[0] || repoSlug
+    const filePart = parts[1]
+
+    // Redirect /:repo -> /:repo/overview
+    if (repoPart && !filePart) {
+      navigate(`/${repoPart}/overview`, { replace: true, state: location.state })
+      setActiveLabel('Overview')
+      return
+    }
+
+    // Sync active label from slug in URL
+    if (filePart) {
+      const targetSlug = filePart.toLowerCase()
+      // find matching label in tree
+      const collectLabels = (items: DocItem[], acc: string[] = []): string[] => {
+        for (const it of items) {
+          if (it.type === 'file') acc.push(it.label)
+          if (it.type === 'folder') collectLabels(it.children, acc)
+        }
+        return acc
+      }
+      const allLabels = collectLabels(MOCK_TREE)
+      const matched = allLabels.find((l) => slugify(l) === targetSlug)
+      setActiveLabel(matched || 'Overview')
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [repoSlug])
+
+  // Load markdown file content for current slug; UI can render later
+  useEffect(() => {
+    const pathname = window.location.pathname.replace(/\/+$/, '')
+    const parts = pathname.split('/').filter(Boolean)
+    const filePart = parts[1] || 'overview'
+    const basenames = Object.keys(MD_MODULES).map(basenameFromPath).filter(Boolean) as string[]
+    // Try exact, then normalized (to handle quick-start vs quickstart)
+    let targetBase = filePart
+    if (!basenames.includes(targetBase)) {
+      const normalized = normalizeKey(filePart)
+      const alt = basenames.find((b) => normalizeKey(b) === normalized)
+      if (alt) targetBase = alt
+    }
+    const key = Object.keys(MD_MODULES).find((k) => k.endsWith(`/docs/${targetBase}.md`))
+    if (key) {
+      MD_MODULES[key]().then((raw) => setMarkdownContent(raw)).catch(() => setMarkdownContent(''))
+    } else {
+      setMarkdownContent('')
+    }
+  }, [activeLabel])
 
   // Handle scroll events
   const handleScroll = () => {
@@ -294,7 +363,11 @@ function DocumentationPage() {
             </button>
           </div>
         </aside>
-        <main className={`docs-main ${isSidebarCollapsed ? 'is-collapsed' : ''}`} />
+        <main className={`docs-main ${isSidebarCollapsed ? 'is-collapsed' : ''}`}>
+          <div className="docs-main__container">
+            <Markdown content={markdownContent} />
+          </div>
+        </main>
       </div>
     </div>
   )
