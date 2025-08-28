@@ -149,8 +149,8 @@ const Markdown: React.FC<MarkdownProps> = ({ content }) => {
       // Handle code blocks
       if (!inline && match) {
         return (
-          <div className="my-6 rounded-md overflow-hidden text-sm shadow-sm">
-            <div className="bg-gray-800 text-gray-200 px-5 py-2 text-sm flex justify-between items-center">
+            <div className="my-6 rounded-lg overflow-hidden text-sm shadow-sm">
+            <div className="bg-gray-800 text-gray-200 px-5 py-2 text-sm flex justify-between items-center rounded-t-lg">
               <span>{match[1]}</span>
               <button
                 onClick={() => {
@@ -179,7 +179,7 @@ const Markdown: React.FC<MarkdownProps> = ({ content }) => {
               language={match[1]}
               style={tomorrow}
               className="!text-sm"
-              customStyle={{ margin: 0, borderRadius: '0 0 0.375rem 0.375rem', padding: '1rem' }}
+              customStyle={{ margin: 0, borderRadius: 3, padding: '1rem' }}
               showLineNumbers={true}
               wrapLines={true}
               wrapLongLines={true}
