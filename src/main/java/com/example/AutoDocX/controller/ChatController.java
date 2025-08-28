@@ -22,13 +22,14 @@ public class ChatController {
     @NoArgsConstructor
     @AllArgsConstructor
     public static class ChatRequest {
-        private String message;
+        private String role;
+        private String content;
     }
 
     @PostMapping("/chat")
     public ResponseEntity<String> chat(@RequestBody ChatRequest chatRequest) {
         try {
-            String response = model.sendMessage(chatRequest.getMessage());
+            String response = model.sendMessage(chatRequest.getContent());
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
