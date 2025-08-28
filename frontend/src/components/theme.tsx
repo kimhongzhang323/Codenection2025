@@ -50,7 +50,7 @@ export const AnimatedThemeToggler = ({ className, isDarkMode: externalIsDarkMode
     await document.startViewTransition(() => {
       flushSync(() => {
         // Toggle the dark class on document element
-        const dark = document.documentElement.classList.toggle("dark");
+        document.documentElement.classList.toggle("dark");
         
         // Update state
         if (externalIsDarkMode !== undefined) {
