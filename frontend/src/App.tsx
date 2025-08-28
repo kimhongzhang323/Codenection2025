@@ -1,13 +1,15 @@
 import { useState, useEffect } from 'react'
+import { Routes, Route, useNavigate } from 'react-router-dom'
 import { checkGithubUrlPublic, fetchGithubRepoDetails, type GithubRepoDetails } from './lib/utils'
 import { LinkIcon } from './components/url_icon'
 import { SearchIcon } from './components/search_icon'
 import { CheckIcon } from './components/check_icon'
 import { XIcon } from './components/close_icon'
 import { ArrowRightIcon } from './components/arrow_icon'
+import DocumentationPage from './pages/DocumentationPage'
 import './App.css'
 
-function App() {
+function HomePage() {
   const [repoUrl, setRepoUrl] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [isSuccess, setIsSuccess] = useState(false)
@@ -15,6 +17,7 @@ function App() {
   const [showRepoDetails, setShowRepoDetails] = useState(false)
   const [repoData, setRepoData] = useState<GithubRepoDetails | null>(null)
   const [showTooltip, setShowTooltip] = useState(false)
+  const navigate = useNavigate()
   
   // Show repo details after 1 second when success
   useEffect(() => {
@@ -83,6 +86,15 @@ function App() {
     }
   }
 
+  function handleArrowClick() {
+    if (repoData) {
+      const slug = (repoData.fullName || '').toLowerCase()
+      navigate(`/${encodeURIComponent(slug)}`, {
+        state: { repoData, repoUrl },
+      })
+    }
+  }
+
   return (
     <main className="home">
       <div className="home__signup-container">
@@ -146,11 +158,22 @@ function App() {
             <ArrowRightIcon 
               className="repo-details__arrow-icon" 
               size={20}
+              onClick={handleArrowClick}
             />
           </div>
         </div>
       )}
     </main>
+  )
+}
+
+function App() {
+  return (
+    <Routes>
+      <Route path="/" element={<HomePage />} />
+      <Route path="/:repo" element={<DocumentationPage />} />
+      <Route path="/documentation" element={<DocumentationPage />} />
+    </Routes>
   )
 }
 
