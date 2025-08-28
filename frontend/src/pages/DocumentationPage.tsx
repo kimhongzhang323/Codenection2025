@@ -2,9 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import './DocumentationPage.css'
 import { GithubIcon } from '../components/github_icon'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
-import { SunIcon } from '../components/light_icon'
-import { MoonIcon } from '../components/dark_icon'
 import Markdown from '../components/markdown'
+import { AnimatedThemeToggler } from '../components/theme'
 
 type DocItem =
   | { type: 'separator'; label: string }
@@ -153,7 +152,17 @@ function DocumentationPage() {
     : undefined
   const githubHref = repoUrl || fallbackUrl || '#'
 
-  const [isDarkSelected, setIsDarkSelected] = useState(true)
+  const [isDarkSelected, setIsDarkSelected] = useState(() => {
+    // Check localStorage first, then document class, default to dark
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('theme')
+      if (saved) {
+        return saved === 'dark'
+      }
+      return document.documentElement.classList.contains('dark')
+    }
+    return true // Default to dark mode
+  })
   const [activeLabel, setActiveLabel] = useState<string | null>(null)
   const [markdownContent, setMarkdownContent] = useState<string>('')
   const [isScrolling, setIsScrolling] = useState(false)
@@ -295,6 +304,21 @@ function DocumentationPage() {
     localStorage.setItem('sidebarCollapsed', JSON.stringify(newState))
   }
 
+  // Handle theme changes and persist to localStorage
+  const handleThemeToggle = (isDark: boolean) => {
+    setIsDarkSelected(isDark)
+    localStorage.setItem('theme', isDark ? 'dark' : 'light')
+  }
+
+  // Sync document class with theme state
+  useEffect(() => {
+    if (isDarkSelected) {
+      document.documentElement.classList.add('dark')
+    } else {
+      document.documentElement.classList.remove('dark')
+    }
+  }, [isDarkSelected])
+
   return (
     <div className="documentation-page">
       {/* Collapsed sidebar button */}
@@ -305,7 +329,15 @@ function DocumentationPage() {
             onClick={handleSidebarToggle}
             aria-label="Toggle sidebar"
           >
-            <img src="/sidebar-collapse.svg" alt="Toggle sidebar" width="20" height="20" />
+            <img 
+              src="/sidebar-collapse.svg" 
+              alt="Toggle sidebar" 
+              width="20" 
+              height="20" 
+              style={{ 
+                filter: isDarkSelected ? 'brightness(0) invert(1)' : 'brightness(0)'
+              }}
+            />
           </button>
         </div>
       )}
@@ -318,10 +350,13 @@ function DocumentationPage() {
                 <span>{sidebarTitle}</span>
               </div>
               <img 
-                src="/sidebar-collapse.svg" 
+                src="/sidebar-collapse.svg"
                 alt="Toggle sidebar" 
                 className="docs-sidebar__collapse-icon" 
                 onClick={handleSidebarToggle}
+                style={{ 
+                  filter: isDarkSelected ? 'brightness(0) invert(1)' : 'brightness(0)'
+                }}
               />
             </div>
             <div className="docs-sidebar__search">
@@ -349,18 +384,11 @@ function DocumentationPage() {
             <a className="docs-footer__gh" href={githubHref} target="_blank" rel="noreferrer" aria-label="GitHub">
               <GithubIcon />
             </a>
-            <button
-              type="button"
+            <AnimatedThemeToggler 
               className={`docs-toggle ${isDarkSelected ? 'is-dark' : 'is-light'}`}
-              aria-label="Toggle theme"
-              onClick={() => setIsDarkSelected((v) => !v)}
-            >
-              <span className="docs-toggle__circle" />
-              <span className="docs-toggle__track-icons">
-                <SunIcon className="docs-toggle__sun" />
-                <MoonIcon className="docs-toggle__moon" />
-              </span>
-            </button>
+              isDarkMode={isDarkSelected}
+              onToggle={handleThemeToggle}
+            />
           </div>
         </aside>
         <main className={`docs-main ${isSidebarCollapsed ? 'is-collapsed' : ''}`}>

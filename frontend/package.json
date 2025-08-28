@@ -12,8 +12,11 @@
   "dependencies": {
     "@fontsource/geist-sans": "^5.2.5",
     "framer-motion": "^12.23.12",
+    "fumadocs-core": "^15.7.4",
+    "fumadocs-ui": "^15.7.4",
     "geist": "^1.4.2",
     "highlight.js": "^11.11.1",
+    "lucide-react": "^0.542.0",
     "mermaid": "^11.10.1",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
