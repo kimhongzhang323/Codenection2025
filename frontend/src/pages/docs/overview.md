@@ -14,6 +14,7 @@ When versioning only applies to part of your docs, You can separate them by fold
 
 For example:
 
+```
 <Files>
   <Folder name="java-sdk" defaultOpen>
     <Folder name="v1" defaultOpen>
@@ -25,10 +26,10 @@ For example:
     </Folder>
   </Folder>
 </Files>
+```
 
 <Callout title="Good to Know">
-  You may want to group them with tabs rather than folders [using Sidebar
-  Tabs](/docs/ui/navigation/sidebar#sidebar-tabs).
+  You may want to group them with tabs rather than folders [using Sidebar Tabs](/docs/ui/navigation/sidebar#sidebar-tabs).
 </Callout>
 
 ## Full Versioning

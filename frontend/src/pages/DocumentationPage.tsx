@@ -4,6 +4,7 @@ import { GithubIcon } from '../components/github_icon'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import Markdown from '../components/markdown'
 import { AnimatedThemeToggler } from '../components/theme'
+import { BottomMiniDialog } from '../components/BottomMiniDialog'
 
 type DocItem =
   | { type: 'separator'; label: string }
@@ -13,10 +14,18 @@ type DocItem =
 // Load all markdown files under docs once; reuse for routing and content loading
 const MD_MODULES = import.meta.glob('./docs/*.md', { as: 'raw' }) as Record<string, () => Promise<string>>
 
-function Collapsible({ label, children, defaultOpen = false }: { label: string; children: React.ReactNode; defaultOpen?: boolean }) {
-  const [open, setOpen] = useState(defaultOpen)
+function Collapsible({ label, children, defaultOpen = false, storageKey }: { label: string; children: React.ReactNode; defaultOpen?: boolean; storageKey: string }) {
+  const initialOpen = (() => {
+    try {
+      const saved = localStorage.getItem(`docsSidebarFolder:${storageKey}`)
+      if (saved === 'open') return true
+      if (saved === 'closed') return false
+    } catch {}
+    return defaultOpen
+  })()
+  const [open, setOpen] = useState(initialOpen)
   const contentRef = useRef<HTMLDivElement>(null)
-  const [maxHeight, setMaxHeight] = useState<string>(defaultOpen ? 'none' : '0px')
+  const [maxHeight, setMaxHeight] = useState<string>(initialOpen ? 'none' : '0px')
 
   useEffect(() => {
     const el = contentRef.current
@@ -31,9 +40,18 @@ function Collapsible({ label, children, defaultOpen = false }: { label: string; 
       const height = el.scrollHeight
       // Force current height before collapsing to enable transition
       setMaxHeight(height + 'px')
-      requestAnimationFrame(() => setMaxHeight('0px'))
+      // Ensure the style is committed before transitioning to 0px
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => setMaxHeight('0px'))
+      })
     }
   }, [open])
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(`docsSidebarFolder:${storageKey}`, open ? 'open' : 'closed')
+    } catch {}
+  }, [open, storageKey])
 
   return (
     <div className="docs-folder">
@@ -111,7 +129,7 @@ function normalizeKey(s: string) {
   return s.toLowerCase().replace(/[^a-z0-9]/g, '')
 }
 
-function renderItem(item: DocItem, idx: number, onFileClick: (label: string) => void, activeLabel: string | null) {
+function renderItem(item: DocItem, idx: number, onFileClick: (label: string) => void, activeLabel: string | null, parentPath: string[] = []) {
   if (item.type === 'separator') {
     return (
       <div key={`sep-${idx}`} className="docs-separator">
@@ -133,10 +151,12 @@ function renderItem(item: DocItem, idx: number, onFileClick: (label: string) => 
     )
   }
   // folder
+  const folderPath = [...parentPath, item.label]
+  const storageKey = folderPath.map((s) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-')).join('/')
   return (
-    <Collapsible key={`folder-${idx}`} label={item.label} defaultOpen={false}>
+    <Collapsible key={`folder-${idx}`} label={item.label} defaultOpen={false} storageKey={storageKey}>
       {item.children.map((child, i) => (
-        <div key={`child-${idx}-${i}`}>{renderItem(child, i, onFileClick, activeLabel)}</div>
+        <div key={`child-${idx}-${i}`}>{renderItem(child, i, onFileClick, activeLabel, folderPath)}</div>
       ))}
     </Collapsible>
   )
@@ -232,7 +252,8 @@ function DocumentationPage() {
     // Sync active label from slug in URL
     if (filePart) {
       const targetSlug = filePart.toLowerCase()
-      // find matching label in tree
+      const normTarget = normalizeKey(targetSlug)
+      // find matching label in tree (robust to hyphens/spaces)
       const collectLabels = (items: DocItem[], acc: string[] = []): string[] => {
         for (const it of items) {
           if (it.type === 'file') acc.push(it.label)
@@ -241,7 +262,10 @@ function DocumentationPage() {
         return acc
       }
       const allLabels = collectLabels(MOCK_TREE)
-      const matched = allLabels.find((l) => slugify(l) === targetSlug)
+      const matched = allLabels.find((l) => {
+        const slug = slugify(l)
+        return slug === targetSlug || normalizeKey(slug) === normTarget || normalizeKey(l) === normTarget
+      })
       setActiveLabel(matched || 'Overview')
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -397,6 +421,9 @@ function DocumentationPage() {
           </div>
         </main>
       </div>
+      
+      {/* Bottom Mini Dialog */}
+      <BottomMiniDialog content={markdownContent} />
     </div>
   )
 }
