@@ -185,6 +185,8 @@ function DocumentationPage() {
   })
   const [activeLabel, setActiveLabel] = useState<string | null>(null)
   const [markdownContent, setMarkdownContent] = useState<string>('')
+  const [draftContent, setDraftContent] = useState<string>('')
+  const [viewMode, setViewMode] = useState<'reading' | 'edit'>('reading')
   const [isScrolling, setIsScrolling] = useState(false)
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
     const saved = localStorage.getItem('sidebarCollapsed')
@@ -286,9 +288,16 @@ function DocumentationPage() {
     }
     const key = Object.keys(MD_MODULES).find((k) => k.endsWith(`/docs/${targetBase}.md`))
     if (key) {
-      MD_MODULES[key]().then((raw) => setMarkdownContent(raw)).catch(() => setMarkdownContent(''))
+      MD_MODULES[key]().then((raw) => {
+        setMarkdownContent(raw)
+        setDraftContent(raw)
+      }).catch(() => {
+        setMarkdownContent('')
+        setDraftContent('')
+      })
     } else {
       setMarkdownContent('')
+      setDraftContent('')
     }
   }, [activeLabel])
 
@@ -417,13 +426,37 @@ function DocumentationPage() {
         </aside>
         <main className={`docs-main ${isSidebarCollapsed ? 'is-collapsed' : ''}`}>
           <div className="docs-main__container">
-            <Markdown content={markdownContent} />
+            {viewMode === 'edit' ? (
+              <textarea
+                value={draftContent}
+                onChange={(e) => setDraftContent(e.target.value)}
+                style={{
+                  width: '100%',
+                  height: '80vh',
+                  padding: '12px',
+                  fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
+                  fontSize: '16px',
+                  lineHeight: 1.5,
+                  color: 'var(--docs-normal-text)',
+                  background: 'var(--docs-bg)',
+                  border: '1px solid var(--bottom-dialog-border)',
+                  borderRadius: 8,
+                  outline: 'none'
+                }}
+              />
+            ) : (
+              <Markdown content={draftContent || markdownContent} />
+            )}
           </div>
         </main>
       </div>
       
       {/* Bottom Mini Dialog */}
-      <BottomMiniDialog content={markdownContent} />
+      <BottomMiniDialog
+        content={viewMode === 'edit' ? draftContent : markdownContent}
+        mode={viewMode}
+        onModeChange={(m) => setViewMode(m)}
+      />
     </div>
   )
 }

@@ -7,26 +7,6 @@
 Fumadocs <span className="text-fd-muted-foreground text-sm">(Foo-ma docs)</span> is a **documentation framework**, designed to be fast, flexible,
 and composes seamlessly into your React framework.
 
-Fumadocs has different parts:
-
-<Cards>
-  <Card icon={<CpuIcon className="text-purple-300" />} title="Fumadocs Core">
-    Handles most of the logic, including document search, content source adapters, and Markdown extensions.
-  </Card>
-
-  <Card icon={<PanelsTopLeft className="text-blue-300" />} title="Fumadocs UI">
-    The default theme of Fumadocs offers a beautiful look for documentation sites and interactive components.
-  </Card>
-
-  <Card icon={<Database />} title="Content Source">
-    The source of your content, can be a CMS or local data layers like [Fumadocs MDX](/docs/mdx) (the official content source).
-  </Card>
-
-  <Card icon={<Terminal />} title="Fumadocs CLI">
-    A command line tool to install UI components and automate things, useful for customizing layouts.
-  </Card>
-</Cards>
-
 <Callout title="Want to learn more?">
   Read our in-depth [What is Fumadocs](/docs/ui/what-is-fumadocs) introduction.
 </Callout>

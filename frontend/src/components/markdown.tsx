@@ -6,16 +6,46 @@ import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { tomorrow } from 'react-syntax-highlighter/dist/cjs/styles/prism';
 import Mermaid from './mermaid';
 import FilesRenderer from './files_renderer';
+import Callout from './callout';
 
 interface MarkdownProps {
   content: string;
 }
 
 const Markdown: React.FC<MarkdownProps> = ({ content }) => {
+  // Helper to extract plain text from React children for nested markdown parsing
+  const extractText = (node: React.ReactNode): string => {
+    if (node == null) return '';
+    if (typeof node === 'string' || typeof node === 'number') return String(node);
+    if (Array.isArray(node)) return node.map(extractText).join('');
+    if (React.isValidElement(node)) return extractText((node.props as { children?: React.ReactNode })?.children);
+    return '';
+  };
   // Define markdown components
-  const MarkdownComponents: React.ComponentProps<typeof ReactMarkdown>['components'] = {
+  const MarkdownComponents = {
+    // Direct HTML Callout tag mapping: <Callout title="...">...</Callout>
+    // Note: HTML inside Callout body (e.g., <a href="...">) will render. Markdown syntax inside HTML blocks is not parsed by default.
+    callout: (props: { children?: React.ReactNode; title?: string; variant?: string }) => {
+      const { children, title, variant } = props as { children?: React.ReactNode; title?: string; variant?: string };
+      const inner = extractText(children);
+      return (
+        <Callout title={title} variant={variant as never}>
+          <ReactMarkdown
+            remarkPlugins={[remarkGfm]}
+            components={{
+              a: MarkdownComponents!.a,
+              strong: MarkdownComponents!.strong,
+              code: MarkdownComponents!.code,
+              p: ({ children: c }) => <span style={{ fontSize: '0.9rem' }}>{c}</span>,
+            }}
+          >
+            {inner}
+          </ReactMarkdown>
+        </Callout>
+      );
+    },
     // Custom component for Files structure
-    pre: ({ children, ...props }) => {
+    pre: ({ children, ...props }: { children?: React.ReactNode }) => {
       const childrenStr = Array.isArray(children) ? children.join('') : String(children || '');
       
       // Check if this pre contains Files structure
@@ -24,6 +54,28 @@ const Markdown: React.FC<MarkdownProps> = ({ content }) => {
         if (filesMatch) {
           return <FilesRenderer>{filesMatch[1]}</FilesRenderer>;
         }
+      }
+      // Render Callout blocks inside fenced HTML
+      if (childrenStr.includes('<Callout') && childrenStr.includes('</Callout>')) {
+        const titleMatch = childrenStr.match(/title="([^"]*)"/);
+        const bodyMatch = childrenStr.match(/<Callout[^>]*>([\s\S]*?)<\/Callout>/);
+        const title = titleMatch ? titleMatch[1] : undefined;
+        const body = bodyMatch ? bodyMatch[1] : '';
+        return (
+          <Callout title={title}>
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm]}
+              components={{
+                a: MarkdownComponents!.a,
+                strong: MarkdownComponents!.strong,
+                code: MarkdownComponents!.code,
+                p: ({ children: c }) => <span style={{ fontSize: '0.9rem' }}>{c}</span>,
+              }}
+            >
+              {body}
+            </ReactMarkdown>
+          </Callout>
+        );
       }
       
       return <pre {...props}>{children}</pre>;
@@ -56,14 +108,14 @@ const Markdown: React.FC<MarkdownProps> = ({ content }) => {
         }
       }
       return (
-        <h2 style={{ fontSize: '1.50rem', fontWeight: 600, marginTop: '1rem', marginBottom: '0.75rem', color: 'var(--docs-header-text)' }} {...props}>
+        <h2 style={{ fontSize: '1.45rem', fontWeight: 600, marginTop: '2rem', marginBottom: '0.75rem', color: 'var(--docs-header-text)' }} {...props}>
           {children}
         </h2>
       );
     },
     h3({ children, ...props }: { children?: React.ReactNode }) {
       return (
-        <h3 style={{ fontSize: '1.20rem', fontWeight: 500, marginTop: '0.75rem', marginBottom: '0.5rem', color: 'var(--docs-header-text)' }} {...props}>
+        <h3 style={{ fontSize: '1.25rem', fontWeight: 600, marginTop: '1.45rem', marginBottom: '0.2rem', color: 'var(--docs-header-text)' }} {...props}>
           {children}
         </h3>
       );
@@ -76,13 +128,42 @@ const Markdown: React.FC<MarkdownProps> = ({ content }) => {
       );
     },
     ul({ children, ...props }: { children?: React.ReactNode }) {
-      return <ul className="list-disc pl-6 mb-4 text-sm dark:text-white space-y-2" {...props}>{children}</ul>;
+      return (
+        <ul
+          className="list-disc pl-6"
+          style={{ marginBottom: '1rem' }}
+          {...props}
+        >
+          {children}
+        </ul>
+      );
     },
     ol({ children, ...props }: { children?: React.ReactNode }) {
-      return <ol className="list-decimal pl-6 mb-4 text-sm dark:text-white space-y-2" {...props}>{children}</ol>;
+      return (
+        <ol
+          className="list-decimal pl-6"
+          style={{ marginBottom: '1rem' }}
+          {...props}
+        >
+          {children}
+        </ol>
+      );
     },
     li({ children, ...props }: { children?: React.ReactNode }) {
-      return <li className="mb-2 text-sm leading-relaxed dark:text-white" {...props}>{children}</li>;
+      return (
+        <li
+          style={{
+            marginBottom: '1rem',
+            fontSize: '0.95rem',
+            lineHeight: 1.6,
+            color: 'var(--docs-normal-text)',
+            fontWeight: 300,
+          }}
+          {...props}
+        >
+          {children}
+        </li>
+      );
     },
     hr({ ...props }) {
       return (
@@ -196,6 +277,8 @@ const Markdown: React.FC<MarkdownProps> = ({ content }) => {
 
       // Handle code blocks
       if (!inline && match) {
+        const isDarkMode = typeof document !== 'undefined' && document.documentElement.classList.contains('dark');
+        const codeBlockBg = isDarkMode ? '#212121' : '#f1f1f1';
         return (
             <div className="my-6 rounded-lg overflow-hidden text-sm shadow-sm">
             <div className="bg-gray-800 text-gray-200 px-5 py-2 text-sm flex justify-between items-center rounded-t-lg">
@@ -227,7 +310,7 @@ const Markdown: React.FC<MarkdownProps> = ({ content }) => {
               language={match[1]}
               style={tomorrow}
               className="!text-sm"
-              customStyle={{ margin: 0, borderRadius: 3, padding: '1rem' }}
+              customStyle={{ margin: 0, borderRadius: 3, padding: '1rem', backgroundColor: codeBlockBg }}
               showLineNumbers={true}
               wrapLines={true}
               wrapLongLines={true}
@@ -239,17 +322,25 @@ const Markdown: React.FC<MarkdownProps> = ({ content }) => {
         );
       }
 
-      // Handle inline code
+      // Handle inline code styled as a compact code container
+      const isDarkModeInline = typeof document !== 'undefined' && document.documentElement.classList.contains('dark');
+      const inlineBg = isDarkModeInline ? '#212121' : '#f1f1f1';
       return (
         <code
-          className={`${className} font-mono bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded text-pink-500 dark:text-pink-400 text-sm`}
+          className={`${className} inline-block font-mono text-sm px-2 py-1 rounded-md border shadow-sm text-gray-800 dark:text-gray-100`}
+          style={{
+            lineHeight: 1.6,
+            verticalAlign: 'baseline',
+            backgroundColor: inlineBg,
+            borderColor: isDarkModeInline ? '#3a3a3a' : '#d1d5db',
+          }}
           {...otherProps}
         >
           {children}
         </code>
       );
     },
-  };
+  } as unknown as React.ComponentProps<typeof ReactMarkdown>['components'];
 
   return (
     <div className="docs-md max-w-none px-2 py-4">
