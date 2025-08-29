@@ -5,6 +5,7 @@ import rehypeRaw from 'rehype-raw';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { tomorrow } from 'react-syntax-highlighter/dist/cjs/styles/prism';
 import Mermaid from './mermaid';
+import FilesRenderer from './files_renderer';
 
 interface MarkdownProps {
   content: string;
@@ -13,16 +14,31 @@ interface MarkdownProps {
 const Markdown: React.FC<MarkdownProps> = ({ content }) => {
   // Define markdown components
   const MarkdownComponents: React.ComponentProps<typeof ReactMarkdown>['components'] = {
+    // Custom component for Files structure
+    pre: ({ children, ...props }) => {
+      const childrenStr = Array.isArray(children) ? children.join('') : String(children || '');
+      
+      // Check if this pre contains Files structure
+      if (childrenStr.includes('<Files>') && childrenStr.includes('</Files>')) {
+        const filesMatch = childrenStr.match(/<Files>([\s\S]*?)<\/Files>/);
+        if (filesMatch) {
+          return <FilesRenderer>{filesMatch[1]}</FilesRenderer>;
+        }
+      }
+      
+      return <pre {...props}>{children}</pre>;
+    },
+
     p({ children, ...props }: { children?: React.ReactNode }) {
       return (
-        <p style={{ marginBottom: '0.75rem', fontSize: '0.95rem', lineHeight: 1.6, color: '#ebebeb' }} {...props}>
+        <p style={{ marginBottom: '1rem', fontSize: '0.95rem', lineHeight: 1.6, color: 'var(--docs-normal-text)', fontWeight: 300 }} {...props}>
           {children}
         </p>
       );
     },
     h1({ children, ...props }: { children?: React.ReactNode }) {
       return (
-        <h1 style={{ fontSize: '1.25rem', fontWeight: 700, marginTop: '1.25rem', marginBottom: '0.75rem', color: '#ebebeb' }} {...props}>
+        <h1 style={{ fontSize: '1.85rem', fontWeight: 600, marginTop: '0.75rem', marginBottom: '0.75rem', color: 'var(--docs-header-text)' }} {...props}>
           {children}
         </h1>
       );
@@ -33,28 +49,28 @@ const Markdown: React.FC<MarkdownProps> = ({ content }) => {
         const text = children.toString();
         if (text.includes('Thought') || text.includes('Action') || text.includes('Observation') || text.includes('Answer')) {
           return (
-            <h2 style={{ fontSize: '0.95rem', fontWeight: 700, marginTop: '1rem', marginBottom: '0.75rem', color: '#ebebeb' }} {...props}>
+            <h2 style={{ fontSize: '0.9rem', fontWeight: 600, marginTop: '1rem', marginBottom: '0.75rem', color: 'var(--docs-header-text)' }} {...props}>
               {children}
             </h2>
           );
         }
       }
       return (
-        <h2 style={{ fontSize: '1.125rem', fontWeight: 700, marginTop: '1rem', marginBottom: '0.75rem', color: '#ebebeb' }} {...props}>
+        <h2 style={{ fontSize: '1.50rem', fontWeight: 600, marginTop: '1rem', marginBottom: '0.75rem', color: 'var(--docs-header-text)' }} {...props}>
           {children}
         </h2>
       );
     },
     h3({ children, ...props }: { children?: React.ReactNode }) {
       return (
-        <h3 style={{ fontSize: '1rem', fontWeight: 600, marginTop: '0.75rem', marginBottom: '0.5rem', color: '#ebebeb' }} {...props}>
+        <h3 style={{ fontSize: '1.20rem', fontWeight: 500, marginTop: '0.75rem', marginBottom: '0.5rem', color: 'var(--docs-header-text)' }} {...props}>
           {children}
         </h3>
       );
     },
     h4({ children, ...props }: { children?: React.ReactNode }) {
       return (
-        <h4 style={{ fontSize: '0.95rem', fontWeight: 600, marginTop: '0.5rem', marginBottom: '0.5rem', color: '#ebebeb' }} {...props}>
+        <h4 style={{ fontSize: '1rem', fontWeight: 500, marginTop: '0.5rem', marginBottom: '0.5rem', color: 'var(--docs-header-text)' }} {...props}>
           {children}
         </h4>
       );
@@ -68,11 +84,35 @@ const Markdown: React.FC<MarkdownProps> = ({ content }) => {
     li({ children, ...props }: { children?: React.ReactNode }) {
       return <li className="mb-2 text-sm leading-relaxed dark:text-white" {...props}>{children}</li>;
     },
+    hr({ ...props }) {
+      return (
+        <hr style={{ 
+          border: 'none', 
+          height: '0.5px', 
+          backgroundColor: 'var(--docs-text)', 
+          margin: '2rem 0',
+          opacity: 0.2
+        }} {...props} />
+      );
+    },
+    strong({ children, ...props }: { children?: React.ReactNode }) {
+      return (
+        <strong style={{ color: 'var(--docs-bold-text)', fontWeight: 400 }} {...props}>
+          {children}
+        </strong>
+      );
+    },
     a({ children, href, ...props }: { children?: React.ReactNode; href?: string }) {
       return (
         <a
           href={href}
-          className="text-purple-600 dark:text-purple-400 hover:underline font-medium"
+          style={{
+            color: 'var(--docs-link-text)',
+            textDecoration: 'underline',
+            textDecorationColor: '#89b5fa',
+            textUnderlineOffset: '2px',
+            fontWeight: 300
+          }}
           target="_blank"
           rel="noopener noreferrer"
           {...props}
@@ -132,6 +172,14 @@ const Markdown: React.FC<MarkdownProps> = ({ content }) => {
       const { inline, className, children, ...otherProps } = props;
       const match = /language-(\w+)/.exec(className || '');
       const codeContent = children ? String(children).replace(/\n$/, '') : '';
+
+      // Check if this code block contains Files structure
+      if (!inline && codeContent.includes('<Files>') && codeContent.includes('</Files>')) {
+        const filesMatch = codeContent.match(/<Files>([\s\S]*?)<\/Files>/);
+        if (filesMatch) {
+          return <FilesRenderer>{filesMatch[1]}</FilesRenderer>;
+        }
+      }
 
       // Handle Mermaid diagrams
       if (!inline && match && match[1] === 'mermaid') {

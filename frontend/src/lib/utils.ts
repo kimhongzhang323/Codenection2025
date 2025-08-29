@@ -1,5 +1,8 @@
-export function cn(...classes: Array<string | undefined | false | null>): string {
-  return classes.filter(Boolean).join(' ');
+import { type ClassValue, clsx } from "clsx";
+import { twMerge } from "tailwind-merge";
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
 }
 
 // A reference to a GitHub repository in the form owner/name

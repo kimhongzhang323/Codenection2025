@@ -1,9 +1,13 @@
 /* Theme variables */
 :root {
-  --docs-bg: #ffffff;
+  --docs-bg: #f5f5f5;
   --docs-text: #1a1a1a;
-  --sidebar-bg: #f8f9fa;
-  --sidebar-border: #e9ecef;
+  --docs-link-text: #0a0a0a;
+  --docs-header-text: #0a0a0a;
+  --docs-normal-text: #393939;
+  --docs-bold-text: #0a0a0a;
+  --sidebar-bg: #f1f1f1;
+  --sidebar-border: #dde1e7;
   --sidebar-text: #495057;
   --collapsed-button-bg: #ffffff;
   --collapsed-button-border: #dee2e6;
@@ -14,13 +18,13 @@
   --footer-border: #e9ecef;
   --tree-bg: #ffffff;
   --tree-border: #e9ecef;
-  --file-bg: #f8f9fa;
+  --file-bg: #f1f1f1;
   --file-text: #495057;
   --file-hover-bg: #e9ecef;
   --file-hover-border: #dee2e6;
   --file-active-bg: rgba(32, 56, 100, 0.1);
   --file-active-text: #1a365d;
-  --folder-bg: #f8f9fa;
+  --folder-bg: #f1f1f1;
   --folder-text: #495057;
   --folder-hover-bg: #e9ecef;
   --separator-text: #6c757d;
@@ -36,6 +40,10 @@
 :root.dark {
   --docs-bg: #121212;
   --docs-text: #ffffff;
+  --docs-link-text: #ffffff;
+  --docs-header-text: #ebebeb;
+  --docs-normal-text: #bfbfbf;
+  --docs-bold-text: #ebebeb;
   --sidebar-bg: #191919;
   --sidebar-border: #2a2a2a;
   --sidebar-text: #ffffff;
@@ -152,7 +160,7 @@
   justify-content: space-between;
   gap: 10px; 
   font-size: 16px; 
-  font-weight: 600; 
+  font-weight: 500; 
   width: 88%; 
   margin: 0 auto; 
   margin-top: 6px; 
@@ -165,8 +173,8 @@
 }
 
 .docs-sidebar__collapse-icon {
-  width: 16px;
-  height: 16px;
+  width: 18px;
+  height: 18px;
   cursor: pointer;
   opacity: 0.7;
   transition: opacity 0.2s ease;
@@ -357,12 +365,12 @@ html:not(.dark) .docs-sidebar__collapse-icon {
   align-items: center; 
   transform: translateY(3px); 
   margin-left: auto;
-  margin-right: 120px;
+  margin-right: 130px;
 }
 .docs-footer__gh:hover { color: var(--docs-text); }
 
 /* Toggle */
-.docs-toggle { position: relative; width: 68px; height: 30px; border-radius: 999px; background: var(--footer-bg); border: 1px solid var(--footer-border); display: inline-flex; align-items: center; justify-content: center; padding: 0 6px; color: var(--sidebar-text); overflow: hidden; }
+.docs-toggle { position: relative; width: 68px; height: 30px; border-radius: 20px; background: var(--footer-bg); border: 1px solid var(--footer-border); display: inline-flex; align-items: center; justify-content: center; padding: 0 6px; color: var(--sidebar-text); overflow: hidden; }
 .docs-toggle:hover { background: var(--footer-bg); border-color: var(--footer-border); }
 .docs-toggle:focus { outline: none; box-shadow: none; }
 
@@ -370,9 +378,9 @@ html:not(.dark) .docs-sidebar__collapse-icon {
 .docs-toggle__sun, .docs-toggle__moon { display: inline-flex; }
 
 /* Moving circle behind active icon - fits rounded ends exactly */
-.docs-toggle__circle { position: absolute; top: -1px; left: -1px; width: 32px; height: 32px; background: var(--sidebar-border); border-radius: 50%; transition: left 200ms ease; z-index: 1; }
-.docs-toggle.is-dark .docs-toggle__circle { left: calc(100% - 31px); }
-.docs-toggle.is-light .docs-toggle__circle { left: -1px; }
+.docs-toggle__circle { position: absolute; top: 0px; left: 2px; width: 28px; height: 28px; background: var(--sidebar-border); border-radius: 50%; transition: left 200ms ease; z-index: 1; }
+.docs-toggle.is-dark .docs-toggle__circle { left: calc(100% - 28px); }
+.docs-toggle.is-light .docs-toggle__circle { left: 0px; }
 
 /* Main content */
 .docs-main { 
@@ -388,13 +396,6 @@ html:not(.dark) .docs-sidebar__collapse-icon {
   padding: 40px 24px;
 }
 
-/* Ensure no global typography styles override markdown sizes */
-/* Markdown typography override (wins against global typographic styles) */
-.docs-md h1 { font-size: 2rem !important; font-weight: 700; color: var(--docs-text) !important; margin: 1.25rem 0 0.75rem; }
-.docs-md h2 { font-size: 1.5rem !important; font-weight: 700; color: var(--docs-text) !important; margin: 1rem 0 0.75rem; }
-.docs-md h3 { font-size: 1.25rem !important; font-weight: 600; color: var(--docs-text) !important; margin: 0.75rem 0 0.5rem; }
-.docs-md h4 { font-size: 1.1rem !important; font-weight: 600; color: var(--docs-text) !important; margin: 0.5rem 0; }
-.docs-md p  { font-size: 0.95rem !important; color: var(--docs-text) !important; line-height: 1.6; margin: 0.75rem 0; }
 
 /* Responsive */
 @media (max-width: 900px) { 
