@@ -327,11 +327,11 @@ button:focus-visible {
 /* Tree indicator line (visible and darker) */
 .tree-indicator {
   width: 1px;
-  background-color: rgba(0, 0, 0, 0.25);
+  background-color: rgba(145, 145, 145, 0.25);
 }
 
 html.dark .tree-indicator {
-  background-color: rgba(255, 255, 255, 0.25);
+  background-color: rgba(117, 117, 117, 0.25);
 }
 
 [data-radix-accordion-trigger]:focus {

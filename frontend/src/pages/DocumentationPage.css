@@ -4,7 +4,7 @@
   --docs-text: #1a1a1a;
   --docs-link-text: #0a0a0a;
   --docs-header-text: #0a0a0a;
-  --docs-normal-text: #393939;
+  --docs-normal-text: #777777;
   --docs-bold-text: #0a0a0a;
   --sidebar-bg: #f1f1f1;
   --sidebar-border: #dde1e7;
@@ -159,7 +159,7 @@
   align-items: center; 
   justify-content: space-between;
   gap: 10px; 
-  font-size: 16px; 
+  font-size: 15px; 
   font-weight: 500; 
   width: 88%; 
   margin: 0 auto; 
