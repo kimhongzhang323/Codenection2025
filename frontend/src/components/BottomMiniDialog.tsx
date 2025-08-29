@@ -3,6 +3,8 @@ import './BottomMiniDialog.css'
 
 interface BottomMiniDialogProps {
   content: string
+  mode?: 'reading' | 'edit'
+  onModeChange?: (mode: 'reading' | 'edit') => void
 }
 
 interface WordCountStats {
@@ -10,10 +12,9 @@ interface WordCountStats {
   characters: number
 }
 
-export function BottomMiniDialog({ content }: BottomMiniDialogProps) {
+export function BottomMiniDialog({ content, mode = 'reading', onModeChange }: BottomMiniDialogProps) {
   const [stats, setStats] = useState<WordCountStats>({ words: 0, characters: 0 })
   const [showModeDialog, setShowModeDialog] = useState(false)
-  const [currentMode, setCurrentMode] = useState<'reading' | 'edit'>('reading')
   const [isUpdating, setIsUpdating] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
@@ -42,8 +43,8 @@ export function BottomMiniDialog({ content }: BottomMiniDialogProps) {
     return num.toLocaleString()
   }
 
-  const handleModeChange = (mode: 'reading' | 'edit') => {
-    setCurrentMode(mode)
+  const handleModeChange = (nextMode: 'reading' | 'edit') => {
+    if (onModeChange) onModeChange(nextMode)
     setShowModeDialog(false)
   }
 
@@ -94,7 +95,7 @@ export function BottomMiniDialog({ content }: BottomMiniDialogProps) {
             onClick={() => setShowModeDialog(!showModeDialog)}
             aria-label="Toggle reading mode"
           >
-            {currentMode === 'reading' ? (
+            {mode === 'reading' ? (
               <svg className="bottom-mini-dialog__icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/>
                 <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
@@ -110,7 +111,7 @@ export function BottomMiniDialog({ content }: BottomMiniDialogProps) {
           {showModeDialog && (
             <div className="bottom-mini-dialog__mode-dropdown">
               <button 
-                className={`bottom-mini-dialog__mode-option ${currentMode === 'reading' ? 'is-active' : ''}`}
+                className={`bottom-mini-dialog__mode-option ${mode === 'reading' ? 'is-active' : ''}`}
                 onClick={() => handleModeChange('reading')}
               >
                 <svg className="bottom-mini-dialog__mode-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -118,7 +119,7 @@ export function BottomMiniDialog({ content }: BottomMiniDialogProps) {
                   <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>
                 </svg>
                 <span>Reading</span>
-                {currentMode === 'reading' && (
+                {mode === 'reading' && (
                   <svg className="bottom-mini-dialog__check-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <polyline points="20,6 9,17 4,12"/>
                   </svg>
@@ -126,7 +127,7 @@ export function BottomMiniDialog({ content }: BottomMiniDialogProps) {
               </button>
               
               <button 
-                className={`bottom-mini-dialog__mode-option ${currentMode === 'edit' ? 'is-active' : ''}`}
+                className={`bottom-mini-dialog__mode-option ${mode === 'edit' ? 'is-active' : ''}`}
                 onClick={() => handleModeChange('edit')}
               >
                 <svg className="bottom-mini-dialog__mode-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -134,7 +135,7 @@ export function BottomMiniDialog({ content }: BottomMiniDialogProps) {
                   <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
                 </svg>
                 <span>Edit</span>
-                {currentMode === 'edit' && (
+                {mode === 'edit' && (
                   <svg className="bottom-mini-dialog__check-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <polyline points="20,6 9,17 4,12"/>
                   </svg>
