@@ -1,5 +1,7 @@
 # Quick Start
 
+---
+
 ## Introduction
 
 Fumadocs <span className="text-fd-muted-foreground text-sm">(Foo-ma docs)</span> is a **documentation framework**, designed to be fast, flexible,
