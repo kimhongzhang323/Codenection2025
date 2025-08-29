@@ -301,8 +301,7 @@ const File = forwardRef<
     },
     ref,
   ) => {
-    const { direction, selectedId, selectItem } = useTree();
-    const isSelected = isSelect ?? selectedId === value;
+    const { direction, selectItem } = useTree();
     return (
       <button
         ref={ref}
