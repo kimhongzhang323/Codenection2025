@@ -385,3 +385,69 @@ button.flex.items-center.gap-1:focus {
   outline: none !important;
   box-shadow: none !important;
 }
+
+.docs-main::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.docs-main::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.docs-main::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 3px;
+  transition: background-color 0.3s ease;
+}
+
+.docs-main:hover::-webkit-scrollbar-thumb {
+  background: var(--sidebar-border);
+}
+
+.docs-main::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* AI chat content scrollbar */
+.ai-chat-content::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.ai-chat-content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.ai-chat-content::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 3px;
+  transition: background-color 0.3s ease;
+}
+
+.ai-chat-content:hover::-webkit-scrollbar-thumb {
+  background: var(--sidebar-border);
+}
+
+.ai-chat-content::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Firefox scrollbar styles - only for main content */
+.docs-main {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+
+.docs-main:hover {
+  scrollbar-color: var(--sidebar-border) transparent;
+}
+
+.ai-chat-content {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+
+.ai-chat-content:hover {
+  scrollbar-color: var(--sidebar-border) transparent;
+}
