@@ -12,7 +12,9 @@ import org.slf4j.LoggerFactory;
 import com.example.AutoDocX.model.ClonedRepo;
 import com.example.AutoDocX.service.RepoHandler;
 import com.example.AutoDocX.service.JavaTreeConverter;
+import com.example.AutoDocX.service.JavaGraphConverter;
 import com.example.AutoDocX.parser.model.JavaClass;
+import com.example.AutoDocX.parser.model.Graph;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -38,6 +40,9 @@ public class CloneController {
     @Autowired
     private JavaTreeConverter javaTreeConverter;
 
+    @Autowired
+    private JavaGraphConverter javaGraphConverter;
+
     @PostMapping("/clone")
     public ResponseEntity<String> cloneAndRead(@RequestBody Map<String, String> payload) {
         logger.info("Received clone request.");
@@ -58,13 +63,22 @@ public class CloneController {
             Path repoPath = clonedRepo.getClonedPath();
 
             List<JavaClass> javaTree = javaTreeConverter.convertRepoToJavaTree(repoPath);
-            StringBuilder treeString = new StringBuilder();
-            javaTree.forEach(treeString::append);
+            Graph graph = javaGraphConverter.convertJavaTreeToGraph(javaTree);
 
-            logger.info("Successfully parsed Java tree from repository: {}", repoPath);
+            String bfsResult = "No classes found to perform BFS.";
+            if (!javaTree.isEmpty()) {
+                String startNodeId = "class_" + javaTree.get(0).getName(); // Using the first class as start node for BFS
+                bfsResult = graph.bfs(startNodeId, 1);
+            }
+
+            StringBuilder responseBody = new StringBuilder();
+            responseBody.append(graph.toString());
+            responseBody.append("\n\n").append(bfsResult);
+
+            logger.info("Successfully parsed Java tree, converted to graph, and performed BFS from repository: {}", repoPath);
             return ResponseEntity.ok()
                     .contentType(MediaType.TEXT_PLAIN)
-                    .body(treeString.toString());
+                    .body(responseBody.toString());
 
         } catch (IOException e) {
             logger.error("File operation error after cloning URL: {}. Error: {}", url, e.getMessage(), e);
