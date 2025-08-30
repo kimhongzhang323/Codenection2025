@@ -49,7 +49,5 @@ coverage/
 
 /todo.md
 /prd.md
-
-# Ignore model weights
-*.pt
-src/main/resources/graphcodebert.pt
+cloned-repos
+src/main/resources
