@@ -22,7 +22,7 @@ public class JavaGraphConverter {
 
         // First pass: create all nodes and add them to the map and graph
         for (JavaClass javaClass : javaClasses) {
-            String classId = "class_" + javaClass.getPackageName() + "_" + javaClass.getName();
+            String classId = "class_" + javaClass.getName();
             nodesMap.computeIfAbsent(classId, k -> {
                 GraphNode node = new GraphNode(classId, javaClass.getName(), GraphNode.NodeType.CLASS, new ArrayList<>(), new ArrayList<>());
                 graph.addNode(node);
@@ -50,7 +50,7 @@ public class JavaGraphConverter {
 
         // Second pass: create links and populate adjacency lists
         for (JavaClass javaClass : javaClasses) {
-            String classId = "class_" + javaClass.getPackageName() + "_" + javaClass.getName();
+            String classId = "class_" + javaClass.getName();
             GraphNode classNode = nodesMap.get(classId);
 
             for (JavaField field : javaClass.getFields()) {
@@ -80,7 +80,7 @@ public class JavaGraphConverter {
                     for (JavaClass targetClass : javaClasses) {
                         for (JavaMethod targetMethod : targetClass.getMethods()) {
                             if (targetMethod.getName().equals(calledMethodName)) {
-                                String targetClassId = "class_" + targetClass.getPackageName() + "_" + targetClass.getName();
+                                String targetClassId = "class_" + targetClass.getName();
                                 String targetMethodId = "method_" + targetClassId + "_" + targetMethod.getName();
                                 GraphNode targetMethodNode = nodesMap.get(targetMethodId);
 
