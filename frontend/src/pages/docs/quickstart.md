@@ -108,4 +108,3 @@ Some common questions you may encounter.
       baseUrl: '/info', // to the new value [!code highlight]
     });
     ```
-
