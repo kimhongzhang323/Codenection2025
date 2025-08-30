@@ -24,7 +24,7 @@ public class JavaGraphConverter {
         for (JavaClass javaClass : javaClasses) {
             String classId = "class_" + javaClass.getName();
             nodesMap.computeIfAbsent(classId, k -> {
-                GraphNode node = new GraphNode(classId, javaClass.getName(), GraphNode.NodeType.CLASS, new ArrayList<>(), new ArrayList<>());
+                GraphNode node = new GraphNode(classId, javaClass.getName(), GraphNode.NodeType.CLASS, javaClass.getFilePath(), javaClass.getStartLine(), javaClass.getEndLine(), new ArrayList<>(), new ArrayList<>());
                 graph.addNode(node);
                 return node;
             });
@@ -32,7 +32,7 @@ public class JavaGraphConverter {
             for (JavaField field : javaClass.getFields()) {
                 String fieldId = "field_" + classId + "_" + field.getName();
                 nodesMap.computeIfAbsent(fieldId, k -> {
-                    GraphNode node = new GraphNode(fieldId, field.getName(), GraphNode.NodeType.FIELD, new ArrayList<>(), new ArrayList<>());
+                    GraphNode node = new GraphNode(fieldId, field.getName(), GraphNode.NodeType.FIELD, field.getFilePath(), field.getStartLine(), field.getEndLine(), new ArrayList<>(), new ArrayList<>());
                     graph.addNode(node);
                     return node;
                 });
@@ -41,7 +41,7 @@ public class JavaGraphConverter {
             for (JavaMethod method : javaClass.getMethods()) {
                 String methodId = "method_" + classId + "_" + method.getName();
                 nodesMap.computeIfAbsent(methodId, k -> {
-                    GraphNode node = new GraphNode(methodId, method.getName(), GraphNode.NodeType.METHOD, new ArrayList<>(), new ArrayList<>());
+                    GraphNode node = new GraphNode(methodId, method.getName(), GraphNode.NodeType.METHOD, method.getFilePath(), method.getStartLine(), method.getEndLine(), new ArrayList<>(), new ArrayList<>());
                     graph.addNode(node);
                     return node;
                 });

@@ -28,8 +28,8 @@ public class Graph {
         this.links.add(link);
     }
 
-    public Optional<GraphNode> getNodeById(String nodeId) {
-        return nodes.stream().filter(node -> node.getId().equals(nodeId)).findFirst();
+    public Optional<GraphNode> getNodeById(String query) {
+        return nodes.stream().filter(node -> node.getId().equals(query) || node.getLabel().equals(query)).findFirst();
     }
 
     public String bfs(String startNodeId, int depthLimit) {

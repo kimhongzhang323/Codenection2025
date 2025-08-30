@@ -17,14 +17,33 @@ import java.nio.file.Paths;
 import java.util.UUID;
 import org.eclipse.jgit.api.errors.GitAPIException;
 
+import com.example.AutoDocX.parser.model.Graph;
+import com.example.AutoDocX.parser.model.JavaClass;
+import java.util.List;
+import com.example.AutoDocX.parser.model.GraphNode;
+import java.util.Optional;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.core.type.TypeReference;
+
+import com.example.AutoDocX.repository.record.RepoRecord;
+import java.util.stream.Collectors;
+
 @Service
 public class RepoHandler {
 
     private static final Logger logger = LoggerFactory.getLogger(RepoHandler.class);
     private static final int MAX_ENTRIES = 5; // Example capacity
+    private static final Path JSON_FILE_PATH = Paths.get("cloned_repos.json");
 
     @Autowired
     private GitService gitService;
+
+    @Autowired
+    private JavaTreeConverter javaTreeConverter;
+
+    @Autowired
+    private JavaGraphConverter javaGraphConverter;
 
     private final LinkedHashMap<String, ClonedRepo> cache = new LinkedHashMap<String, ClonedRepo>(MAX_ENTRIES, 0.75f, true) {
         @Override
@@ -38,6 +57,46 @@ public class RepoHandler {
         }
     };
 
+    public RepoHandler() {
+        loadReposFromJson();
+    }
+
+    private void saveReposToJson() {
+        List<RepoRecord> repoRecords = cache.values().stream()
+                .map(repo -> new RepoRecord(repo.getRepoLink(), repo.getClonedPath().toString()))
+                .collect(Collectors.toList());
+        ObjectMapper mapper = new ObjectMapper();
+        try {
+            mapper.writerWithDefaultPrettyPrinter().writeValue(JSON_FILE_PATH.toFile(), repoRecords);
+            logger.info("Cloned repositories saved to {}.", JSON_FILE_PATH);
+        } catch (IOException e) {
+            logger.error("Error saving cloned repositories to JSON: {}", e.getMessage(), e);
+        }
+    }
+
+    private void loadReposFromJson() {
+        ObjectMapper mapper = new ObjectMapper();
+        if (Files.exists(JSON_FILE_PATH)) {
+            try {
+                List<RepoRecord> repoRecords = mapper.readValue(JSON_FILE_PATH.toFile(), new TypeReference<List<RepoRecord>>() {});
+                for (RepoRecord record : repoRecords) {
+                    // Check if the directory still exists
+                    Path clonedPath = Paths.get(record.getClonedPath());
+                    if (Files.exists(clonedPath) && Files.isDirectory(clonedPath)) {
+                        // Reconstruct ClonedRepo object, graph will be null initially
+                        ClonedRepo clonedRepo = new ClonedRepo(record.getRepoLink(), clonedPath, null, null); // Commit hash and graph are not persisted for simplicity here
+                        cache.put(record.getRepoLink(), clonedRepo);
+                    } else {
+                        logger.warn("Cloned directory for {} not found at {}. Skipping.", record.getRepoLink(), record.getClonedPath());
+                    }
+                }
+                logger.info("Cloned repositories loaded from {}.", JSON_FILE_PATH);
+            } catch (IOException e) {
+                logger.error("Error loading cloned repositories from JSON: {}", e.getMessage(), e);
+            }
+        }
+    }
+
     public ClonedRepo getRepo(String repoLink) {
         ClonedRepo clonedRepo = cache.get(repoLink);
         if (clonedRepo != null) {
@@ -48,8 +107,9 @@ public class RepoHandler {
             try {
                 Path targetDir = Paths.get("cloned-repos", UUID.randomUUID().toString());
                 String commitHash = gitService.cloneRepo(repoLink, targetDir);
-                clonedRepo = new ClonedRepo(repoLink, targetDir, commitHash);
+                clonedRepo = new ClonedRepo(repoLink, targetDir, commitHash, null);
                 cache.put(repoLink, clonedRepo);
+                saveReposToJson(); // Persist after new repo is cloned
                 logger.info("Cloned and added repository to cache: {}", repoLink);
                 return clonedRepo;
             } catch (GitAPIException e) {
@@ -59,11 +119,38 @@ public class RepoHandler {
         }
     }
 
+    public Graph getGraph(ClonedRepo clonedRepo) throws IOException {
+        if (clonedRepo.getGraph() == null) {
+            logger.info("Generating graph for repository: {}", clonedRepo.getRepoLink());
+            List<JavaClass> javaTree = javaTreeConverter.convertRepoToJavaTree(clonedRepo.getClonedPath());
+            Graph graph = javaGraphConverter.convertJavaTreeToGraph(javaTree);
+            clonedRepo.setGraph(graph);
+        }
+        return clonedRepo.getGraph();
+    }
+
+    public String getCodeChunk(ClonedRepo clonedRepo, String nodeId) throws IOException, NodeNotFoundException {
+        Graph graph = getGraph(clonedRepo);
+        Optional<GraphNode> nodeOpt = graph.getNodeById(nodeId);
+
+        if (nodeOpt.isEmpty()) {
+            throw new NodeNotFoundException("Node with ID " + nodeId + " not found in the graph for repository " + clonedRepo.getRepoLink());
+        }
+
+        GraphNode node = nodeOpt.get();
+        if (node.getFilePath() == null || node.getStartLine() == -1 || node.getEndLine() == -1) {
+            throw new IllegalStateException("Code location information missing for node with ID: " + nodeId);
+        }
+
+        return gitService.readFileContent(node.getFilePath(), node.getStartLine(), node.getEndLine());
+    }
+
     public void removeRepo(String repoLink) {
         ClonedRepo removedRepo = cache.remove(repoLink);
         if (removedRepo != null) {
             logger.info("Removed repository from cache: {}", repoLink);
             deleteClonedDirectory(removedRepo.getClonedPath());
+            saveReposToJson(); // Persist after removing a repo
         } else {
             logger.warn("Attempted to remove non-existent repository from cache: {}", repoLink);
         }
@@ -83,6 +170,13 @@ public class RepoHandler {
             } catch (IOException e) {
                 logger.error("Error deleting directory {}: {}", path, e.getMessage(), e);
             }
+        }
+    }
+
+    // Custom exception for when a node is not found
+    public static class NodeNotFoundException extends Exception {
+        public NodeNotFoundException(String message) {
+            super(message);
         }
     }
 }

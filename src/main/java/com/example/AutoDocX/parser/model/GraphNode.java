@@ -14,6 +14,9 @@ public class GraphNode {
     private String id;
     private String label;
     private NodeType type;
+    private String filePath;
+    private int startLine;
+    private int endLine;
     private List<GraphLink> outgoingLinks = new ArrayList<>();
     private List<GraphLink> incomingLinks = new ArrayList<>();
 

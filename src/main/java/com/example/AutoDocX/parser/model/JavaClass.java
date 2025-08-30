@@ -15,6 +15,9 @@ public class JavaClass {
     private List<JavaMethod> methods;
     private List<JavaField> fields;
     private List<String> imports;
+    private int startLine;
+    private int endLine;
+    private String filePath;
 
     @Override
     public String toString() {

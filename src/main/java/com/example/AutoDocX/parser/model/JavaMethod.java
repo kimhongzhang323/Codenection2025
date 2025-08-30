@@ -15,6 +15,9 @@ public class JavaMethod {
     private List<JavaParameter> parameters;
     private List<String> thrownExceptions;
     private String body;
+    private int startLine;
+    private int endLine;
+    private String filePath;
 
     @Override
     public String toString() {
