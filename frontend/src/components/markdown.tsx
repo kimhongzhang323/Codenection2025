@@ -3,7 +3,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { tomorrow } from 'react-syntax-highlighter/dist/cjs/styles/prism';
+import { tomorrow, prism } from 'react-syntax-highlighter/dist/cjs/styles/prism';
 import Mermaid from './mermaid';
 import FilesRenderer from './files_renderer';
 import Callout from './callout';
@@ -83,46 +83,98 @@ const Markdown: React.FC<MarkdownProps> = ({ content }) => {
 
     p({ children, ...props }: { children?: React.ReactNode }) {
       return (
-        <p style={{ marginBottom: '1rem', fontSize: '0.95rem', lineHeight: 1.6, color: 'var(--docs-normal-text)', fontWeight: 300 }} {...props}>
+        <p style={{ marginBottom: '1.5rem', fontSize: '1rem', lineHeight: 1.6, color: 'var(--docs-normal-text)', fontWeight: 300 }} {...props}>
           {children}
         </p>
       );
     },
     h1({ children, ...props }: { children?: React.ReactNode }) {
+      const text = typeof children === 'string' ? children : '';
+      const id = text
+        .toLowerCase()
+        .replace(/[^a-z0-9\s-]/g, '')
+        .replace(/\s+/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '');
+      
       return (
-        <h1 style={{ fontSize: '1.85rem', fontWeight: 600, marginTop: '0.75rem', marginBottom: '0.75rem', color: 'var(--docs-header-text)' }} {...props}>
+        <h1 
+          id={id}
+          style={{ fontSize: '1.85rem', fontWeight: 600, marginTop: '0.75rem', marginBottom: '0.75rem', color: 'var(--docs-header-text)' }} 
+          {...props}
+        >
           {children}
         </h1>
       );
     },
     h2({ children, ...props }: { children?: React.ReactNode }) {
+      const text = typeof children === 'string' ? children : '';
+      const id = text
+        .toLowerCase()
+        .replace(/[^a-z0-9\s-]/g, '')
+        .replace(/\s+/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '');
+      
       // Special styling for ReAct headings
       if (children && typeof children === 'string') {
         const text = children.toString();
         if (text.includes('Thought') || text.includes('Action') || text.includes('Observation') || text.includes('Answer')) {
           return (
-            <h2 style={{ fontSize: '0.9rem', fontWeight: 600, marginTop: '1rem', marginBottom: '0.75rem', color: 'var(--docs-header-text)' }} {...props}>
+            <h2 
+              id={id}
+              style={{ fontSize: '0.9rem', fontWeight: 600, marginTop: '1rem', marginBottom: '0.75rem', color: 'var(--docs-header-text)' }} 
+              {...props}
+            >
               {children}
             </h2>
           );
         }
       }
       return (
-        <h2 style={{ fontSize: '1.45rem', fontWeight: 600, marginTop: '2rem', marginBottom: '0.75rem', color: 'var(--docs-header-text)' }} {...props}>
+        <h2 
+          id={id}
+          style={{ fontSize: '1.45rem', fontWeight: 600, marginTop: '2.25rem', marginBottom: '0.75rem', color: 'var(--docs-header-text)' }} 
+          {...props}
+        >
           {children}
         </h2>
       );
     },
     h3({ children, ...props }: { children?: React.ReactNode }) {
+      const text = typeof children === 'string' ? children : '';
+      const id = text
+        .toLowerCase()
+        .replace(/[^a-z0-9\s-]/g, '')
+        .replace(/\s+/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '');
+      
       return (
-        <h3 style={{ fontSize: '1.25rem', fontWeight: 600, marginTop: '1.45rem', marginBottom: '0.2rem', color: 'var(--docs-header-text)' }} {...props}>
+        <h3 
+          id={id}
+          style={{ fontSize: '1.35rem', fontWeight: 600, marginTop: '1.45rem', marginBottom: '0.2rem', color: 'var(--docs-header-text)' }} 
+          {...props}
+        >
           {children}
         </h3>
       );
     },
     h4({ children, ...props }: { children?: React.ReactNode }) {
+      const text = typeof children === 'string' ? children : '';
+      const id = text
+        .toLowerCase()
+        .replace(/[^a-z0-9\s-]/g, '')
+        .replace(/\s+/g, '-')
+        .replace(/-+/g, '-')
+        .replace(/^-|-$/g, '');
+      
       return (
-        <h4 style={{ fontSize: '1rem', fontWeight: 500, marginTop: '0.5rem', marginBottom: '0.5rem', color: 'var(--docs-header-text)' }} {...props}>
+        <h4 
+          id={id}
+          style={{ fontSize: '1.25rem', fontWeight: 500, marginTop: '0.5rem', marginBottom: '0.5rem', color: 'var(--docs-header-text)' }} 
+          {...props}
+        >
           {children}
         </h4>
       );
@@ -172,7 +224,7 @@ const Markdown: React.FC<MarkdownProps> = ({ content }) => {
           height: '0.5px', 
           backgroundColor: 'var(--docs-text)', 
           margin: '2rem 0',
-          opacity: 0.2
+          opacity: 0.1
         }} {...props} />
       );
     },
@@ -278,39 +330,26 @@ const Markdown: React.FC<MarkdownProps> = ({ content }) => {
       // Handle code blocks
       if (!inline && match) {
         const isDarkMode = typeof document !== 'undefined' && document.documentElement.classList.contains('dark');
-        const codeBlockBg = isDarkMode ? '#212121' : '#f1f1f1';
+        const codeBlockBg = isDarkMode ? '#212121' : '#eaeaea';
+        const textColor = isDarkMode ? '#e5e7eb' : '#1f2937';
+            
+        // Use different themes for dark/light mode
+        const theme = isDarkMode ? tomorrow : prism;
+          
         return (
-            <div className="my-6 rounded-lg overflow-hidden text-sm shadow-sm">
-            <div className="bg-gray-800 text-gray-200 px-5 py-2 text-sm flex justify-between items-center rounded-t-lg">
-              <span>{match[1]}</span>
-              <button
-                onClick={() => {
-                  navigator.clipboard.writeText(codeContent);
-                }}
-                className="text-gray-400 hover:text-white"
-                title="Copy code"
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
-                  />
-                </svg>
-              </button>
-            </div>
+          <div className="my-6 rounded-lg overflow-hidden text-sm shadow-sm">
             <SyntaxHighlighter
               language={match[1]}
-              style={tomorrow}
+              style={theme}
               className="!text-sm"
-              customStyle={{ margin: 0, borderRadius: 3, padding: '1rem', backgroundColor: codeBlockBg }}
+              customStyle={{
+                margin: 0,
+                borderRadius: '0.5rem',
+                padding: '1rem',
+                marginBottom: '0.5rem',
+                backgroundColor: codeBlockBg,
+                color: textColor,
+              }}
               showLineNumbers={true}
               wrapLines={true}
               wrapLongLines={true}

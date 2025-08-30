@@ -141,7 +141,7 @@
   border: 1px solid var(--bottom-dialog-dropdown-border);
   border-radius: 8px;
   box-shadow: var(--bottom-dialog-dropdown-shadow);
-  min-width: 120px;
+  min-width: 180px;
   overflow: hidden;
   animation: dropdownFadeIn 0.2s ease;
 }
@@ -171,6 +171,7 @@
   cursor: pointer;
   transition: all 0.2s ease;
   text-align: left;
+  position: relative;
 }
 
 .bottom-mini-dialog__mode-option:hover {
@@ -194,7 +195,20 @@
 
 .bottom-mini-dialog__check-icon {
   color: var(--bottom-dialog-text);
+  flex-shrink: 0;
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.bottom-mini-dialog__shortcut {
+  color: var(--bottom-dialog-text);
+  opacity: 0.6;
+  font-size: 11px;
+  font-weight: 400;
   margin-left: auto;
+  margin-right: 32px;
   flex-shrink: 0;
 }
 
@@ -223,7 +237,7 @@
   
   .bottom-mini-dialog__mode-dropdown {
     right: -8px;
-    min-width: 100px;
+    min-width: 160px;
   }
 }
 
