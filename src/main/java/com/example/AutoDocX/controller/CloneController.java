@@ -11,11 +11,14 @@ import org.slf4j.LoggerFactory;
 
 import com.example.AutoDocX.model.ClonedRepo;
 import com.example.AutoDocX.service.RepoHandler;
+import com.example.AutoDocX.service.JavaTreeConverter;
+import com.example.AutoDocX.parser.model.JavaClass;
 
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.Map;
 import java.util.Optional;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api")
@@ -31,6 +34,9 @@ public class CloneController {
     // GitService is still needed for findFirstFile and readFileContent
     @Autowired
     private GitService gitService;
+
+    @Autowired
+    private JavaTreeConverter javaTreeConverter;
 
     @PostMapping("/clone")
     public ResponseEntity<String> cloneAndRead(@RequestBody Map<String, String> payload) {
@@ -51,19 +57,14 @@ public class CloneController {
 
             Path repoPath = clonedRepo.getClonedPath();
 
-            // Find the first file
-            Optional<Path> firstFile = gitService.findFirstFile(repoPath);
-            if (firstFile.isEmpty()) {
-                logger.warn("No files found in cloned repository: {}", repoPath);
-                return ResponseEntity.status(HttpStatus.NOT_FOUND).body("No files found in repo.");
-            }
+            List<JavaClass> javaTree = javaTreeConverter.convertRepoToJavaTree(repoPath);
+            StringBuilder treeString = new StringBuilder();
+            javaTree.forEach(treeString::append);
 
-            // Read file content
-            String content = gitService.readFileContent(firstFile.get());
-            logger.info("Successfully read content from file: {}", firstFile.get());
+            logger.info("Successfully parsed Java tree from repository: {}", repoPath);
             return ResponseEntity.ok()
                     .contentType(MediaType.TEXT_PLAIN)
-                    .body(content);
+                    .body(treeString.toString());
 
         } catch (IOException e) {
             logger.error("File operation error after cloning URL: {}. Error: {}", url, e.getMessage(), e);
