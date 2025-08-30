@@ -34,7 +34,7 @@ public class RepoHandler {
 
     private static final Logger logger = LoggerFactory.getLogger(RepoHandler.class);
     private static final int MAX_ENTRIES = 5; // Example capacity
-    private static final Path JSON_FILE_PATH = Paths.get("cloned_repos.json");
+    private static final Path JSON_FILE_PATH = Paths.get("cloned-repos/meta.json");
 
     @Autowired
     private GitService gitService;
