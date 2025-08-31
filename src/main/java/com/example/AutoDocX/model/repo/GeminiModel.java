@@ -22,8 +22,8 @@ public class GeminiModel implements Model {
     private final Client genaiClient;
     private final String modelName;
 
-    public GeminiModel(@Value("${gemini.model.name}") String modelName) {
-        this.genaiClient = new Client();
+    public GeminiModel(@Value("${gemini.model.name}") String modelName, @Value("${gemini.api.key}") String apiKey) {
+        this.genaiClient = Client.builder().apiKey(apiKey).build();
         this.modelName = modelName;
     }
 
@@ -41,10 +41,10 @@ public class GeminiModel implements Model {
                     config
             );
 
-            if (response.candidates().isPresent() && response.candidates().isPresent()) {
+            if (response.candidates().isPresent() && !response.candidates().get().isEmpty()) {
                 com.google.genai.types.Content candidateContent = response.candidates().get().get(0).content().get();
-                if (candidateContent != null && candidateContent.parts().isPresent() && !candidateContent.parts().isEmpty()) {
-                    Part firstPart = (Part) candidateContent.parts().get();
+                if (candidateContent != null && candidateContent.parts().isPresent() && !candidateContent.parts().get().isEmpty()) {
+                    Part firstPart = candidateContent.parts().get().get(0);
                     if (firstPart.functionCall().isPresent()) {
                         result.put("tool", firstPart.functionCall().get().name());
                         result.put("param", firstPart.functionCall().get().args());
@@ -56,9 +56,6 @@ public class GeminiModel implements Model {
                         result.put("final_answer", textResponse);
                     }
                 } else if (response.candidates().get().get(0).finishReason().isPresent() && !response.candidates().get().get(0).finishReason().toString().equals("STOP")) {
-                    // Handle cases where finish reason is not STOP but no function call or text is present directly in the first part
-                    // This might require more sophisticated parsing based on exact API behavior for such cases
-                    // For now, if no text or function call is explicit in first part, and not STOP, we can try to get all text parts.
                     String textResponse = response.candidates().get().get(0).content().get().parts().get().stream()
                             .filter(p -> p.text().isPresent())
                             .map(p -> p.text().get())
