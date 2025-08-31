@@ -89,7 +89,6 @@
             <artifactId>javaparser-symbol-solver-core</artifactId>
             <version>3.27.0</version>
         </dependency>
-
     </dependencies>
 
     <!-- Milestone repo for Spring AI -->

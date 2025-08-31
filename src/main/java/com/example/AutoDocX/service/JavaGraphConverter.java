@@ -173,6 +173,34 @@ public class JavaGraphConverter {
         return graph;
     }
 
+    public Map<String, List<Map<String, Object>>> convertJavaTreeToGraphData(List<JavaClass> javaClasses) {
+        Graph graph = convertJavaTreeToGraph(javaClasses);
+        List<Map<String, Object>> nodes = new ArrayList<>();
+        for (GraphNode node : graph.getNodes()) {
+            Map<String, Object> map = new HashMap<>();
+            map.put("id", node.getId());
+            map.put("label", node.getLabel());
+            map.put("type", node.getType().toString());
+            map.put("filePath", node.getFilePath());
+            map.put("startLine", node.getStartLine());
+            map.put("endLine", node.getEndLine());
+            map.put("accessModifier", node.getAccessModifier());
+            nodes.add(map);
+        }
+        List<Map<String, Object>> links = new ArrayList<>();
+        for (GraphLink link : graph.getLinks()) {
+            Map<String, Object> map = new HashMap<>();
+            map.put("source", link.getSource());
+            map.put("target", link.getTarget());
+            map.put("type", link.getType().toString());
+            links.add(map);
+        }
+        Map<String, List<Map<String, Object>>> result = new HashMap<>();
+        result.put("nodes", nodes);
+        result.put("links", links);
+        return result;
+    }
+
     private void filterGraph(Graph graph) {
         List<GraphNode> nodesToRemove = new ArrayList<>();
         List<GraphLink> linksToRemove = new ArrayList<>();
