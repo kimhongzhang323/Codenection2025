@@ -35,7 +35,7 @@ public class McpToolbox {
         return graph.bfs(nodeId, 1); // depth 1 for direct connections
     }
 
-    public String folderTreeStructure(ClonedRepo repo, String folderPath) throws IOException {
+    public String folderTreeStructure(ClonedRepo repo, String folderPath, int depth) throws IOException {
         Path rootPath = repo.getClonedPath();
         Path targetPath = rootPath.resolve(folderPath);
         StringBuilder tree = new StringBuilder();
@@ -44,47 +44,32 @@ public class McpToolbox {
             return "Folder not found or is not a directory: " + folderPath;
         }
 
-        Files.walkFileTree(targetPath, java.util.EnumSet.of(java.nio.file.FileVisitOption.FOLLOW_LINKS), 5, new SimpleFileVisitor<Path>() {
+        // Add the root folder to the tree
+        tree.append("-[D] ").append(targetPath.getFileName()).append("/").append("\n");
+
+        Files.walkFileTree(targetPath, java.util.EnumSet.of(java.nio.file.FileVisitOption.FOLLOW_LINKS), depth, new SimpleFileVisitor<Path>() {
             @Override
             public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) throws IOException {
-                try {
-                    String relativePath = rootPath.relativize(dir).toString();
-                    if (!relativePath.isEmpty()) { 
-                        int depth = targetPath.relativize(dir).getNameCount();
-                        tree.append("  ").append("|".repeat(depth * 2)).append("-[D] "); 
-                        tree.append(dir.getFileName()).append("/").append("\n");
-                    }
-                    return FileVisitResult.CONTINUE;
-                } catch (AccessDeniedException e) {
-                    tree.append("  ").append("|".repeat(targetPath.relativize(dir).getNameCount() * 2)).append("-[D] ");
-                    tree.append(dir.getFileName()).append("/ (Access Denied)\n");
-                    System.err.println("DEBUG: Access Denied for directory: " + dir + " - Skipping. Error: " + e.getMessage());
-                    return FileVisitResult.SKIP_SUBTREE; // Skip this directory and its contents
+                if (!dir.equals(targetPath)) { // Exclude the root folder itself, as it's already added
+                    int currentDepth = targetPath.relativize(dir).getNameCount();
+                    tree.append("  ").append("|   ".repeat(currentDepth - 1)).append("|--[D] ");
+                    tree.append(dir.getFileName()).append("/").append("\n");
                 }
+                return FileVisitResult.CONTINUE;
             }
 
             @Override
             public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) throws IOException {
-                try {
-                    String relativePath = rootPath.relativize(file).toString();
-                    if (!relativePath.isEmpty()) {
-                        int depth = targetPath.relativize(file).getNameCount();
-                        tree.append("  ").append("|".repeat(depth * 2)).append("-[F] "); 
-                        tree.append(file.getFileName()).append("\n");
-                    }
-                    return FileVisitResult.CONTINUE;
-                } catch (AccessDeniedException e) {
-                    tree.append("  ").append("|".repeat(targetPath.relativize(file).getNameCount() * 2)).append("-[F] ");
-                    tree.append(file.getFileName()).append(" (Access Denied)\n");
-                    System.err.println("DEBUG: Access Denied for file: " + file + " - Skipping. Error: " + e.getMessage());
-                    return FileVisitResult.CONTINUE; // Continue to next file
-                }
+                int currentDepth = targetPath.relativize(file).getNameCount();
+                tree.append("  ").append("|   ".repeat(currentDepth - 1)).append("|--[F] ");
+                tree.append(file.getFileName()).append("\n");
+                return FileVisitResult.CONTINUE;
             }
 
             @Override
             public FileVisitResult visitFileFailed(Path file, IOException exc) throws IOException {
                 if (exc instanceof AccessDeniedException) {
-                    tree.append("  ").append("|".repeat(targetPath.relativize(file).getNameCount() * 2)).append("-[E] ");
+                    tree.append("  ").append("|   ".repeat(targetPath.relativize(file).getNameCount() - 1)).append("-[E] ");
                     tree.append(file.getFileName()).append(" (Failed: Access Denied)\n");
                     System.err.println("DEBUG: Visit failed for path (Access Denied): " + file + " Error: " + exc.getMessage());
                     return FileVisitResult.CONTINUE; // Continue if a file visit fails
@@ -93,6 +78,15 @@ public class McpToolbox {
             }
         });
         return tree.toString();
+    }
+
+    public String readFile(ClonedRepo repo, String filePath) throws IOException {
+        Path rootPath = repo.getClonedPath();
+        Path targetPath = rootPath.resolve(filePath);
+        if (!Files.exists(targetPath) || Files.isDirectory(targetPath)) {
+            throw new IOException("File not found or is a directory: " + filePath);
+        }
+        return Files.readString(targetPath);
     }
 
     public List<String> getNodesInFile(Graph graph, String filePath) {
