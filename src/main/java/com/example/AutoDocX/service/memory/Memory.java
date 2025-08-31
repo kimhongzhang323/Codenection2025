@@ -4,31 +4,68 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class Memory {
+    private static final int MIN_OVERLAP_LENGTH = 100; // Minimum length of common substring to consider for deduplication
+
     private final List<MemoryEntry> entries = new ArrayList<>();
 
     public void addEntry(String query, String result) {
         MemoryEntry newEntry = new MemoryEntry(query, result);
 
-        // Iterate in reverse to safely remove elements
+        List<MemoryEntry> entriesToRemove = new ArrayList<>();
+
         for (int i = entries.size() - 1; i >= 0; i--) {
             MemoryEntry existingEntry = entries.get(i);
+            String existingResult = existingEntry.getResult();
+            String newResult = newEntry.getResult();
 
-            // Case 1: Existing entry contains the new entry's result (and they are not identical)
-            if (existingEntry.getResult().contains(newEntry.getResult()) && !existingEntry.getResult().equals(newEntry.getResult())) {
-                String updatedResult = existingEntry.getResult().replace(newEntry.getResult(), "").trim();
-                existingEntry.setResult(updatedResult);
+            // Case 1: New entry completely subsumes an old entry, remove the old one
+            if (newResult.contains(existingResult) && !newResult.equals(existingResult)) {
+                entriesToRemove.add(existingEntry);
             }
-            // Case 2: New entry contains the existing entry's result (and they are not identical)
-            else if (newEntry.getResult().contains(existingEntry.getResult()) && !existingEntry.getResult().equals(newEntry.getResult())) {
-                entries.remove(i);
+            // Case 2: Old entry contains the new entry (unlikely if new is more comprehensive, but for partial overlaps)
+            else {
+                String commonSubstring = findLongestCommonSubstring(existingResult, newResult);
+                if (!commonSubstring.isEmpty() && commonSubstring.length() >= MIN_OVERLAP_LENGTH) {
+                    // Remove the common substring from the OLDER entry
+                    String updatedResult = newResult.replace(commonSubstring, commonSubstring.substring(0, MIN_OVERLAP_LENGTH) + "... [REPEATED CONTENT]").trim();
+                    newEntry.setResult(updatedResult);
+                }
             }
         }
 
+        entries.removeAll(entriesToRemove);
         entries.add(newEntry);
     }
 
     public List<MemoryEntry> getEntries() {
         return new ArrayList<>(entries);
+    }
+
+    private String findLongestCommonSubstring(String s1, String s2) {
+        String longest = "";
+        int m = s1.length();
+        int n = s2.length();
+        int[][] dp = new int[m + 1][n + 1];
+        int maxLength = 0;
+        int endIndex = 0;
+
+        for (int i = 1; i <= m; i++) {
+            for (int j = 1; j <= n; j++) {
+                if (s1.charAt(i - 1) == s2.charAt(j - 1)) {
+                    dp[i][j] = dp[i - 1][j - 1] + 1;
+                    if (dp[i][j] > maxLength) {
+                        maxLength = dp[i][j];
+                        endIndex = i - 1;
+                    }
+                } else {
+                    dp[i][j] = 0;
+                }
+            }
+        }
+        if (maxLength > 0) {
+            longest = s1.substring(endIndex - maxLength + 1, endIndex + 1);
+        }
+        return longest;
     }
 
     public static class MemoryEntry {

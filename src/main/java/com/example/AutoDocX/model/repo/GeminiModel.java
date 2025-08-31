@@ -53,24 +53,24 @@ public class GeminiModel implements Model {
                                 .filter(p -> p.text().isPresent())
                                 .map(p -> p.text().get())
                                 .collect(Collectors.joining());
-                        result.put("final_answer", textResponse);
+                        result.put("final-answer", textResponse);
                     }
                 } else if (response.candidates().get().get(0).finishReason().isPresent() && !response.candidates().get().get(0).finishReason().toString().equals("STOP")) {
                     String textResponse = response.candidates().get().get(0).content().get().parts().get().stream()
                             .filter(p -> p.text().isPresent())
                             .map(p -> p.text().get())
                             .collect(Collectors.joining());
-                    result.put("final_answer", textResponse);
+                    result.put("final-answer", textResponse);
                 }
                 else if (response.candidates().get().get(0).finishReason().isPresent() && response.candidates().get().get(0).finishReason().toString().equals("STOP")) {
                     String textResponse = response.candidates().get().get(0).content().get().parts().get().stream()
                             .filter(p -> p.text().isPresent())
                             .map(p -> p.text().get())
                             .collect(Collectors.joining());
-                    result.put("final_answer", textResponse);
+                    result.put("final-answer", textResponse);
                 }
             } else {
-                result.put("final_answer", "No response from Gemini model.");
+                result.put("final-answer", "No response from Gemini model.");
             }
         } catch (Exception e) {
             throw new RuntimeException("An unexpected error occurred", e);

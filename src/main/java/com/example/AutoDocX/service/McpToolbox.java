@@ -37,7 +37,8 @@ public class McpToolbox {
 
     public String folderTreeStructure(ClonedRepo repo, String folderPath, int depth) throws IOException {
         Path rootPath = repo.getClonedPath();
-        Path targetPath = rootPath.resolve(folderPath);
+        String effectiveFolderPath = (folderPath == null || folderPath.isEmpty() || folderPath.startsWith("/") || folderPath.startsWith("\\")) ? "." + folderPath : folderPath;
+        Path targetPath = rootPath.resolve(effectiveFolderPath).normalize(); // Normalize to handle "." correctly
         StringBuilder tree = new StringBuilder();
 
         if (!Files.exists(targetPath) || !Files.isDirectory(targetPath)) {
@@ -82,7 +83,8 @@ public class McpToolbox {
 
     public String readFile(ClonedRepo repo, String filePath) throws IOException {
         Path rootPath = repo.getClonedPath();
-        Path targetPath = rootPath.resolve(filePath);
+        String effectiveFilePath = (filePath == null || filePath.isEmpty() || filePath.startsWith("/") || filePath.startsWith("\\")) ? "." + filePath : filePath;
+        Path targetPath = rootPath.resolve(effectiveFilePath).normalize(); // Normalize to handle "." correctly
         if (!Files.exists(targetPath) || Files.isDirectory(targetPath)) {
             throw new IOException("File not found or is a directory: " + filePath);
         }

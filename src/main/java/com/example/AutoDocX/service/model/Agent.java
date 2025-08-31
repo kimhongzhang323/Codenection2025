@@ -77,14 +77,15 @@ public class Agent {
             System.out.println("DEBUG: Parsed response from LLM:\n" + formatModelResponseMap(modelResponseMap));
 
             try {
-                if (modelResponseMap.containsKey("final_answer")) {
-                    currentResponse = (String) modelResponseMap.get("final_answer");
+                if (modelResponseMap.containsKey("final-answer")) {
+                    currentResponse = (String) modelResponseMap.get("final-answer");
                     System.out.println("DEBUG: LLM provided final answer:\n" + currentResponse);
-                    session.getMemory().addEntry("final_answer", currentResponse);
+                    session.getMemory().addEntry("final-answer", currentResponse);
                     break; // Exit loop, we have the final answer
                 } else if (modelResponseMap.containsKey("tool") && modelResponseMap.containsKey("param")) {
                     String toolNameRaw = Optional.ofNullable(modelResponseMap.get("tool")).map(Object::toString).orElse("UNKNOWN_TOOL");
-                    String toolName = toolNameRaw.startsWith("Optional[") && toolNameRaw.endsWith("]") ? toolNameRaw.substring(9, toolNameRaw.length() - 1) : toolNameRaw; // Explicitly unwrap if it's still wrapped
+                    String toolName = toolNameRaw.startsWith("Optional[") && toolNameRaw.endsWith("]") ? toolNameRaw.substring(9, toolNameRaw.length() - 1) : toolNameRaw;
+                    toolName = toolName.replace("_", "-"); // Convert underscores to hyphens here
 
                     Object toolParamsRaw = modelResponseMap.get("param");
                     Object toolParams = toolParamsRaw instanceof Optional ? ((Optional<?>) toolParamsRaw).orElse(null) : toolParamsRaw;
@@ -129,24 +130,30 @@ public class Agent {
         String result;
         Object unwrappedParam = (param instanceof Optional) ? ((Optional<?>) param).orElse(null) : param;
 
+        // Cast unwrappedParam to a Map for parameter extraction, as LLM provides structured parameters
+        Map<String, Object> paramsMap = (Map<String, Object>) unwrappedParam;
+
         switch (tool) {
             case "get-code":
-                result = mcpToolbox.getCode(repo, (String) unwrappedParam);
+                String nodeIdOrLabelForCode = Optional.ofNullable(paramsMap.get("nodeIdOrLabel")).map(Object::toString).orElseThrow(() -> new IllegalArgumentException("Missing nodeIdOrLabel for get-code tool."));
+                result = mcpToolbox.getCode(repo, nodeIdOrLabelForCode);
                 break;
             case "find-direct-connections":
-                result = mcpToolbox.findDirectConnections(graph, (String) unwrappedParam);
+                String nodeIdOrLabelForConnections = Optional.ofNullable(paramsMap.get("nodeIdOrLabel")).map(Object::toString).orElseThrow(() -> new IllegalArgumentException("Missing nodeIdOrLabel for find-direct-connections tool."));
+                result = mcpToolbox.findDirectConnections(graph, nodeIdOrLabelForConnections);
                 break;
             case "folder-tree-structure":
-                JSONObject folderTreeParams = new JSONObject((Map<String, Object>) unwrappedParam);
-                String folderPath = folderTreeParams.getString("folderPath");
-                int depth = folderTreeParams.optInt("depth", Integer.MAX_VALUE); // Default to MAX_VALUE if not provided
+                String folderPath = Optional.ofNullable(paramsMap.get("folderPath")).map(Object::toString).orElseThrow(() -> new IllegalArgumentException("Missing folderPath for folder-tree-structure tool."));
+                int depth = paramsMap.containsKey("depth") ? Optional.ofNullable(paramsMap.get("depth")).map(val -> ((Number) val).intValue()).orElse(Integer.MAX_VALUE) : Integer.MAX_VALUE;
                 result = mcpToolbox.folderTreeStructure(repo, folderPath, depth);
                 break;
             case "read-file":
-                result = mcpToolbox.readFile(repo, (String) unwrappedParam);
+                String filePathForRead = Optional.ofNullable(paramsMap.get("filePath")).map(Object::toString).orElseThrow(() -> new IllegalArgumentException("Missing filePath for read-file tool."));
+                result = mcpToolbox.readFile(repo, filePathForRead);
                 break;
             case "get-nodes-in-file":
-                List<String> nodes = mcpToolbox.getNodesInFile(graph, (String) unwrappedParam);
+                String filePathForNodes = Optional.ofNullable(paramsMap.get("filePath")).map(Object::toString).orElseThrow(() -> new IllegalArgumentException("Missing filePath for get-nodes-in-file tool."));
+                List<String> nodes = mcpToolbox.getNodesInFile(graph, filePathForNodes);
                 result = String.join(", ", nodes);
                 break;
             default:
@@ -164,7 +171,7 @@ public class Agent {
         tools.add(Tool.builder()
                 .functionDeclarations(FunctionDeclaration.builder()
                         .name("folder-tree-structure")
-                        .description("Retrieves the tree structure of a folder within the cloned repository up to a specified depth. The folderPath must be relative to the repository root (e.g., \"src/main/java\"). The depth parameter is optional, if not provided, it will traverse the entire directory. All paths should be relative to the repository root.")
+                        .description("Retrieves the tree structure of a folder within the repository up to a specified depth.")
                         .parameters(Schema.builder()
                                 .type(Type.Known.OBJECT)
                                 .properties(Map.of(
@@ -179,7 +186,7 @@ public class Agent {
         tools.add(Tool.builder()
                 .functionDeclarations(FunctionDeclaration.builder()
                         .name("read-file")
-                        .description("Reads the content of a specified file within the cloned repository. The filePath must be relative to the repository root (e.g., \"src/main/java/com/example/AutoDocX/controller/AgentController.java\"). All paths should be relative to the repository root.")
+                        .description("Reads the content of a specified file within the repository.")
                         .parameters(Schema.builder()
                                 .type(Type.Known.OBJECT)
                                 .properties(Map.of("filePath", Schema.builder().type(Type.Known.STRING).description("The path to the file, relative to the repository root.").build()))
@@ -191,7 +198,7 @@ public class Agent {
         tools.add(Tool.builder()
                 .functionDeclarations(FunctionDeclaration.builder()
                         .name("get-nodes-in-file")
-                        .description("Returns the top-level nodes (classes) in a specific file. The filePath must be relative to the repository root (e.g., \"src/main/java/com/example/AutoDocX/controller/AgentController.java\"). All paths should be relative to the repository root.")
+                        .description("Returns the top-level graph nodes (classes) in a specific file.")
                         .parameters(Schema.builder()
                                 .type(Type.Known.OBJECT)
                                 .properties(Map.of("filePath", Schema.builder().type(Type.Known.STRING).description("The path to the file, relative to the repository root.").build()))
@@ -203,7 +210,7 @@ public class Agent {
         tools.add(Tool.builder()
                 .functionDeclarations(FunctionDeclaration.builder()
                         .name("get-code")
-                        .description("Retrieves the source code for a specific node (class, method, field) using node id. The nodeIdOrLabel can be obtained from 'get-nodes-in-file' or 'find-direct-connections'. All paths should be relative to the repository root.")
+                        .description("Retrieves the source code for a specific node (class, method, field) using graph node id. The nodeIdOrLabel can be obtained from 'get-nodes-in-file' or 'find-direct-connections'.")
                         .parameters(Schema.builder()
                                 .type(Type.Known.OBJECT)
                                 .properties(Map.of("nodeIdOrLabel", Schema.builder().type(Type.Known.STRING).description("The ID or label of the node (e.g., class_MyClass, method_MyClass_myMethod).").build()))
@@ -215,7 +222,7 @@ public class Agent {
         tools.add(Tool.builder()
                 .functionDeclarations(FunctionDeclaration.builder()
                         .name("find-direct-connections")
-                        .description("Explores the direct relationships (outgoing links) of a node within the code graph using node id. The nodeIdOrLabel can be obtained from 'get-nodes-in-file' or 'get-code'. All paths should be relative to the repository root.")
+                        .description("Explores the direct relationships (outgoing links) of a node within the code graph using node id. The nodeIdOrLabel can be obtained from 'get-nodes-in-file'.")
                         .parameters(Schema.builder()
                                 .type(Type.Known.OBJECT)
                                 .properties(Map.of("nodeIdOrLabel", Schema.builder().type(Type.Known.STRING).description("The ID or label of the node (e.g., class_MyClass, method_MyClass_myMethod).").build()))
@@ -231,14 +238,18 @@ public class Agent {
 
         // System instructions
         StringBuilder systemInstruction = new StringBuilder();
-        systemInstruction.append("You are a professional documentation writer.");
-        systemInstruction.append("The codebase is serialised into a code graph, showing relationship between nodes.");
-        systemInstruction.append("Your task is to write clear and concise documentation using the provided tools.");
-        contents.add(Content.builder().parts(Arrays.asList(Part.builder().text(systemInstruction.toString()).build())).role("model").build());
+        systemInstruction.append("You are a professional java project documentation writer.\n");
+        systemInstruction.append("The codebase is serialised into a code graph, showing relationship between nodes.\n");
+        systemInstruction.append("Your task is to write complete and accurate readme documentation using the provided tools.\n");
+        systemInstruction.append("You must actively explore the repository using the available tools until you have verified all necessary details (structure, purpose, usage, dependencies, etc.).\n");
+        systemInstruction.append("Do not make assumptions or infer undocumented information—always verify by reading files, exploring the folder tree, and checking code connections.\n");
+        systemInstruction.append("Continue exploring until you are confident you can provide a final, comprehensive README.\n");
+        systemInstruction.append("Note: You are already operating from the root of the cloned repository.\n");
+        contents.add(Content.builder().parts(Arrays.asList(Part.builder().text(systemInstruction.toString()).build())).role("model").build()); // Changed to "model"
 
         // Query memory
         for (Memory.MemoryEntry entry : session.getMemory().getEntries()) {
-            contents.add(Content.builder().parts(Arrays.asList(Part.builder().text("Query: " + entry.getQuery() + " | Result: " + entry.getResult()).build())).role("model").build());
+            contents.add(Content.builder().parts(Arrays.asList(Part.builder().text(entry.getQuery() + " | Result: " + entry.getResult()).build())).role("model").build());
         }
 
         // User input
@@ -254,12 +265,12 @@ public class Agent {
     }
 
     private String getFinalResponse(Session session) {
-        Optional<Memory.MemoryEntry> finalAnswerEntry = session.getMemory().getEntries().stream().filter(entry -> entry.getQuery().equals("final_answer")).reduce((first, second) -> second);
+        Optional<Memory.MemoryEntry> finalAnswerEntry = session.getMemory().getEntries().stream().filter(entry -> entry.getQuery().equals("final-answer")).reduce((first, second) -> second);
 
         if (finalAnswerEntry.isPresent()) {
             return finalAnswerEntry.get().getResult();
         } else {
-            // If no final_answer, return the result of the last successful tool call
+            // If no final-answer, return the result of the last successful tool call
             Optional<Memory.MemoryEntry> lastToolResultEntry = session.getMemory().getEntries().stream().filter(entry -> entry.getQuery().startsWith("tool_result:")).reduce((first, second) -> second);
             return lastToolResultEntry.map(Memory.MemoryEntry::getResult).orElse("No documentation generated.");
         }
@@ -267,8 +278,8 @@ public class Agent {
 
     private String formatModelResponseMap(Map<String, Object> responseMap) {
         StringBuilder sb = new StringBuilder();
-        if (responseMap.containsKey("final_answer")) {
-            sb.append("  Final Answer: ").append(responseMap.get("final_answer")).append("\n");
+        if (responseMap.containsKey("final-answer")) {
+            sb.append("  Final Answer: ").append(responseMap.get("final-answer")).append("\n");
         } else if (responseMap.containsKey("tool") && responseMap.containsKey("param")) {
             String toolName = Optional.ofNullable(responseMap.get("tool")).map(Object::toString).orElse("UNKNOWN_TOOL");
             Object toolParamsRaw = responseMap.get("param");
