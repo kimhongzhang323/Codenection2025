@@ -24,7 +24,7 @@ public class JavaGraphConverter {
         for (JavaClass javaClass : javaClasses) {
             String classId = "class_" + javaClass.getName();
             nodesMap.computeIfAbsent(classId, k -> {
-                GraphNode node = new GraphNode(classId, javaClass.getName(), GraphNode.NodeType.CLASS, javaClass.getFilePath(), javaClass.getStartLine(), javaClass.getEndLine(), new ArrayList<>(), new ArrayList<>());
+                GraphNode node = new GraphNode(classId, javaClass.getName(), GraphNode.NodeType.CLASS, javaClass.getFilePath(), javaClass.getStartLine(), javaClass.getEndLine(), null, new ArrayList<>(), new ArrayList<>());
                 graph.addNode(node);
                 return node;
             });
@@ -32,7 +32,7 @@ public class JavaGraphConverter {
             for (JavaField field : javaClass.getFields()) {
                 String fieldId = "field_" + classId + "_" + field.getName();
                 nodesMap.computeIfAbsent(fieldId, k -> {
-                    GraphNode node = new GraphNode(fieldId, field.getName(), GraphNode.NodeType.FIELD, field.getFilePath(), field.getStartLine(), field.getEndLine(), new ArrayList<>(), new ArrayList<>());
+                    GraphNode node = new GraphNode(fieldId, field.getName(), GraphNode.NodeType.FIELD, field.getFilePath(), field.getStartLine(), field.getEndLine(), field.getAccessModifier(), new ArrayList<>(), new ArrayList<>());
                     graph.addNode(node);
                     return node;
                 });
@@ -41,7 +41,7 @@ public class JavaGraphConverter {
             for (JavaMethod method : javaClass.getMethods()) {
                 String methodId = "method_" + classId + "_" + method.getName();
                 nodesMap.computeIfAbsent(methodId, k -> {
-                    GraphNode node = new GraphNode(methodId, method.getName(), GraphNode.NodeType.METHOD, method.getFilePath(), method.getStartLine(), method.getEndLine(), new ArrayList<>(), new ArrayList<>());
+                    GraphNode node = new GraphNode(methodId, method.getName(), GraphNode.NodeType.METHOD, method.getFilePath(), method.getStartLine(), method.getEndLine(), null, new ArrayList<>(), new ArrayList<>());
                     graph.addNode(node);
                     return node;
                 });
@@ -94,8 +94,118 @@ public class JavaGraphConverter {
                         }
                     }
                 }
+
+                // Analyze method body for field reads/writes
+                for (JavaField field : javaClass.getFields()) {
+                    String fieldName = field.getName();
+                    String fieldId = "field_" + classId + "_" + fieldName;
+                    GraphNode fieldNode = nodesMap.get(fieldId);
+
+                    if (fieldNode != null) {
+                        // Simple regex for reads (field name not followed by assignment operator)
+                        Pattern readPattern = Pattern.compile("\\b" + fieldName + "\\b(?!\\s*=)");
+                        Matcher readMatcher = readPattern.matcher(method.getBody());
+                        if (readMatcher.find()) {
+                            GraphLink readsLink = new GraphLink(methodId, fieldId, GraphLink.LinkType.READS);
+                            methodNode.getOutgoingLinks().add(readsLink);
+                            fieldNode.getIncomingLinks().add(readsLink);
+                            graph.addLink(readsLink);
+                        }
+
+                        // Simple regex for writes (field name followed by assignment operator)
+                        Pattern writePattern = Pattern.compile("\\b" + fieldName + "\\s*=");
+                        Matcher writeMatcher = writePattern.matcher(method.getBody());
+                        if (writeMatcher.find()) {
+                            GraphLink writesLink = new GraphLink(methodId, fieldId, GraphLink.LinkType.WRITES);
+                            methodNode.getOutgoingLinks().add(writesLink);
+                            fieldNode.getIncomingLinks().add(writesLink);
+                            graph.addLink(writesLink);
+                        }
+                    }
+                }
+            }
+
+            // Add inheritance links
+            if (javaClass.getSuperClass() != null) {
+                String superClassId = "class_" + javaClass.getSuperClass();
+                GraphNode superClassNode = nodesMap.get(superClassId);
+                if (superClassNode != null) {
+                    GraphLink inheritsLink = new GraphLink(classId, superClassId, GraphLink.LinkType.INHERITS);
+                    classNode.getOutgoingLinks().add(inheritsLink);
+                    superClassNode.getIncomingLinks().add(inheritsLink);
+                    graph.addLink(inheritsLink);
+                }
+            }
+
+            // Add implements links
+            for (String interfaceName : javaClass.getInterfaces()) {
+                String interfaceId = "class_" + interfaceName;
+                GraphNode interfaceNode = nodesMap.get(interfaceId);
+                if (interfaceNode != null) {
+                    GraphLink implementsLink = new GraphLink(classId, interfaceId, GraphLink.LinkType.IMPLEMENTS);
+                    classNode.getOutgoingLinks().add(implementsLink);
+                    interfaceNode.getIncomingLinks().add(implementsLink);
+                    graph.addLink(implementsLink);
+                }
+            }
+
+            // Add composition links (has-a relationship)
+            for (JavaField field : javaClass.getFields()) {
+                String fieldType = field.getType();
+                // Check if the field type corresponds to another class in our parsed Java classes
+                // This is a simplistic check; a more robust solution would involve symbol resolution
+                for (JavaClass targetClass : javaClasses) {
+                    if (targetClass.getName().equals(fieldType)) {
+                        String targetClassId = "class_" + targetClass.getName();
+                        GraphNode targetClassNode = nodesMap.get(targetClassId);
+
+                        if (targetClassNode != null) {
+                            GraphLink exposesLink = new GraphLink(classId, targetClassId, GraphLink.LinkType.COMPOSES);
+                            classNode.getOutgoingLinks().add(exposesLink);
+                            targetClassNode.getIncomingLinks().add(exposesLink);
+                            graph.addLink(exposesLink);
+                        }
+                    }
+                }
             }
         }
+        filterGraph(graph); // Call filter method before returning the graph
         return graph;
+    }
+
+    private void filterGraph(Graph graph) {
+        List<GraphNode> nodesToRemove = new ArrayList<>();
+        List<GraphLink> linksToRemove = new ArrayList<>();
+
+        for (GraphNode node : graph.getNodes()) {
+            if (node.getType() == GraphNode.NodeType.FIELD && "private".equals(node.getAccessModifier())) {
+                boolean hasWrites = false;
+                for (GraphLink link : node.getIncomingLinks()) {
+                    if (link.getType() == GraphLink.LinkType.WRITES) {
+                        hasWrites = true;
+                        break;
+                    }
+                }
+                if (!hasWrites) {
+                    nodesToRemove.add(node);
+                }
+            }
+        }
+
+        for (GraphNode node : nodesToRemove) {
+            // Remove all links connected to the node being removed
+            linksToRemove.addAll(node.getOutgoingLinks());
+            linksToRemove.addAll(node.getIncomingLinks());
+
+            // Remove the node itself
+            graph.getNodes().remove(node);
+        }
+
+        for (GraphLink link : linksToRemove) {
+            graph.getLinks().remove(link);
+            // Also remove these links from the adjacency lists of connected nodes
+            graph.getNodeById(link.getSource()).ifPresent(sourceNode -> sourceNode.getOutgoingLinks().remove(link));
+            graph.getNodeById(link.getTarget()).ifPresent(targetNode -> targetNode.getIncomingLinks().remove(link));
+        }
     }
 }

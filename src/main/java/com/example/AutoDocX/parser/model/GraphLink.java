@@ -15,7 +15,11 @@ public class GraphLink {
     public enum LinkType {
         CONTAINS,
         CALLS,
-        USES
+        INHERITS,
+        IMPLEMENTS,
+        READS,
+        WRITES,
+        COMPOSES
     }
 
     @Override

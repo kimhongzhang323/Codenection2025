@@ -7,6 +7,7 @@ import com.github.javaparser.ast.body.FieldDeclaration;
 import com.github.javaparser.ast.body.MethodDeclaration;
 import com.github.javaparser.ast.body.Parameter;
 import com.github.javaparser.ast.nodeTypes.NodeWithName;
+import com.github.javaparser.ast.nodeTypes.NodeWithSimpleName;
 import com.github.javaparser.ast.stmt.BlockStmt;
 import com.github.javaparser.symbolsolver.JavaSymbolSolver;
 import com.github.javaparser.symbolsolver.resolution.typesolvers.CombinedTypeSolver;
@@ -88,7 +89,12 @@ public class JavaTreeConverter {
                     .map(NodeWithName::getNameAsString)
                     .collect(Collectors.toList());
 
-            classesInUnit.add(new JavaClass(className, packageName, methods, fields, imports, startLine, endLine, filePath));
+            String superClass = classDeclaration.getExtendedTypes().isEmpty() ? null : classDeclaration.getExtendedTypes().get(0).getNameAsString();
+            List<String> interfaces = classDeclaration.getImplementedTypes().stream()
+                    .map(NodeWithSimpleName::getNameAsString)
+                    .collect(Collectors.toList());
+
+            classesInUnit.add(new JavaClass(className, packageName, methods, fields, superClass, interfaces, imports, startLine, endLine, filePath));
         });
         return classesInUnit;
     }

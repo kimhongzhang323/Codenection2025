@@ -14,6 +14,8 @@ public class JavaClass {
     private String packageName;
     private List<JavaMethod> methods;
     private List<JavaField> fields;
+    private String superClass;
+    private List<String> interfaces;
     private List<String> imports;
     private int startLine;
     private int endLine;
