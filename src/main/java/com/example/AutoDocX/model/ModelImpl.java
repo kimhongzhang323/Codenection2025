@@ -25,18 +25,21 @@ public class ModelImpl implements Model {
 
     @Override
     public String sendMessage(String message) {
+        log.info("DEBUG: Message sent to ChatModel: {}\n", message);
         try {
             // Submit AI call to thread pool and wait for result
             return CompletableFuture.supplyAsync(() -> {
                 try {
-                    return chatModel.call(message);
+                    String llmResponse = chatModel.call(message);
+                    log.info("DEBUG: Raw response from ChatModel: {}\n", llmResponse);
+                    return llmResponse;
                 } catch (Exception e) {
-                    log.error("Error processing chat request: {}", e.getMessage(), e);
+                    log.error("Error processing chat request: {}\n", e.getMessage(), e);
                     return "Sorry, an error occurred while communicating with the AI service.";
                 }
             }, aiTaskExecutor).join();
         } catch (Exception e) {
-            log.error("Unexpected error in async AI call: {}", e.getMessage(), e);
+            log.error("Unexpected error in async AI call: {}\n", e.getMessage(), e);
             return "Sorry, an unexpected error occurred.";
         }
     }
