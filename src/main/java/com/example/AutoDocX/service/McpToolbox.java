@@ -3,6 +3,7 @@ package com.example.AutoDocX.service;
 import com.example.AutoDocX.model.ClonedRepo;
 import com.example.AutoDocX.parser.model.Graph;
 import com.example.AutoDocX.parser.model.GraphNode;
+import com.example.AutoDocX.parser.model.GraphAlgo;
 import com.example.AutoDocX.service.RepoHandler.NodeNotFoundException;
 import org.springframework.stereotype.Service;
 import java.util.List;
@@ -29,10 +30,6 @@ public class McpToolbox {
 
     public String getCode(ClonedRepo repo, String nodeId) throws IOException, NodeNotFoundException {
         return repoHandler.getCodeChunk(repo, nodeId);
-    }
-
-    public String findDirectConnections(Graph graph, String nodeId) {
-        return graph.bfs(nodeId, 1); // depth 1 for direct connections
     }
 
     public String folderTreeStructure(ClonedRepo repo, String folderPath, int depth) throws IOException {
@@ -96,5 +93,16 @@ public class McpToolbox {
             .filter(node -> filePath.equals(node.getFilePath()) && node.getType() == GraphNode.NodeType.CLASS)
             .map(GraphNode::getLabel)
             .collect(Collectors.toList());
+    }
+
+    public String findCentralNodes(Graph graph, int n) {
+        List<GraphNode> centralNodes = GraphAlgo.findCentralNodes(graph, n);
+        return centralNodes.stream()
+                .map(node -> node.getLabel() + " (Outgoing Links: " + GraphAlgo.calculateNodeOutgoingLinkCount(graph, node.getId()) + ")")
+                .collect(Collectors.joining("\n"));
+    }
+
+    public String smartDfs(Graph graph, String startNodeId, int depthLimit, double minPopularityRatio) {
+        return GraphAlgo.smartDfs(graph, startNodeId, depthLimit, minPopularityRatio);
     }
 }

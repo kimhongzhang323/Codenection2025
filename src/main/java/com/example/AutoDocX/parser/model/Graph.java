@@ -32,44 +32,6 @@ public class Graph {
         return nodes.stream().filter(node -> node.getId().equals(query) || node.getLabel().equals(query)).findFirst();
     }
 
-    public String bfs(String startNodeId, int depthLimit) {
-        StringBuilder traversalResult = new StringBuilder("BFS Traversal starting from ").append(startNodeId).append(" with depth limit ").append(depthLimit).append(":\n");
-        Queue<Map.Entry<GraphNode, Integer>> queue = new LinkedList<>();
-        Set<String> visited = new HashSet<>();
-
-        Optional<GraphNode> startNodeOpt = getNodeById(startNodeId);
-        if (startNodeOpt.isEmpty()) {
-            return traversalResult.append("  Start node not found.").toString();
-        }
-
-        GraphNode startNode = startNodeOpt.get();
-        queue.add(Map.entry(startNode, 0));
-        visited.add(startNode.getId());
-        traversalResult.append("  Visited: ").append(startNode.getLabel()).append(" (").append(startNode.getId()).append(") at depth 0\n");
-
-        while (!queue.isEmpty()) {
-            Map.Entry<GraphNode, Integer> currentEntry = queue.poll();
-            GraphNode currentNode = currentEntry.getKey();
-            int currentDepth = currentEntry.getValue();
-
-            if (currentDepth >= depthLimit) {
-                continue; // Do not explore further if depth limit is reached
-            }
-
-            for (GraphLink link : currentNode.getOutgoingLinks()) {
-                String neighborId = link.getTarget();
-                if (!visited.contains(neighborId)) {
-                    getNodeById(neighborId).ifPresent(neighborNode -> {
-                        visited.add(neighborId);
-                        queue.add(Map.entry(neighborNode, currentDepth + 1));
-                        traversalResult.append("  Visited: ").append(neighborNode.getLabel()).append(" (").append(neighborNode.getId()).append(") at depth ").append(currentDepth + 1).append("\n");
-                    });
-                }
-            }
-        }
-        return traversalResult.toString();
-    }
-
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();

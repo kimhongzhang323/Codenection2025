@@ -1,5 +1,6 @@
 package com.example.AutoDocX.controller;
 
+import com.example.AutoDocX.parser.model.GraphAlgo;
 import com.example.AutoDocX.service.GitService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -26,7 +27,6 @@ import org.eclipse.jgit.api.errors.GitAPIException;
 @RestController
 @RequestMapping("/api")
 public class CloneController {
-
     private static final Logger logger = LoggerFactory.getLogger(CloneController.class);
 
     // GitService is no longer directly autowired here; RepoHandler handles cloning.
@@ -63,17 +63,15 @@ public class CloneController {
             // This assumes at least one class exists.
             if (!graph.getNodes().isEmpty() && graph.getNodes().get(0).getType() == GraphNode.NodeType.CLASS) {
                 String startNodeId = graph.getNodes().get(0).getId(); // Using the first class node as start
-                bfsResult = graph.bfs(startNodeId, 2);
+                bfsResult = GraphAlgo.bfs(graph, startNodeId, 2);
             }
 
-            StringBuilder responseBody = new StringBuilder();
-            responseBody.append(graph.toString());
-            responseBody.append("\n\n").append(bfsResult);
+            String responseBody = graph.toString() + "\n\n" + bfsResult;
 
             logger.info("Successfully parsed Java tree, converted to graph, and performed BFS from repository: {}", clonedRepo.getRepoLink());
             return ResponseEntity.ok()
                     .contentType(MediaType.TEXT_PLAIN)
-                    .body(responseBody.toString());
+                    .body(responseBody);
 
         } catch (IOException e) {
             logger.error("Error during repository processing for URL: {}. Error: {}", url, e.getMessage(), e);
