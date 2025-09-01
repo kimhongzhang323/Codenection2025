@@ -2,7 +2,7 @@ package com.example.AutoDocX.controller;
 
 import com.example.AutoDocX.service.ApiResponse;
 import com.example.AutoDocX.service.GlobalExceptionHandler;
-import com.example.AutoDocX.service.model.Agent;
+import com.example.AutoDocX.service.Agent;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;

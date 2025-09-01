@@ -96,7 +96,7 @@ public class McpToolbox {
     }
 
     public String findCentralNodes(Graph graph, int n) {
-        List<GraphNode> centralNodes = GraphAlgo.findCentralNodes(graph, n);
+        List<GraphNode> centralNodes = GraphAlgo.findCentralClassNodes(graph, n);
         return centralNodes.stream()
                 .map(node -> node.getLabel() + " (Outgoing Links: " + GraphAlgo.calculateNodeOutgoingLinkCount(graph, node.getId()) + ")")
                 .collect(Collectors.joining("\n"));

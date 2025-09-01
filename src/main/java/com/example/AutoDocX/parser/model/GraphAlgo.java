@@ -14,11 +14,66 @@ import java.util.Stack;
 import java.util.ArrayList;
 
 public class GraphAlgo {
+    public static List<GraphNode> findCentralClassNodes(Graph graph, int n) {
+        return getClassNodes(graph).stream()
+                .collect(Collectors.toMap(
+                        cls -> cls,
+                        cls -> countOutgoingCallsOutsideClass(graph, cls)
+                ))
+                .entrySet().stream()
+                .sorted(Map.Entry.comparingByValue(Comparator.reverseOrder()))
+                .limit(n)
+                .map(Map.Entry::getKey)
+                .collect(Collectors.toList());
+    }
+
+    private static List<GraphNode> getClassNodes(Graph graph) {
+        return graph.getNodes().stream()
+                .filter(node -> node.getType() == GraphNode.NodeType.CLASS)
+                .toList();
+    }
+
+    private static List<GraphNode> getClassMembers(Graph graph, GraphNode cls) {
+        // If CONTAINS links are used in your graph model, prefer them:
+        List<GraphNode> members = cls.getOutgoingLinks().stream()
+                .filter(link -> link.getType() == GraphLink.LinkType.CONTAINS)
+                .map(link -> graph.getNodeById(link.getTarget()))
+                .flatMap(Optional::stream)
+                .toList();
+
+        // Otherwise, fallback to filePath heuristic
+        if (members.isEmpty()) {
+            members = graph.getNodes().stream()
+                    .filter(node -> (node.getType() == GraphNode.NodeType.METHOD
+                            || node.getType() == GraphNode.NodeType.FIELD))
+                    .filter(node -> node.getFilePath() != null
+                            && node.getFilePath().equals(cls.getFilePath()))
+                    .toList();
+        }
+        return members;
+    }
+
+    private static int countOutgoingCallsOutsideClass(Graph graph, GraphNode cls) {
+        List<GraphNode> relatedNodes = new ArrayList<>();
+        relatedNodes.add(cls);
+        relatedNodes.addAll(getClassMembers(graph, cls));
+
+        return relatedNodes.stream()
+                .flatMap(node -> node.getOutgoingLinks().stream())
+                .filter(link -> link.getType() == GraphLink.LinkType.CALLS)
+                .filter(link -> {
+                    return graph.getNodeById(link.getTarget())
+                            .map(targetNode -> !relatedNodes.contains(targetNode))
+                            .orElse(false);
+                })
+                .mapToInt(x -> 1)
+                .sum();
+    }
 
     public static int calculateNodeOutgoingLinkCount(Graph graph, String nodeId) {
         return graph.getNodeById(nodeId)
                 .map(node -> (int) node.getOutgoingLinks().stream()
-                        .filter(link -> link.getType() == GraphLink.LinkType.COMPOSES || link.getType() == GraphLink.LinkType.CALLS)
+                        .filter(link -> link.getType() == GraphLink.LinkType.CALLS || link.getType() == GraphLink.LinkType.COMPOSES)
                         .count())
                 .orElse(0);
     }

@@ -47,7 +47,7 @@ public class JavaTreeConverter {
         JavaSymbolSolver symbolSolver = new JavaSymbolSolver(combinedTypeSolver);
         ParserConfiguration parserConfiguration = new ParserConfiguration();
         parserConfiguration.setSymbolResolver(symbolSolver);
-        parserConfiguration.setLanguageLevel(LanguageLevel.JAVA_17); // Set Java language level to 17
+        parserConfiguration.setLanguageLevel(LanguageLevel.JAVA_17);
         StaticJavaParser.setConfiguration(parserConfiguration);
 
         try (Stream<Path> paths = Files.walk(repositoryPath)) {
@@ -72,17 +72,19 @@ public class JavaTreeConverter {
         List<JavaClass> classesInUnit = new ArrayList<>();
 
         cu.findAll(ClassOrInterfaceDeclaration.class).forEach(classDeclaration -> {
-            String className = classDeclaration.getNameAsString();
             String packageName = cu.getPackageDeclaration().map(NodeWithName::getNameAsString).orElse("default");
+            String className = classDeclaration.getNameAsString();
+            String fqClassName = packageName + "." + className;
+
             int startLine = classDeclaration.getBegin().map(pos -> pos.line).orElse(-1);
             int endLine = classDeclaration.getEnd().map(pos -> pos.line).orElse(-1);
 
             List<JavaMethod> methods = classDeclaration.getMethods().stream()
-                    .map(methodDeclaration -> parseMethodDeclaration(methodDeclaration, filePath))
+                    .map(methodDeclaration -> parseMethodDeclaration(fqClassName, methodDeclaration, filePath))
                     .collect(Collectors.toList());
 
             List<JavaField> fields = classDeclaration.getFields().stream()
-                    .map(fieldDeclaration -> parseFieldDeclaration(fieldDeclaration, filePath))
+                    .map(fieldDeclaration -> parseFieldDeclaration(fqClassName, fieldDeclaration, filePath))
                     .collect(Collectors.toList());
 
             List<String> imports = cu.getImports().stream()
@@ -94,16 +96,24 @@ public class JavaTreeConverter {
                     .map(NodeWithSimpleName::getNameAsString)
                     .collect(Collectors.toList());
 
-            classesInUnit.add(new JavaClass(className, packageName, methods, fields, superClass, interfaces, imports, startLine, endLine, filePath));
+            classesInUnit.add(new JavaClass(fqClassName, packageName, methods, fields, superClass, interfaces, imports, startLine, endLine, filePath));
         });
         return classesInUnit;
     }
 
-    private JavaMethod parseMethodDeclaration(MethodDeclaration methodDeclaration, String filePath) {
+    private JavaMethod parseMethodDeclaration(String fqClassName, MethodDeclaration methodDeclaration, String filePath) {
         String methodName = methodDeclaration.getNameAsString();
         String returnType = methodDeclaration.getTypeAsString();
+
+        String signature = fqClassName + "." + methodName + "(" +
+                methodDeclaration.getParameters().stream()
+                        .map(p -> p.getType().toString())
+                        .collect(Collectors.joining(",")) +
+                ")";
+
         int startLine = methodDeclaration.getBegin().map(pos -> pos.line).orElse(-1);
         int endLine = methodDeclaration.getEnd().map(pos -> pos.line).orElse(-1);
+
         List<JavaParameter> parameters = methodDeclaration.getParameters().stream()
                 .map(this::parseParameter)
                 .collect(Collectors.toList());
@@ -112,20 +122,23 @@ public class JavaTreeConverter {
                 .collect(Collectors.toList());
         String body = methodDeclaration.getBody().map(BlockStmt::toString).orElse("");
 
-        return new JavaMethod(methodName, returnType, parameters, thrownExceptions, body, startLine, endLine, filePath);
+        return new JavaMethod(signature, returnType, parameters, thrownExceptions, body, startLine, endLine, filePath);
     }
 
     private JavaParameter parseParameter(Parameter parameter) {
         return new JavaParameter(parameter.getNameAsString(), parameter.getTypeAsString());
     }
 
-    private JavaField parseFieldDeclaration(FieldDeclaration fieldDeclaration, String filePath) {
-        String fieldName = fieldDeclaration.getVariables().get(0).getNameAsString(); // Assuming one variable per declaration
+    private JavaField parseFieldDeclaration(String fqClassName, FieldDeclaration fieldDeclaration, String filePath) {
+        String fieldName = fieldDeclaration.getVariables().get(0).getNameAsString();
         String fieldType = fieldDeclaration.getElementType().toString();
         String accessModifier = fieldDeclaration.getAccessSpecifier().toString();
+
+        String fqFieldName = fqClassName + "." + fieldName;
+
         int startLine = fieldDeclaration.getBegin().map(pos -> pos.line).orElse(-1);
         int endLine = fieldDeclaration.getEnd().map(pos -> pos.line).orElse(-1);
 
-        return new JavaField(fieldName, fieldType, accessModifier, startLine, endLine, filePath);
+        return new JavaField(fqFieldName, fieldType, accessModifier, startLine, endLine, filePath);
     }
 }

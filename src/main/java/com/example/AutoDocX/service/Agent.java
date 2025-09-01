@@ -1,33 +1,18 @@
-package com.example.AutoDocX.service.model;
+package com.example.AutoDocX.service;
 
 import com.example.AutoDocX.model.ClonedRepo;
 import com.example.AutoDocX.model.repo.Model;
 import com.example.AutoDocX.parser.model.Graph;
-import com.example.AutoDocX.service.McpToolbox;
-import com.example.AutoDocX.service.RepoHandler;
-import com.example.AutoDocX.service.Session;
-import com.example.AutoDocX.service.SessionManager;
 import com.example.AutoDocX.service.memory.Memory;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.genai.types.*;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
-import org.springframework.beans.factory.annotation.Qualifier; // Import Qualifier
 
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
-import org.json.JSONObject; // Import JSONObject
-import com.google.genai.types.Content;
-import com.google.genai.types.Tool;
-import com.google.genai.types.FunctionDeclaration; // Added
-import com.google.genai.types.Schema;              // Added
-import com.google.genai.types.Type;                 // Added
-import com.google.genai.types.Part;
-import java.util.ArrayList;
-import java.util.Arrays;
-// Added for Map.of
-import java.util.stream.Collectors; // Added for Collectors
-import com.fasterxml.jackson.core.JsonProcessingException; // Added for JsonProcessingException
+import java.util.stream.Collectors;
 
 
 @Service
@@ -74,15 +59,10 @@ public class Agent {
             System.out.println("DEBUG: Context (Tools) sent to LLM:\n" + formatTools(tools));
 
             Map<String, Object> modelResponseMap = model.sendMessage(contents, tools);
-            System.out.println("DEBUG: Parsed response from LLM:\n" + formatModelResponseMap(modelResponseMap));
+            printModelResponseMap(modelResponseMap);
 
             try {
-                if (modelResponseMap.containsKey("final_answer")) {
-                    currentResponse = (String) modelResponseMap.get("final_answer");
-                    System.out.println("DEBUG: LLM provided final answer:\n" + currentResponse);
-                    session.getMemory().addEntry("final_answer", currentResponse);
-                    break; // Exit loop, we have the final answer
-                } else if (modelResponseMap.containsKey("tool") && modelResponseMap.containsKey("param")) {
+                if (modelResponseMap.containsKey("tool") && modelResponseMap.containsKey("param")) {
                     String toolNameRaw = Optional.ofNullable(modelResponseMap.get("tool")).map(Object::toString).orElse("UNKNOWN_TOOL");
                     String toolName = toolNameRaw.startsWith("Optional[") && toolNameRaw.endsWith("]") ? toolNameRaw.substring(9, toolNameRaw.length() - 1) : toolNameRaw;
                     toolName = toolName.replace("-", "_"); // Convert underscores to hyphens here
@@ -94,6 +74,11 @@ public class Agent {
                     String toolResult = handleToolCall(toolName, toolParams, repo, graph, session); // Get the actual result
                     System.out.println("DEBUG: Tool \"" + toolName + "\" executed. Result:\n" + toolResult);
                     currentResponse = toolResult; // Update currentResponse with the actual tool result
+                } else if (modelResponseMap.containsKey("final_answer")) {
+                    currentResponse = (String) modelResponseMap.get("final_answer");
+                    System.out.println("DEBUG: LLM provided final answer:\n" + currentResponse);
+                    session.getMemory().addEntry("final_answer", currentResponse);
+                    break; // Exit loop, we have the final answer
                 } else {
                     currentResponse = "Model returned unrecognized JSON format: " + formatModelResponseMap(modelResponseMap);
                     System.out.println("DEBUG: Unrecognized JSON format.\n" + currentResponse);
@@ -134,10 +119,6 @@ public class Agent {
         Map<String, Object> paramsMap = (Map<String, Object>) unwrappedParam;
 
         switch (tool) {
-            case "get_code":
-                String nodeIdForCode = Optional.ofNullable(paramsMap.get("node_id")).map(Object::toString).orElseThrow(() -> new IllegalArgumentException("Missing node_id for get_code tool."));
-                result = mcpToolbox.getCode(repo, nodeIdForCode);
-                break;
             case "folder_tree_structure":
                 String folderPath = Optional.ofNullable(paramsMap.get("dirname")).map(Object::toString).orElseThrow(() -> new IllegalArgumentException("Missing dirname for folder_tree_structure tool."));
                 int depth = paramsMap.containsKey("depth") ? Optional.ofNullable(paramsMap.get("depth")).map(val -> ((Number) val).intValue()).orElse(Integer.MAX_VALUE) : Integer.MAX_VALUE;
@@ -147,17 +128,21 @@ public class Agent {
                 String filenameForRead = Optional.ofNullable(paramsMap.get("filename")).map(Object::toString).orElseThrow(() -> new IllegalArgumentException("Missing filename for read_file tool."));
                 result = mcpToolbox.readFile(repo, filenameForRead);
                 break;
+            case "get_code":
+                String nodeIdForCode = Optional.ofNullable(paramsMap.get("node_id")).map(Object::toString).orElseThrow(() -> new IllegalArgumentException("Missing node_id for get_code tool."));
+                result = mcpToolbox.getCode(repo, nodeIdForCode);
+                break;
             case "get_nodes_in_file":
                 String filePathForNodes = Optional.ofNullable(paramsMap.get("filename")).map(Object::toString).orElseThrow(() -> new IllegalArgumentException("Missing filename for get_nodes_in_file tool."));
                 List<String> nodes = mcpToolbox.getNodesInFile(graph, filePathForNodes);
                 result = String.join(", ", nodes);
                 break;
             case "find_central_nodes":
-                int n = Optional.ofNullable(paramsMap.get("n")).map(val -> ((Number) val).intValue()).orElseThrow(() -> new IllegalArgumentException("Missing n for find_central_nodes tool."));
+                int n = Optional.ofNullable(paramsMap.get("n")).map(val -> ((Number) val).intValue()).orElse(5);
                 result = mcpToolbox.findCentralNodes(graph, n);
                 break;
             case "find_neighbour_nodes":
-                String smartDfsStartNodeId = Optional.ofNullable(paramsMap.get("start_node_id")).map(Object::toString).orElseThrow(() -> new IllegalArgumentException("Missing start_node_id for find_neighbour_nodes tool."));
+                String smartDfsStartNodeId = Optional.ofNullable(paramsMap.get("node_id")).map(Object::toString).orElseThrow(() -> new IllegalArgumentException("Missing node_id for find_neighbour_nodes tool."));
                 int smartDfsDepthLimit = Optional.ofNullable(paramsMap.get("depth_limit")).map(val -> ((Number) val).intValue()).orElse(Integer.MAX_VALUE);
                 double smartDfsMinPopularityRatio = Optional.ofNullable(paramsMap.get("min_popularity_ratio")).map(val -> ((Number) val).doubleValue()).orElseThrow(() -> new IllegalArgumentException("Missing min_popularity_ratio for find_neighbour_nodes tool."));
                 result = mcpToolbox.smartDfs(graph, smartDfsStartNodeId, smartDfsDepthLimit, smartDfsMinPopularityRatio);
@@ -212,56 +197,62 @@ public class Agent {
 //                                .build())
 //                        .build()).build());
 
+        // get_code
         tools.add(Tool.builder()
-                .functionDeclarations(FunctionDeclaration.builder()
-                        .name("get_code")
-                        .description("Retrieves the source code for a specific node (class, method, field) using graph node id. The node_id can be obtained from 'get_nodes_in_file'.")
-                        .parameters(Schema.builder()
-                                .type(Type.Known.OBJECT)
-                                .properties(Map.of("node_id", Schema.builder().type(Type.Known.STRING).description("The ID of the node (e.g., class_MyClass, method_MyClass_myMethod).").build()))
-                                .required(List.of("node_id"))
-                                .build())
-                        .build()).build());
-
-        // find_central_nodes
-        tools.add(Tool.builder()
-                .functionDeclarations(FunctionDeclaration.builder()
-                        .name("find_central_nodes")
-                        .description("Finds the top N most central nodes in the code graph, based on the number of outgoing links.")
-                        .parameters(Schema.builder()
-                                .type(Type.Known.OBJECT)
-                                .properties(Map.of(
-                                        "n", Schema.builder().type(Type.Known.NUMBER).description("The number of central nodes to return.").build()
-                                ))
-                                .required(List.of("n"))
-                                .build())
-                        .build()).build());
-
-        // find_neighbour_nodes
-        tools.add(Tool.builder()
-                .functionDeclarations(FunctionDeclaration.builder()
-                        .name("find_neighbour_nodes")
-                        .description("Performs a depth-first search with popularity-based pruning, only traversing to a neighboring node if its popularity exceeds a specified ratio of the current node's popularity.")
-                        .parameters(Schema.builder()
-                                .type(Type.Known.OBJECT)
-                                .properties(Map.of(
-                                        "start_node_id", Schema.builder().type(Type.Known.STRING).description("The ID of the node to start the DFS from.").build(),
-                                        "depth_limit", Schema.builder().type(Type.Known.NUMBER).description("The maximum depth to traverse. Optional. If not provided, it will traverse the entire graph.").build(),
-                                        "min_popularity_ratio", Schema.builder().type(Type.Known.NUMBER).description("The minimum popularity ratio (0.0 to 1.0) for a neighbor node to be traversed.").build()
-                                ))
-                                .required(List.of("start_node_id", "min_popularity_ratio"))
-                                .build())
-                        .build()).build());
+            .functionDeclarations(List.of(
+                FunctionDeclaration.builder()
+                    .name("get_code")
+                    .description("Retrieves the source code for a specific node (class, method, field) using graph node id. The node_id can be obtained from 'get_nodes_in_file'.")
+                    .parameters(Schema.builder()
+                        .type(Type.Known.OBJECT)
+                        .properties(Map.of(
+                            "node_id", Schema.builder()
+                                    .type(Type.Known.STRING)
+                                    .description("The ID of the node (e.g., class_MyClass, method_MyClass_myMethod).")
+                                    .build()
+                        ))
+                        .required(List.of("node_id"))
+                        .build())
+                    .build(),
+                FunctionDeclaration.builder()
+                    .name("find_central_nodes")
+                    .description("Finds the top N most central nodes in the code graph, based on the number of outgoing links.")
+                    .parameters(Schema.builder()
+                        .type(Type.Known.OBJECT)
+                        .properties(Map.of(
+                                "n", Schema.builder()
+                                        .type(Type.Known.NUMBER)
+                                        .description("The number of central nodes to return.")
+                                        .build()
+                        ))
+                        .required(List.of("n"))
+                        .build())
+                    .build(),
+                FunctionDeclaration.builder()
+                    .name("find_neighbour_nodes")
+                    .description("Performs a depth-first search with popularity-based pruning.")
+                    .parameters(Schema.builder()
+                        .type(Type.Known.OBJECT)
+                        .properties(Map.of(
+                            "node_id", Schema.builder().type(Type.Known.STRING).description("The ID of the node to start the DFS from.").build(),
+                            "depth_limit", Schema.builder().type(Type.Known.NUMBER).description("The maximum depth to traverse. Optional.").build(),
+                            "min_popularity_ratio", Schema.builder().type(Type.Known.NUMBER).description("The minimum popularity ratio (0.0 to 1.0) for a neighbor node to be traversed.").build()
+                        ))
+                        .required(List.of("node_id", "min_popularity_ratio"))
+                        .build())
+                    .build()
+            ))
+            .build());
 
         return tools;
     }
 
     private String getAvailableToolsStr() {
         List<String> toolNames = getTools().stream()
-                .flatMap(tool -> tool.functionDeclarations().stream())
-                .flatMap(List::stream)
-                .map(declaration -> declaration.name().orElse("UNKNOWN_TOOL"))
-                .collect(Collectors.toList());
+            .flatMap(tool -> tool.functionDeclarations().stream())
+            .flatMap(List::stream)
+            .map(declaration -> declaration.name().orElse("UNKNOWN_TOOL"))
+            .collect(Collectors.toList());
         return "[" + String.join(", ", toolNames) + "]";
     }
 
@@ -269,15 +260,15 @@ public class Agent {
         List<Content> contents = new ArrayList<>();
 
         String systemInstruction = "You are a professional java project documentation writer.\n" +
-                "The codebase is serialised into a code graph, showing relationship between nodes.\n" +
-                "Your task is to write complete and accurate readme documentation using the provided tools.\n" +
+            "The codebase is serialised into a code graph, showing relationship between nodes.\n" +
+            "Your task is to write complete and accurate readme documentation using the provided tools.\n" +
 //                "You MUST only use the tools provided to you. DO NOT attempt to use any other tools or functions.\n" +
-                "You must actively explore the codebase using the available tools until you have verified all necessary details (structure, purpose, usage, dependencies, etc.).\n" +
-                "Do not make assumptions or infer unobserved information. always verify by the nodes and checking node connections.\n" +
-                "Continue exploring until you are confident you can provide a final, comprehensive README.\n" +
-                "Start with exploring central nodes.\n" +
+            "You must actively explore the codebase using the available tools until you have verified all necessary details (structure, purpose, usage, dependencies, etc.).\n" +
+            "Do not make assumptions or infer unobserved information. always verify by the nodes and checking node connections.\n" +
+            "Start with exploring central nodes, you should not ask user for pointers.\n" +
+            "Continue exploring until you are confident you can provide a final, comprehensive README.\n" +
 //                "Note: You are already operating from the root of the cloned repository.\n\n" +
-                "Available tools: " + getAvailableToolsStr() + "\n\n";
+            "Available tools: " + getAvailableToolsStr() + "\n\n";
 
         contents.add(Content.builder().parts(Arrays.asList(Part.builder().text(systemInstruction).build())).role("model").build());
 
@@ -361,5 +352,23 @@ public class Agent {
             });
         }
         return sb.toString();
+    }
+
+    private void printModelResponseMap(Map<String, Object> response) {
+        System.out.println("=== Model Response Map ===");
+        response.forEach((key, value) -> {
+            if (value instanceof Map) {
+                System.out.println(key + " ->");
+                ((Map<?, ?>) value).forEach((k, v) -> System.out.println("   " + k + ": " + v));
+            } else if (value instanceof Iterable) {
+                System.out.println(key + " ->");
+                for (Object item : (Iterable<?>) value) {
+                    System.out.println("   - " + item);
+                }
+            } else {
+                System.out.println(key + " -> " + value);
+            }
+        });
+        System.out.println("=============================");
     }
 }

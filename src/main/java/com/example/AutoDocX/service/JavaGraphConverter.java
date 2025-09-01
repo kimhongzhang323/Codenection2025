@@ -3,12 +3,7 @@ package com.example.AutoDocX.service;
 import com.example.AutoDocX.parser.model.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import java.util.List;
-import java.util.Map;
-import java.util.HashMap;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-import java.util.ArrayList;
+import java.util.*;
 
 @Service
 public class JavaGraphConverter {
@@ -18,222 +13,200 @@ public class JavaGraphConverter {
 
     public Graph convertJavaTreeToGraph(List<JavaClass> javaClasses) {
         Graph graph = new Graph();
-        Map<String, GraphNode> nodesMap = new HashMap<>();
+        Map<String, GraphNode> nodesMap = createNodes(graph, javaClasses);
 
-        // First pass: create all nodes and add them to the map and graph
         for (JavaClass javaClass : javaClasses) {
-            String classId = "class_" + javaClass.getName();
-            nodesMap.computeIfAbsent(classId, k -> {
-                GraphNode node = new GraphNode(classId, javaClass.getName(), GraphNode.NodeType.CLASS, javaClass.getFilePath(), javaClass.getStartLine(), javaClass.getEndLine(), null, new ArrayList<>(), new ArrayList<>());
-                graph.addNode(node);
-                return node;
-            });
-
-            for (JavaField field : javaClass.getFields()) {
-                String fieldId = "field_" + classId + "_" + field.getName();
-                nodesMap.computeIfAbsent(fieldId, k -> {
-                    GraphNode node = new GraphNode(fieldId, field.getName(), GraphNode.NodeType.FIELD, field.getFilePath(), field.getStartLine(), field.getEndLine(), field.getAccessModifier(), new ArrayList<>(), new ArrayList<>());
-                    graph.addNode(node);
-                    return node;
-                });
-            }
-
-            for (JavaMethod method : javaClass.getMethods()) {
-                String methodId = "method_" + classId + "_" + method.getName();
-                nodesMap.computeIfAbsent(methodId, k -> {
-                    GraphNode node = new GraphNode(methodId, method.getName(), GraphNode.NodeType.METHOD, method.getFilePath(), method.getStartLine(), method.getEndLine(), null, new ArrayList<>(), new ArrayList<>());
-                    graph.addNode(node);
-                    return node;
-                });
-            }
-        }
-
-        // Second pass: create links and populate adjacency lists
-        for (JavaClass javaClass : javaClasses) {
-            String classId = "class_" + javaClass.getName();
+            String classId = generateNodeId(javaClass);
             GraphNode classNode = nodesMap.get(classId);
 
-            for (JavaField field : javaClass.getFields()) {
-                String fieldId = "field_" + classId + "_" + field.getName();
-                GraphNode fieldNode = nodesMap.get(fieldId);
-                GraphLink link = new GraphLink(classId, fieldId, GraphLink.LinkType.CONTAINS);
-                classNode.getOutgoingLinks().add(link);
-                fieldNode.getIncomingLinks().add(link);
-                graph.addLink(link);
-            }
-
-            for (JavaMethod method : javaClass.getMethods()) {
-                String methodId = "method_" + classId + "_" + method.getName();
-                GraphNode methodNode = nodesMap.get(methodId);
-                GraphLink containsLink = new GraphLink(classId, methodId, GraphLink.LinkType.CONTAINS);
-                classNode.getOutgoingLinks().add(containsLink);
-                methodNode.getIncomingLinks().add(containsLink);
-                graph.addLink(containsLink);
-
-                // Analyze method body for method calls
-                Pattern methodCallPattern = Pattern.compile("\\b([a-zA-Z_][a-zA-Z0-9_]*)\\s*\\(");
-                Matcher matcher = methodCallPattern.matcher(method.getBody());
-                while (matcher.find()) {
-                    String calledMethodName = matcher.group(1);
-                    // This is a simplistic approach. A more robust solution would involve symbol resolution.
-                    // For now, we'll create a link if a method with that name exists anywhere in the tree.
-                    for (JavaClass targetClass : javaClasses) {
-                        for (JavaMethod targetMethod : targetClass.getMethods()) {
-                            if (targetMethod.getName().equals(calledMethodName)) {
-                                String targetClassId = "class_" + targetClass.getName();
-                                String targetMethodId = "method_" + targetClassId + "_" + targetMethod.getName();
-                                GraphNode targetMethodNode = nodesMap.get(targetMethodId);
-
-                                if (targetMethodNode != null) { // Ensure target node exists
-                                    GraphLink callsLink = new GraphLink(methodId, targetMethodId, GraphLink.LinkType.CALLS);
-                                    methodNode.getOutgoingLinks().add(callsLink);
-                                    targetMethodNode.getIncomingLinks().add(callsLink);
-                                    graph.addLink(callsLink);
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // Analyze method body for field reads/writes
-                for (JavaField field : javaClass.getFields()) {
-                    String fieldName = field.getName();
-                    String fieldId = "field_" + classId + "_" + fieldName;
-                    GraphNode fieldNode = nodesMap.get(fieldId);
-
-                    if (fieldNode != null) {
-                        // Simple regex for reads (field name not followed by assignment operator)
-                        Pattern readPattern = Pattern.compile("\\b" + fieldName + "\\b(?!\\s*=)");
-                        Matcher readMatcher = readPattern.matcher(method.getBody());
-                        if (readMatcher.find()) {
-                            GraphLink readsLink = new GraphLink(methodId, fieldId, GraphLink.LinkType.READS);
-                            methodNode.getOutgoingLinks().add(readsLink);
-                            fieldNode.getIncomingLinks().add(readsLink);
-                            graph.addLink(readsLink);
-                        }
-
-                        // Simple regex for writes (field name followed by assignment operator)
-                        Pattern writePattern = Pattern.compile("\\b" + fieldName + "\\s*=");
-                        Matcher writeMatcher = writePattern.matcher(method.getBody());
-                        if (writeMatcher.find()) {
-                            GraphLink writesLink = new GraphLink(methodId, fieldId, GraphLink.LinkType.WRITES);
-                            methodNode.getOutgoingLinks().add(writesLink);
-                            fieldNode.getIncomingLinks().add(writesLink);
-                            graph.addLink(writesLink);
-                        }
-                    }
-                }
-            }
-
-            // Add inheritance links
-            if (javaClass.getSuperClass() != null) {
-                String superClassId = "class_" + javaClass.getSuperClass();
-                GraphNode superClassNode = nodesMap.get(superClassId);
-                if (superClassNode != null) {
-                    GraphLink inheritsLink = new GraphLink(classId, superClassId, GraphLink.LinkType.INHERITS);
-                    classNode.getOutgoingLinks().add(inheritsLink);
-                    superClassNode.getIncomingLinks().add(inheritsLink);
-                    graph.addLink(inheritsLink);
-                }
-            }
-
-            // Add implements links
-            for (String interfaceName : javaClass.getInterfaces()) {
-                String interfaceId = "class_" + interfaceName;
-                GraphNode interfaceNode = nodesMap.get(interfaceId);
-                if (interfaceNode != null) {
-                    GraphLink implementsLink = new GraphLink(classId, interfaceId, GraphLink.LinkType.IMPLEMENTS);
-                    classNode.getOutgoingLinks().add(implementsLink);
-                    interfaceNode.getIncomingLinks().add(implementsLink);
-                    graph.addLink(implementsLink);
-                }
-            }
-
-            // Add composition links (has-a relationship)
-            for (JavaField field : javaClass.getFields()) {
-                String fieldType = field.getType();
-                // Check if the field type corresponds to another class in our parsed Java classes
-                // This is a simplistic check; a more robust solution would involve symbol resolution
-                for (JavaClass targetClass : javaClasses) {
-                    if (targetClass.getName().equals(fieldType)) {
-                        String targetClassId = "class_" + targetClass.getName();
-                        GraphNode targetClassNode = nodesMap.get(targetClassId);
-
-                        if (targetClassNode != null) {
-                            GraphLink exposesLink = new GraphLink(classId, targetClassId, GraphLink.LinkType.COMPOSES);
-                            classNode.getOutgoingLinks().add(exposesLink);
-                            targetClassNode.getIncomingLinks().add(exposesLink);
-                            graph.addLink(exposesLink);
-                        }
-                    }
-                }
-            }
+            createFieldLinks(graph, javaClass, classNode, nodesMap);
+            createMethodLinks(graph, javaClass, classNode, nodesMap, javaClasses);
+            addInheritanceLinks(graph, javaClass, classNode, nodesMap);
+            addImplementsLinks(graph, javaClass, classNode, nodesMap);
+            addCompositionLinks(graph, javaClass, classNode, nodesMap, javaClasses);
         }
-        filterGraph(graph); // Call filter method before returning the graph
+
+        filterGraph(graph);
         return graph;
     }
 
-    public Map<String, List<Map<String, Object>>> convertJavaTreeToGraphData(List<JavaClass> javaClasses) {
-        Graph graph = convertJavaTreeToGraph(javaClasses);
-        List<Map<String, Object>> nodes = new ArrayList<>();
-        for (GraphNode node : graph.getNodes()) {
-            Map<String, Object> map = new HashMap<>();
-            map.put("id", node.getId());
-            map.put("label", node.getLabel());
-            map.put("type", node.getType().toString());
-            map.put("filePath", node.getFilePath());
-            map.put("startLine", node.getStartLine());
-            map.put("endLine", node.getEndLine());
-            map.put("accessModifier", node.getAccessModifier());
-            nodes.add(map);
+    // ---------- Node Creation ----------
+    private Map<String, GraphNode> createNodes(Graph graph, List<JavaClass> javaClasses) {
+        Map<String, GraphNode> nodesMap = new HashMap<>();
+
+        for (JavaClass javaClass : javaClasses) {
+            // Class node
+            String classId = generateNodeId(javaClass);
+            String classLabel = "class_" + javaClass.getName();
+            GraphNode classNode = new GraphNode(
+                    classId,
+                    classLabel,
+                    GraphNode.NodeType.CLASS,
+                    javaClass.getFilePath(),
+                    javaClass.getStartLine(),
+                    javaClass.getEndLine(),
+                    null,
+                    new ArrayList<>(),
+                    new ArrayList<>()
+            );
+            graph.addNode(classNode);
+            nodesMap.put(classId, classNode);
+
+            // Field nodes
+            for (JavaField field : javaClass.getFields()) {
+                String fieldId = generateNodeId(javaClass, field);
+                String fieldLabel = "field_" + classLabel + "_" + field.getName();
+                GraphNode fieldNode = new GraphNode(
+                        fieldId,
+                        fieldLabel,
+                        GraphNode.NodeType.FIELD,
+                        field.getFilePath(),
+                        field.getStartLine(),
+                        field.getEndLine(),
+                        field.getAccessModifier(),
+                        new ArrayList<>(),
+                        new ArrayList<>()
+                );
+                graph.addNode(fieldNode);
+                nodesMap.put(fieldId, fieldNode);
+            }
+
+            // Method nodes
+            for (JavaMethod method : javaClass.getMethods()) {
+                String methodId = generateNodeId(javaClass, method);
+                String methodLabel = "method_" + classLabel + "_" + method.getName();
+                GraphNode methodNode = new GraphNode(
+                        methodId,
+                        methodLabel,
+                        GraphNode.NodeType.METHOD,
+                        method.getFilePath(),
+                        method.getStartLine(),
+                        method.getEndLine(),
+                        null,
+                        new ArrayList<>(),
+                        new ArrayList<>()
+                );
+                graph.addNode(methodNode);
+                nodesMap.put(methodId, methodNode);
+            }
         }
-        List<Map<String, Object>> links = new ArrayList<>();
-        for (GraphLink link : graph.getLinks()) {
-            Map<String, Object> map = new HashMap<>();
-            map.put("source", link.getSource());
-            map.put("target", link.getTarget());
-            map.put("type", link.getType().toString());
-            links.add(map);
-        }
-        Map<String, List<Map<String, Object>>> result = new HashMap<>();
-        result.put("nodes", nodes);
-        result.put("links", links);
-        return result;
+        return nodesMap;
     }
 
+    // ---------- Link Helpers ----------
+    private void addLink(Graph graph, GraphNode source, GraphNode target, GraphLink.LinkType type) {
+        if (source == null || target == null) {
+            return; // prevent NPE if lookup failed
+        }
+        GraphLink link = new GraphLink(source.getId(), target.getId(), type);
+        source.getOutgoingLinks().add(link);
+        target.getIncomingLinks().add(link);
+        graph.addLink(link);
+    }
+
+    private void createFieldLinks(Graph graph, JavaClass javaClass, GraphNode classNode, Map<String, GraphNode> nodesMap) {
+        for (JavaField field : javaClass.getFields()) {
+            GraphNode fieldNode = nodesMap.get(generateNodeId(javaClass, field));
+            addLink(graph, classNode, fieldNode, GraphLink.LinkType.CONTAINS);
+        }
+    }
+
+    private void createMethodLinks(Graph graph, JavaClass javaClass, GraphNode classNode,
+                                   Map<String, GraphNode> nodesMap, List<JavaClass> allClasses) {
+        for (JavaMethod method : javaClass.getMethods()) {
+            GraphNode methodNode = nodesMap.get(generateNodeId(javaClass, method));
+            addLink(graph, classNode, methodNode, GraphLink.LinkType.CONTAINS);
+
+            // Method calls
+            for (JavaClass targetClass : allClasses) {
+                for (JavaMethod targetMethod : targetClass.getMethods()) {
+                    if (method.getBody().contains(targetMethod.getName())) {
+                        GraphNode targetNode = nodesMap.get(generateNodeId(targetClass, targetMethod));
+                        addLink(graph, methodNode, targetNode, GraphLink.LinkType.CALLS);
+                    }
+                }
+            }
+
+            // Field access detection
+            for (JavaField field : javaClass.getFields()) {
+                GraphNode fieldNode = nodesMap.get(generateNodeId(javaClass, field));
+                if (fieldNode != null) {
+                    if (method.getBody().matches(".*\\b" + field.getName() + "\\b.*")) {
+                        addLink(graph, methodNode, fieldNode, GraphLink.LinkType.READS);
+                    }
+                    if (method.getBody().matches(".*\\b" + field.getName() + "\\s*=.*")) {
+                        addLink(graph, methodNode, fieldNode, GraphLink.LinkType.WRITES);
+                    }
+                }
+            }
+        }
+    }
+
+    private void addInheritanceLinks(Graph graph, JavaClass javaClass, GraphNode classNode, Map<String, GraphNode> nodesMap) {
+        if (javaClass.getSuperClass() != null) {
+            String superId = javaClass.getSuperClass(); // should already be canonical (package+name)
+            GraphNode superClassNode = nodesMap.get(superId);
+            addLink(graph, classNode, superClassNode, GraphLink.LinkType.INHERITS);
+        }
+    }
+
+    private void addImplementsLinks(Graph graph, JavaClass javaClass, GraphNode classNode, Map<String, GraphNode> nodesMap) {
+        for (String interfaceName : javaClass.getInterfaces()) {
+            GraphNode interfaceNode = nodesMap.get(interfaceName);
+            addLink(graph, classNode, interfaceNode, GraphLink.LinkType.IMPLEMENTS);
+        }
+    }
+
+    private void addCompositionLinks(Graph graph, JavaClass javaClass, GraphNode classNode,
+                                     Map<String, GraphNode> nodesMap, List<JavaClass> allClasses) {
+        for (JavaField field : javaClass.getFields()) {
+            for (JavaClass targetClass : allClasses) {
+                if (targetClass.getName().equals(field.getType())) {
+                    GraphNode targetClassNode = nodesMap.get(generateNodeId(targetClass));
+                    addLink(graph, classNode, targetClassNode, GraphLink.LinkType.COMPOSES);
+                }
+            }
+        }
+    }
+
+    // ---------- Filtering ----------
     private void filterGraph(Graph graph) {
         List<GraphNode> nodesToRemove = new ArrayList<>();
         List<GraphLink> linksToRemove = new ArrayList<>();
 
         for (GraphNode node : graph.getNodes()) {
             if (node.getType() == GraphNode.NodeType.FIELD && "private".equals(node.getAccessModifier())) {
-                boolean hasWrites = false;
-                for (GraphLink link : node.getIncomingLinks()) {
-                    if (link.getType() == GraphLink.LinkType.WRITES) {
-                        hasWrites = true;
-                        break;
-                    }
-                }
+                boolean hasWrites = node.getIncomingLinks().stream()
+                        .anyMatch(link -> link.getType() == GraphLink.LinkType.WRITES);
                 if (!hasWrites) {
                     nodesToRemove.add(node);
+                    linksToRemove.addAll(node.getOutgoingLinks());
+                    linksToRemove.addAll(node.getIncomingLinks());
                 }
             }
         }
 
-        for (GraphNode node : nodesToRemove) {
-            // Remove all links connected to the node being removed
-            linksToRemove.addAll(node.getOutgoingLinks());
-            linksToRemove.addAll(node.getIncomingLinks());
-
-            // Remove the node itself
-            graph.getNodes().remove(node);
-        }
+        graph.getNodes().removeAll(nodesToRemove);
+        graph.getLinks().removeAll(linksToRemove);
 
         for (GraphLink link : linksToRemove) {
-            graph.getLinks().remove(link);
-            // Also remove these links from the adjacency lists of connected nodes
-            graph.getNodeById(link.getSource()).ifPresent(sourceNode -> sourceNode.getOutgoingLinks().remove(link));
-            graph.getNodeById(link.getTarget()).ifPresent(targetNode -> targetNode.getIncomingLinks().remove(link));
+            graph.getNodeById(link.getSource())
+                    .ifPresent(sourceNode -> sourceNode.getOutgoingLinks().remove(link));
+            graph.getNodeById(link.getTarget())
+                    .ifPresent(targetNode -> targetNode.getIncomingLinks().remove(link));
         }
+    }
+
+    // ---------- ID Generator ----------
+    private String generateNodeId(JavaClass javaClass) {
+        return javaClass.getPackageName() + "." + javaClass.getName();
+    }
+
+    private String generateNodeId(JavaClass javaClass, JavaField field) {
+        return generateNodeId(javaClass) + "." + field.getName();
+    }
+
+    private String generateNodeId(JavaClass javaClass, JavaMethod method) {
+        return generateNodeId(javaClass) + "." + method.getName();
     }
 }
