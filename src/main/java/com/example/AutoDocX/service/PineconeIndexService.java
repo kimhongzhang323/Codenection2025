@@ -2,17 +2,12 @@ package com.example.AutoDocX.service;
 
 import io.pinecone.clients.Index;
 import io.pinecone.clients.Pinecone;
-import io.pinecone.proto.UpsertResponse;
-import io.pinecone.unsigned_indices_model.VectorWithUnsignedIndices;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.*;
-
-import static io.pinecone.commons.IndexInterface.buildUpsertVectorWithUnsignedIndices;
 
 @Service
 public class PineconeIndexService {
@@ -20,7 +15,8 @@ public class PineconeIndexService {
     private static final Logger logger = LoggerFactory.getLogger(PineconeIndexService.class);
 
     private final Pinecone pineconeClient;
-    private final String indexName = "autodocx";
+    private final String indexName = "codenection";
+    private final String namespace = "default"; // ✅ configure namespace here
 
     private static final int MAX_CONCURRENT_REQUESTS = 3;
     private static final int BATCH_SIZE = 50;
@@ -29,8 +25,6 @@ public class PineconeIndexService {
 
     public PineconeIndexService(Pinecone pineconeClient) {
         this.pineconeClient = pineconeClient;
-
-        // Bounded thread pool with backpressure
         this.executor = new ThreadPoolExecutor(
                 MAX_CONCURRENT_REQUESTS,
                 MAX_CONCURRENT_REQUESTS,
@@ -41,51 +35,38 @@ public class PineconeIndexService {
         );
     }
 
-    public void upsertVectors(List<String> ids, List<List<Float>> embeddings) {
-        if (ids.size() != embeddings.size()) {
-            throw new IllegalArgumentException("IDs and embeddings size mismatch");
+    public void upsertTextVectors(List<String> ids, List<String> texts) {
+        if (ids.size() != texts.size()) {
+            throw new IllegalArgumentException("IDs and texts size mismatch");
         }
-
         for (int start = 0; start < ids.size(); start += BATCH_SIZE) {
             int end = Math.min(start + BATCH_SIZE, ids.size());
             List<String> batchIds = ids.subList(start, end);
-            List<List<Float>> batchEmbeddings = embeddings.subList(start, end);
-
-            executor.submit(() -> {
-                try {
-                    doUpsert(batchIds, batchEmbeddings);
-                } catch (Exception e) {
-                    logger.error("Batch upsert failed: {}", e.getMessage(), e);
-                }
-            });
+            List<String> batchTxt = texts.subList(start, end);
+            executor.submit(() -> doUpsertWithText(batchIds, batchTxt));
         }
     }
 
-    private void doUpsert(List<String> ids, List<List<Float>> embeddings) {
+    private void doUpsertWithText(List<String> ids, List<String> texts) {
         try {
             Index index = pineconeClient.getIndexConnection(indexName);
+            List<Map<String, String>> upsertRecords = new ArrayList<>();
 
-            List<VectorWithUnsignedIndices> vectors = new ArrayList<>();
             for (int i = 0; i < ids.size(); i++) {
-                vectors.add(
-                        buildUpsertVectorWithUnsignedIndices(
-                                ids.get(i),
-                                embeddings.get(i),
-                                null,
-                                null,
-                                null
-                        )
-                );
+                Map<String, String> record = new HashMap<>();
+                record.put("_id", ids.get(i));
+                record.put("text", texts.get(i));   // ✅ match expected field
+                record.put("type", "code");         // optional metadata
+                upsertRecords.add(record);
             }
 
-            UpsertResponse response = index.upsert(vectors, "default");
-            logger.info("Upserted {} vectors into index {}", ids.size(), indexName);
-            logger.debug("Upsert response: {}", response);
-
+            index.upsertRecords(namespace, upsertRecords);
+            logger.info("Upserted {} text/code records into index {}", ids.size(), indexName);
         } catch (Exception e) {
-            logger.error("Error upserting vectors into index '{}': {}", indexName, e.getMessage(), e);
+            logger.error("Error upserting text/code records into index '{}': {}", indexName, e.getMessage(), e);
         }
     }
+
 
     public void shutdown() {
         executor.shutdown();
