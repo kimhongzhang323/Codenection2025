@@ -10,23 +10,13 @@
     <packaging>jar</packaging>
     <name>AutoDocX</name>
 
-    <properties>
-        <java.version>17</java.version>
-        <spring.boot.version>3.3.4</spring.boot.version>
-        <spring-ai.version>1.0.0-M4</spring-ai.version>
-        <djl.version>0.34.0</djl.version>
-        <pinecone.version>5.1.0</pinecone.version>
-        <lombok.version>1.18.34</lombok.version>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    </properties>
-
     <dependencyManagement>
         <dependencies>
             <!-- Spring Boot BOM -->
             <dependency>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-dependencies</artifactId>
-                <version>${spring.boot.version}</version>
+                <version>3.3.4</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
@@ -35,12 +25,18 @@
             <dependency>
                 <groupId>org.springframework.ai</groupId>
                 <artifactId>spring-ai-bom</artifactId>
-                <version>${spring-ai.version}</version>
+                <version>1.0.0-M4</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
+            <dependency>
+                <groupId>dev.langchain4j</groupId>
+                <artifactId>langchain4j-embeddings</artifactId>
+                <version>1.4.0-beta10</version>
+            </dependency>
         </dependencies>
     </dependencyManagement>
+
     <distributionManagement>
         <repository>
             <id>github</id>
@@ -48,8 +44,6 @@
             <url>https://maven.pkg.github.com/kimhongzhang323/Codenection2025</url>
         </repository>
     </distributionManagement>
-
-
 
     <dependencies>
         <!-- Spring Boot Starters -->
@@ -84,24 +78,24 @@
         <dependency>
             <groupId>ai.djl</groupId>
             <artifactId>api</artifactId>
-            <version>${djl.version}</version>
+            <version>0.34.0</version>
         </dependency>
         <dependency>
             <groupId>ai.djl.pytorch</groupId>
             <artifactId>pytorch-engine</artifactId>
-            <version>${djl.version}</version>
+            <version>0.34.0</version>
         </dependency>
         <dependency>
             <groupId>ai.djl.huggingface</groupId>
             <artifactId>tokenizers</artifactId>
-            <version>${djl.version}</version>
+            <version>0.34.0</version>
         </dependency>
 
         <!-- Pinecone Java client -->
         <dependency>
             <groupId>io.pinecone</groupId>
             <artifactId>pinecone-client</artifactId>
-            <version>${pinecone.version}</version>
+            <version>5.1.0</version>
         </dependency>
 
         <!-- Utilities -->
@@ -140,16 +134,10 @@
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
-            <version>${lombok.version}</version>
+            <version>1.18.34</version>
             <scope>provided</scope>
         </dependency>
 
-        <!-- Testing -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-test</artifactId>
-            <scope>test</scope>
-        </dependency>
     </dependencies>
 
     <repositories>
@@ -174,24 +162,24 @@
                 <plugin>
                     <groupId>org.springframework.boot</groupId>
                     <artifactId>spring-boot-maven-plugin</artifactId>
-                    <version>${spring.boot.version}</version>
+                    <version>3.3.4</version>
                 </plugin>
                 <plugin>
                     <groupId>org.apache.maven.plugins</groupId>
                     <artifactId>maven-compiler-plugin</artifactId>
                     <version>3.13.0</version>
                     <configuration>
-                        <encoding>${project.build.sourceEncoding}</encoding>
+                        <encoding>UTF-8</encoding>
                         <annotationProcessorPaths>
                             <path>
                                 <groupId>org.projectlombok</groupId>
                                 <artifactId>lombok</artifactId>
-                                <version>${lombok.version}</version>
+                                <version>1.18.34</version>
                             </path>
                         </annotationProcessorPaths>
-                        <source>${java.version}</source>
-                        <target>${java.version}</target>
-                        <release>${java.version}</release>
+                        <source>17</source>
+                        <target>17</target>
+                        <release>17</release>
                         <compilerArgs>
                             <arg>-parameters</arg>
                         </compilerArgs>
@@ -202,7 +190,7 @@
                     <artifactId>maven-resources-plugin</artifactId>
                     <version>3.3.1</version>
                     <configuration>
-                        <encoding>${project.build.sourceEncoding}</encoding>
+                        <encoding>UTF-8</encoding>
                     </configuration>
                 </plugin>
             </plugins>
