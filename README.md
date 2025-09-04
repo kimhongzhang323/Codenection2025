@@ -1,7 +1,7 @@
 <div align="center">
-  <img src="frontend/public/banner.png" alt="AutoDocX Banner" width="600"/>
+  <img src="frontend/public/banner.png" alt="AutoDocX Banner" style="width: 100%; max-width: 100%; height: auto;"/>
   
-  **AI-Powered Documentation Platform for Developers**
+  <h2 style="font-size: 1.5rem; margin: 1.5rem 0;">AI-Powered Documentation Platform for Developers</h2>
   
   [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
   [![Java](https://img.shields.io/badge/Java-17-orange.svg)](https://openjdk.java.net/)
