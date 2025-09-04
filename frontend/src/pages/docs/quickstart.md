@@ -58,8 +58,6 @@ Create your first MDX file in the docs folder.
 ---
 title: Hello World
 ---
-
-## Yo what's up
 ```
 
 Run the app in development mode and see [http://localhost:3000/docs](http://localhost:3000/docs).

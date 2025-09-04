@@ -7,6 +7,10 @@ import { CheckIcon } from './components/check_icon'
 import { XIcon } from './components/close_icon'
 import { ArrowRightIcon } from './components/arrow_icon'
 import DocumentationPage from './pages/DocumentationPage'
+import SignUpPage from './pages/SignUpPage'
+import TextSelectionDialog from './components/TextSelectionDialog'
+import { AIChatPanel } from './components/AIChatPanel'
+import { AIChatProvider } from './contexts/AIChatContext'
 import './App.css'
 
 function HomePage() {
@@ -95,10 +99,14 @@ function HomePage() {
     }
   }
 
+  function handleSignUpClick() {
+    navigate('/signup')
+  }
+
   return (
     <main className="home">
       <div className="home__signup-container">
-        <button className="home__signup-btn">
+        <button className="home__signup-btn" onClick={handleSignUpClick}>
           Sign Up
         </button>
         {showTooltip && (
@@ -169,12 +177,17 @@ function HomePage() {
 
 function App() {
   return (
-    <Routes>
-      <Route path="/" element={<HomePage />} />
-      <Route path="/:repo" element={<DocumentationPage />} />
-      <Route path="/:repo/:file" element={<DocumentationPage />} />
-      <Route path="/documentation" element={<DocumentationPage />} />
-    </Routes>
+    <AIChatProvider>
+      <Routes>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/signup" element={<SignUpPage />} />
+        <Route path="/:repo" element={<DocumentationPage />} />
+        <Route path="/:repo/:file" element={<DocumentationPage />} />
+        <Route path="/documentation" element={<DocumentationPage />} />
+      </Routes>
+      <TextSelectionDialog />
+      <AIChatPanel />
+    </AIChatProvider>
   )
 }
 
