@@ -1,0 +1,469 @@
+.signup-container {
+    min-height: 100vh;
+    background-color: #121212;
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+    position: relative;
+  }
+  
+  .signup-content {
+    width: 100%;
+    max-width: 480px;
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+  }
+  
+  /* Header */
+.signup-header {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  margin-bottom: 1rem;
+}
+  
+  .back-button {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: #1b1b1b;
+    border: 1px solid #2a2a2a;
+    color: #ffffff;
+    padding: 10px 22px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+  
+  .back-button:hover {
+    background: #2a2a2a;
+    border-color: #343434;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    transform: translateY(-1px);
+  }
+  
+  .back-button:active {
+    background: #1b1b1b;
+    border-color: #2a2a2a;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    transform: translateY(0);
+  }
+
+  /* Back button positioned at top left of the page */
+  .back-button-page {
+    position: absolute;
+    top: 24px;
+    left: 80px;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    background: #1b1b1b;
+    border: 1px solid #2a2a2a;
+    color: #ffffff;
+    padding: 10px 22px;
+    border-radius: 8px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+
+  .back-button-page:hover {
+    background: #2a2a2a;
+    border-color: #343434;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+    transform: translateY(-1px);
+  }
+
+  .back-button-page:active {
+    background: #1b1b1b;
+    border-color: #2a2a2a;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+    transform: translateY(0);
+  }
+
+  .back-button-page:focus,
+  .back-button-page:focus-visible {
+    outline: none;
+    box-shadow: none;
+  }
+  
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    color: #ffffff;
+    font-size: 1.25rem;
+    font-weight: 600;
+  }
+  
+  .smallhome__logo {
+    width: 45px; /* Adjust this value to your desired width */
+    height: 45px; /* Keeping 'height' as 'auto' prevents the image from being distorted */
+  }
+  
+  
+  
+  /* .logo-icon {
+    width: 40px;
+    height: 40px;
+    background: #1b1b1b;
+    border: 1px solid #2a2a2a;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #ffffff;
+  } */
+  
+  /* Main Content */
+  .signup-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+  
+  .signup-card {
+    background: #1b1b1b;
+    border: 1px solid #2a2a2a;
+    border-radius: 8px;
+    padding: 2.5rem;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  }
+  
+  .card-header {
+    text-align: center;
+    margin-bottom: 2rem;
+  }
+  
+  .card-title {
+    font-size: 28px;
+    font-weight: 700;
+    color: #ffffff;
+    margin: 0 0 0.75rem 0;
+  }
+  
+  .card-description {
+    font-size: 1rem;
+    color: #bdbdbd;
+    margin: 0;
+    line-height: 1.6;
+  }
+  
+  /* Permissions Section */
+  .permissions-section {
+    margin-bottom: 2rem;
+  }
+  
+  .permissions-title {
+    font-size: 1.125rem;
+    font-weight: 600;
+    color: #ffffff;
+    margin: 0 0 1rem 0;
+  }
+  
+  .permissions-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+  
+  .permission-item {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    color: #e0e0e0;
+    font-size: 0.875rem;
+    line-height: 1.5;
+  }
+  
+  .permission-icon {
+    color: #22c55e;
+    flex-shrink: 0;
+  }
+  
+  /* Auth Section */
+  .auth-section {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-bottom: 2rem;
+  }
+  
+  .github-auth-button {
+    width: 100%;
+    background: #6b7e95;
+    color: white;
+    border: none;
+    padding: 1rem 1.5rem;
+    border-radius: 0.75rem;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    min-height: 3.5rem;
+  }
+  
+  .github-auth-button:hover:not(:disabled) {
+    background: #2d333b;
+    transform: translateY(-2px);
+    box-shadow: 0 10px 25px -5px rgba(36, 41, 47, 0.3);
+  }
+  
+  .github-auth-button:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+    transform: none;
+  }
+  
+  .github-icon {
+    flex-shrink: 0;
+  }
+  
+  .loading-spinner {
+    width: 20px;
+    height: 20px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-top: 2px solid white;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+  
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+  
+  .divider {
+    position: relative;
+    text-align: center;
+    margin: 0.5rem 0;
+  }
+  
+  .divider::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    height: 1px;
+    background: #2a2a2a;
+  }
+  
+  .divider span {
+    background: #1b1b1b;
+    color: #bdbdbd;
+    font-size: 0.875rem;
+    padding: 0 1rem;
+    position: relative;
+    z-index: 1;
+  }
+  
+  .skip-button {
+    width: 100%;
+    background: transparent;
+    color: #bdbdbd;
+    border: 1px solid #2a2a2a;
+    padding: 1rem 1.5rem;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  
+  .skip-button:hover {
+    border-color: #343434;
+    color: #ffffff;
+    background: #2a2a2a;
+  }
+  
+  /* Security Note */
+  .security-note {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 1rem;
+    background: rgba(34, 197, 94, 0.1);
+    border: 1px solid rgba(34, 197, 94, 0.2);
+    border-radius: 8px;
+  }
+  
+  .security-icon {
+    color: #22c55e;
+    flex-shrink: 0;
+    margin-top: 0.125rem;
+  }
+  
+  .security-note p {
+    margin: 0;
+    font-size: 0.875rem;
+    color: #e0e0e0;
+    line-height: 1.5;
+  }
+  
+  /* Footer */
+  .signup-footer {
+    text-align: center;
+  }
+  
+  .signup-footer p {
+    margin: 0;
+    font-size: 0.875rem;
+    color: rgba(255, 255, 255, 0.8);
+    line-height: 1.5;
+  }
+  
+  /* Responsive Design */
+  @media (max-width: 640px) {
+    .signup-container {
+      padding: 0.5rem;
+    }
+  
+    .signup-content {
+      max-width: 100%;
+    }
+  
+    .signup-card {
+      padding: 2rem 1.5rem;
+      border-radius: 1rem;
+    }
+  
+    .card-title {
+      font-size: 1.75rem;
+    }
+  
+    .signup-header {
+      margin-bottom: 0.5rem;
+    }
+  
+    .logo {
+      font-size: 1.125rem;
+    }
+  
+    .logo-icon {
+      width: 36px;
+      height: 36px;
+    }
+  
+    .back-button {
+      padding: 0.5rem 0.75rem;
+      font-size: 0.8125rem;
+    }
+  
+    .permissions-list {
+      gap: 0.625rem;
+    }
+  
+    .permission-item {
+      font-size: 0.8125rem;
+    }
+  
+    .github-auth-button,
+    .skip-button {
+      padding: 0.875rem 1.25rem;
+      font-size: 0.9375rem;
+    }
+  }
+  
+  @media (max-width: 480px) {
+    .signup-card {
+      padding: 1.5rem 1rem;
+    }
+  
+    .card-title {
+      font-size: 1.5rem;
+    }
+  
+    .permissions-title {
+      font-size: 1rem;
+    }
+  
+    .security-note {
+      padding: 0.875rem;
+    }
+  }
+  
+  /* Focus States for Accessibility */
+.back-button:focus,
+.back-button:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
+.github-auth-button:focus,
+.skip-button:focus {
+  outline: 2px solid #3b82f6;
+  outline-offset: 2px;
+}
+  
+  /* Dark Mode Support */
+@media (prefers-color-scheme: dark) {
+    .signup-card {
+      background: rgba(30, 41, 59, 0.95);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+  
+    .card-title {
+      color: #f8fafc;
+    }
+  
+    .card-description {
+      color: #94a3b8;
+    }
+  
+    .permissions-title {
+      color: #f8fafc;
+    }
+  
+    .permission-item {
+      color: #cbd5e0;
+    }
+  
+    .divider::before {
+      background: #475569;
+    }
+  
+    .divider span {
+      background: rgba(30, 41, 59, 0.95);
+      color: #94a3b8;
+    }
+  
+    .skip-button {
+      color: #94a3b8;
+      border-color: #475569;
+    }
+  
+    .skip-button:hover {
+      border-color: #64748b;
+      color: #cbd5e0;
+      background: rgba(51, 65, 85, 0.5);
+    }
+  
+    .security-note {
+      background: rgba(59, 130, 246, 0.1);
+      border-color: rgba(59, 130, 246, 0.3);
+    }
+  
+    .security-note p {
+      color: #93c5fd;
+    }
+}
+  

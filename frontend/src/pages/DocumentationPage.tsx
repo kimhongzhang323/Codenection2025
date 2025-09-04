@@ -6,8 +6,9 @@ import Markdown from '../components/markdown'
 import TableOfContents from '../components/table_of_content'
 import { AnimatedThemeToggler } from '../components/theme'
 import { BottomMiniDialog } from '../components/BottomMiniDialog'
-import { AIChatPanel } from '../components/AIChatPanel'
 import { SparklesIcon } from '../components/sparkles_icon'
+import { useAIChat } from '../contexts/AIChatContext'
+import SearchDialog from '../components/SearchDialog'
 
 type DocItem =
   | { type: 'separator'; label: string }
@@ -195,9 +196,10 @@ function DocumentationPage() {
     const saved = localStorage.getItem('sidebarCollapsed')
     return saved ? JSON.parse(saved) : false
   })
-  const [isChatOpen, setIsChatOpen] = useState(false)
+  const { toggleChat } = useAIChat()
   const scrollTimeoutRef = useRef<number | null>(null)
   const treeRef = useRef<HTMLElement>(null)
+  const [isSearchOpen, setIsSearchOpen] = useState(false)
 
   // Determine encoded repo slug for routing back to repo root
   const repoSlug = (() => {
@@ -341,6 +343,20 @@ function DocumentationPage() {
     localStorage.setItem('sidebarCollapsed', JSON.stringify(newState))
   }
 
+  // Open search dialog on Ctrl+K
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const isK = e.key.toLowerCase() === 'k'
+      const isCtrlOrMeta = e.ctrlKey || e.metaKey
+      if (isCtrlOrMeta && isK) {
+        e.preventDefault()
+        setIsSearchOpen(true)
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
+
   // Handle theme changes and persist to localStorage
   const handleThemeToggle = (isDark: boolean) => {
     setIsDarkSelected(isDark)
@@ -383,7 +399,7 @@ function DocumentationPage() {
       <div className="docs-ai-chat-button-container">
         <button 
           className="docs-ai-chat-button"
-          onClick={() => setIsChatOpen(!isChatOpen)}
+          onClick={toggleChat}
           aria-label="Open AI chat"
         >
           <SparklesIcon size={18} />
@@ -408,12 +424,12 @@ function DocumentationPage() {
                 }}
               />
             </div>
-            <div className="docs-sidebar__search">
+            <div className="docs-sidebar__search" onClick={() => setIsSearchOpen(true)} role="button" aria-label="Open search">
               <svg className="docs-sidebar__search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="11" cy="11" r="8"/>
                 <path d="m21 21-4.35-4.35"/>
               </svg>
-              <input type="text" placeholder="Search" aria-label="Search docs" />
+              <input type="text" placeholder="Search" aria-label="Search docs" readOnly />
               <div className="docs-sidebar__search-shortcut">
                 <span className="docs-sidebar__search-shortcut-key">Ctrl</span>
                 <span className="docs-sidebar__search-shortcut-key">K</span>
@@ -479,12 +495,9 @@ function DocumentationPage() {
         mode={viewMode}
         onModeChange={(m) => setViewMode(m)}
       />
-      
-      {/* AI Chat Panel */}
-      <AIChatPanel 
-        isOpen={isChatOpen}
-        onToggle={() => setIsChatOpen(!isChatOpen)}
-      />
+
+      {/* Floating Search Dialog */}
+      <SearchDialog isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
 
     </div>
   )

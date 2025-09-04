@@ -1,0 +1,315 @@
+.highlight-dialog {
+  animation: fadeIn 0.2s ease-in-out;
+}
+
+.dialog-content {
+  display: flex;
+  flex-direction: column;
+  background-color: var(--docs-bg);
+  border: 1px solid var(--bottom-dialog-border);
+  color: var(--docs-normal-text);
+  border-radius: 8px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+  font-size: 14px;
+  font-weight: 400;
+  min-width: 280px;
+  max-width: 450px;
+  max-height: 350px;
+  overflow: hidden;
+  backdrop-filter: blur(10px);
+  position: relative;
+}
+
+.dialog-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: linear-gradient(135deg, rgba(100, 108, 255, 0.02), rgba(139, 92, 246, 0.02));
+  border-radius: 8px 8px 0 0;
+  position: relative;
+}
+
+.dialog-status {
+  display: flex;
+  align-items: center;
+  flex: 1;
+}
+
+.dialog-text {
+  font-size: 13px;
+  font-weight: 300;
+  color: #5e5e5e;
+}
+
+.dialog-close {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: var(--docs-muted);
+  color: var(--docs-muted-text);
+  border: none;
+  outline: none;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+  padding: 0;
+  margin-left: 6px;
+  position: relative;
+  z-index: 10;
+  -webkit-tap-highlight-color: transparent;
+  -webkit-focus-ring-color: transparent;
+  -moz-outline: none;
+}
+
+.dialog-close:hover {
+  background-color: var(--docs-muted-hover);
+  color: var(--docs-normal-text);
+  transform: scale(1.05);
+}
+
+.dialog-close:active {
+  transform: scale(0.95);
+  background-color: var(--docs-muted);
+}
+
+.dialog-close .home__input-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+/* Ensure the close button is clearly visible and clickable */
+
+.dialog-response {
+  padding: 12px;
+  background: var(--docs-bg);
+  overflow-y: hidden;
+  max-height: 250px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--docs-muted) transparent;
+}
+
+.dialog-response.typing-complete {
+  overflow-y: auto;
+}
+
+.dialog-response::-webkit-scrollbar {
+  width: 6px;
+}
+
+.dialog-response::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.dialog-response::-webkit-scrollbar-thumb {
+  background-color: var(--docs-muted);
+  border-radius: 3px;
+}
+
+.dialog-response::-webkit-scrollbar-thumb:hover {
+  background-color: var(--docs-muted-hover);
+}
+
+.response-content {
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--docs-normal-text);
+  word-wrap: break-word;
+  white-space: pre-wrap;
+  margin-bottom: 12px;
+}
+
+.dialog-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: 8px;
+  border-top: 1px solid var(--sidebar-border);
+}
+
+.vote-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.vote-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 1px solid var(--docs-muted);
+  border-radius: 6px;
+  padding: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  color: #666666;
+}
+
+.vote-btn:hover {
+  border-color: #333333;
+}
+
+.vote-btn:hover svg {
+  color: #333333;
+}
+
+.vote-btn.voted {
+  background: transparent;
+  border-color: #333333;
+  /* Removed transform to keep icon in original position */
+}
+
+.vote-btn.voted svg {
+  color: #333333;
+  fill: #333333;
+}
+
+.upvote-btn.voted {
+  border-color: #22c55e;
+}
+
+.downvote-btn.voted {
+  border-color: #ef4444;
+}
+
+/* Removed disabled styles since buttons are now toggleable */
+
+.ask-in-chat-btn {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: #e8e8e8;
+  color: #333;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 12px;
+  font-size: 12px;
+  font-weight: 300;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.ask-in-chat-btn:hover {
+  background: #d8d8d8;
+}
+
+.ask-in-chat-btn:active {
+  background: #c8c8c8;
+}
+
+/* Dark mode styles */
+:root.dark .ask-in-chat-btn {
+  background: #212121;
+  color: white;
+}
+
+:root.dark .ask-in-chat-btn:hover {
+  background: #2a2a2a;
+}
+
+:root.dark .ask-in-chat-btn:active {
+  background: #1a1a1a;
+}
+
+:root.dark .vote-btn {
+  border-color: #404040;
+  color: #666666;
+}
+
+:root.dark .vote-btn:hover {
+  border-color: #ffffff;
+}
+
+:root.dark .vote-btn:hover svg {
+  color: white;
+}
+
+:root.dark .vote-btn.voted {
+  background: transparent;
+  border-color: #ffffff;
+  /* Removed transform to keep icon in original position */
+}
+
+:root.dark .vote-btn.voted svg {
+  color: white;
+  fill: white;
+}
+
+:root.dark .upvote-btn.voted {
+  border-color: #22c55e;
+}
+
+:root.dark .downvote-btn.voted {
+  border-color: #ef4444;
+}
+
+.ask-in-chat-btn svg {
+  flex-shrink: 0;
+}
+
+
+
+/* Shining text styles for loading state */
+.dialog-text .shining-text {
+  background: linear-gradient(110deg, #404040, 35%, #ffffff, 50%, #404040, 75%, #404040);
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  color: transparent;
+  font-size: 14px;
+  font-weight: 500;
+  display: inline-block;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Dark mode adjustments for shining text */
+:root.dark .dialog-text .shining-text {
+  background: linear-gradient(110deg, #666666, 35%, #ffffff, 50%, #666666, 75%, #666666);
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .dialog-content {
+    min-width: 200px;
+    max-width: calc(100vw - 32px);
+  }
+}
+
+/* Focus states for accessibility */
+.dialog-close:focus,
+.dialog-close:focus-visible,
+.dialog-close:focus-within {
+  outline: none !important;
+  box-shadow: none !important;
+  border: none !important;
+}
+
+.vote-btn:focus,
+.vote-btn:focus-visible,
+.vote-btn:focus-within {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* Smooth transitions for all interactive elements */
+.dialog-content * {
+  transition: all 0.2s ease;
+}

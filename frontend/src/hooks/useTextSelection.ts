@@ -4,13 +4,15 @@ interface SelectionState {
   isVisible: boolean
   position: { x: number; y: number }
   selectedText: string
+  placement: 'top' | 'bottom'
 }
 
 export const useTextSelection = () => {
   const [selectionState, setSelectionState] = useState<SelectionState>({
     isVisible: false,
     position: { x: 0, y: 0 },
-    selectedText: ''
+    selectedText: '',
+    placement: 'bottom'
   })
 
   const handleSelectionChange = useCallback(() => {
@@ -24,14 +26,33 @@ export const useTextSelection = () => {
     const range = selection.getRangeAt(0)
     const rect = range.getBoundingClientRect()
     
-    // Calculate position for the dialog (below the selection)
+    // Calculate position for the dialog
     const x = rect.left + (rect.width / 2) - 80 // Center the dialog
-    const y = rect.bottom + 8 // 8px below the selection
+    
+    const spaceBelow = window.innerHeight - rect.bottom - 8
+    const spaceAbove = rect.top - 8
+    const estimatedMaxHeight = 350
+
+    let placement: 'top' | 'bottom'
+    let y: number
+
+    if (spaceBelow >= estimatedMaxHeight) {
+      placement = 'bottom'
+      y = rect.bottom + 8
+    } else if (spaceAbove >= estimatedMaxHeight) {
+      placement = 'top'
+      y = rect.top - 8
+    } else {
+      // Place on the side with more space
+      placement = spaceBelow > spaceAbove ? 'bottom' : 'top'
+      y = placement === 'bottom' ? rect.bottom + 8 : rect.top - 8
+    }
 
     setSelectionState({
       isVisible: true,
       position: { x, y },
-      selectedText: selection.toString().trim()
+      selectedText: selection.toString().trim(),
+      placement
     })
   }, [])
 
@@ -54,17 +75,15 @@ export const useTextSelection = () => {
 
   useEffect(() => {
     // Add event listeners
-    document.addEventListener('selectionchange', handleSelectionChange)
     document.addEventListener('mouseup', handleMouseUp)
     document.addEventListener('click', handleClickOutside)
 
     return () => {
       // Cleanup event listeners
-      document.removeEventListener('selectionchange', handleSelectionChange)
       document.removeEventListener('mouseup', handleMouseUp)
       document.removeEventListener('click', handleClickOutside)
     }
-  }, [handleSelectionChange, handleMouseUp, handleClickOutside])
+  }, [handleMouseUp, handleClickOutside])
 
   return {
     ...selectionState,

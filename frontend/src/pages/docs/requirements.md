@@ -1,6 +1,4 @@
 # Feedback
-
-#### Receive feedback from your users
         
 ---------------------------------------------
 
