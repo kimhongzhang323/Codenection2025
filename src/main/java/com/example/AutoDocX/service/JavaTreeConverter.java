@@ -74,17 +74,16 @@ public class JavaTreeConverter {
         cu.findAll(ClassOrInterfaceDeclaration.class).forEach(classDeclaration -> {
             String packageName = cu.getPackageDeclaration().map(NodeWithName::getNameAsString).orElse("default");
             String className = classDeclaration.getNameAsString();
-            String fqClassName = packageName + "." + className;
 
             int startLine = classDeclaration.getBegin().map(pos -> pos.line).orElse(-1);
             int endLine = classDeclaration.getEnd().map(pos -> pos.line).orElse(-1);
 
             List<JavaMethod> methods = classDeclaration.getMethods().stream()
-                    .map(methodDeclaration -> parseMethodDeclaration(fqClassName, methodDeclaration, filePath))
+                    .map(methodDeclaration -> parseMethodDeclaration(className, methodDeclaration, filePath))
                     .collect(Collectors.toList());
 
             List<JavaField> fields = classDeclaration.getFields().stream()
-                    .map(fieldDeclaration -> parseFieldDeclaration(fqClassName, fieldDeclaration, filePath))
+                    .map(fieldDeclaration -> parseFieldDeclaration(className, fieldDeclaration, filePath))
                     .collect(Collectors.toList());
 
             List<String> imports = cu.getImports().stream()
@@ -96,7 +95,7 @@ public class JavaTreeConverter {
                     .map(NodeWithSimpleName::getNameAsString)
                     .collect(Collectors.toList());
 
-            classesInUnit.add(new JavaClass(fqClassName, packageName, methods, fields, superClass, interfaces, imports, startLine, endLine, filePath));
+            classesInUnit.add(new JavaClass(className, packageName, methods, fields, superClass, interfaces, imports, startLine, endLine, filePath));
         });
         return classesInUnit;
     }
@@ -105,7 +104,7 @@ public class JavaTreeConverter {
         String methodName = methodDeclaration.getNameAsString();
         String returnType = methodDeclaration.getTypeAsString();
 
-        String signature = fqClassName + "." + methodName + "(" +
+        String signature = methodName + "(" +
                 methodDeclaration.getParameters().stream()
                         .map(p -> p.getType().toString())
                         .collect(Collectors.joining(",")) +

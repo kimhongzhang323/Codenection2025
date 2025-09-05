@@ -1,102 +1,80 @@
 package com.example.AutoDocX.parser.model;
 
-import com.example.AutoDocX.parser.model.GraphLink;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
-import java.util.Queue;
-import java.util.LinkedList;
-import java.util.HashSet;
-import java.util.Optional;
-import java.util.Stack;
-import java.util.ArrayList;
 
 public class GraphAlgo {
+
     public static List<GraphNode> findCentralClassNodes(Graph graph, int n) {
-        return getClassNodes(graph).stream()
-                .collect(Collectors.toMap(
-                        cls -> cls,
-                        cls -> countOutgoingCallsOutsideClass(graph, cls)
-                ))
-                .entrySet().stream()
-                .sorted(Map.Entry.comparingByValue(Comparator.reverseOrder()))
+        return graph.getNodes().stream()
+                .filter(node -> node.getType() == GraphNode.NodeType.CLASS)
+                .sorted((a, b) -> {
+                    int degreeA = graph.getOutgoingLinks(a.getId()).size();
+                    int degreeB = graph.getOutgoingLinks(b.getId()).size();
+                    return Integer.compare(degreeB, degreeA); // descending
+                })
                 .limit(n)
-                .map(Map.Entry::getKey)
                 .collect(Collectors.toList());
     }
 
-    private static List<GraphNode> getClassNodes(Graph graph) {
-        return graph.getNodes().stream()
-                .filter(node -> node.getType() == GraphNode.NodeType.CLASS)
-                .toList();
-    }
+    public static List<GraphLink> getAllLinksForClass(Graph graph, GraphNode classNode) {
+        String classId = classNode.getId();
 
-    private static List<GraphNode> getClassMembers(Graph graph, GraphNode cls) {
-        // If CONTAINS links are used in your graph model, prefer them:
-        List<GraphNode> members = cls.getOutgoingLinks().stream()
-                .filter(link -> link.getType() == GraphLink.LinkType.CONTAINS)
-                .map(link -> graph.getNodeById(link.getTarget()))
-                .flatMap(Optional::stream)
+        // Any link from/to this class itself
+        List<GraphLink> classLinks = graph.getLinks().stream()
+                .filter(link -> link.getSourceID().equals(classId) || link.getTargetID().equals(classId))
                 .toList();
 
-        // Otherwise, fallback to filePath heuristic
-        if (members.isEmpty()) {
-            members = graph.getNodes().stream()
-                    .filter(node -> (node.getType() == GraphNode.NodeType.METHOD
-                            || node.getType() == GraphNode.NodeType.FIELD))
-                    .filter(node -> node.getFilePath() != null
-                            && node.getFilePath().equals(cls.getFilePath()))
-                    .toList();
-        }
-        return members;
+        // Any link from/to a method node belonging to this class
+        List<GraphLink> methodLinks = graph.getLinks().stream()
+                .filter(link -> link.getSourceID().startsWith("method_" + classNode.getLabel()) ||
+                        link.getTargetID().startsWith("method_" + classNode.getLabel()))
+                .toList();
+
+        List<GraphLink> all = new ArrayList<>();
+        all.addAll(classLinks);
+        all.addAll(methodLinks);
+        return all;
     }
 
-    private static int countOutgoingCallsOutsideClass(Graph graph, GraphNode cls) {
-        List<GraphNode> relatedNodes = new ArrayList<>();
-        relatedNodes.add(cls);
-        relatedNodes.addAll(getClassMembers(graph, cls));
 
-        return relatedNodes.stream()
-                .flatMap(node -> node.getOutgoingLinks().stream())
+    private static int countOutgoingCalls(Graph graph, GraphNode node) {
+        return (int) node.getOutgoingLinks().stream()
                 .filter(link -> link.getType() == GraphLink.LinkType.CALLS)
-                .filter(link -> {
-                    return graph.getNodeById(link.getTarget())
-                            .map(targetNode -> !relatedNodes.contains(targetNode))
-                            .orElse(false);
-                })
-                .mapToInt(x -> 1)
-                .sum();
+                .count();
     }
 
     public static int calculateNodeOutgoingLinkCount(Graph graph, String nodeId) {
-        return graph.getNodeById(nodeId)
+        return graph.getNode(nodeId)
                 .map(node -> (int) node.getOutgoingLinks().stream()
-                        .filter(link -> link.getType() == GraphLink.LinkType.CALLS || link.getType() == GraphLink.LinkType.COMPOSES)
+                        .filter(link -> link.getType() == GraphLink.LinkType.CALLS
+                                || link.getType() == GraphLink.LinkType.COMPOSES)
                         .count())
                 .orElse(0);
     }
 
-    public static List<GraphNode> findCentralNodes(Graph graph, int n) {
+
+    public static Optional<GraphNode> findStartingNode(Graph graph) {
         return graph.getNodes().stream()
-                .collect(Collectors.toMap(
-                        node -> node,
-                        node -> calculateNodeOutgoingLinkCount(graph, node.getId())
-                ))
-                .entrySet().stream()
-                .sorted(Map.Entry.comparingByValue(Comparator.reverseOrder()))
-                .limit(n)
-                .map(Map.Entry::getKey)
-                .collect(Collectors.toList());
+                .filter(node -> graph.getIncomingLinks(node.getId()).isEmpty()) // must have no incoming
+                .max(Comparator.comparingInt(node -> {
+                    int directOut = graph.getOutgoingLinks(node.getId()).size();
+                    int childOut = graph.getOutgoingLinks(node.getId()).stream()
+                            .map(link -> graph.getNode(link.getTargetID()).orElse(null))
+                            .filter(Objects::nonNull)
+                            .mapToInt(child -> graph.getOutgoingLinks(child.getId()).size())
+                            .sum();
+                    return directOut + childOut;
+                }));
     }
+
 
     public static String bfs(Graph graph, String startNodeId, int depthLimit) {
         StringBuilder traversalResult = new StringBuilder("BFS Traversal starting from ").append(startNodeId).append(" with depth limit ").append(depthLimit).append(":\n");
         Queue<Map.Entry<GraphNode, Integer>> queue = new LinkedList<>();
         Set<String> visited = new HashSet<>();
 
-        Optional<GraphNode> startNodeOpt = graph.getNodeById(startNodeId);
+        Optional<GraphNode> startNodeOpt = graph.getNode(startNodeId);
         if (startNodeOpt.isEmpty()) {
             return traversalResult.append("  Start node not found.").toString();
         }
@@ -116,9 +94,9 @@ public class GraphAlgo {
             }
 
             for (GraphLink link : currentNode.getOutgoingLinks()) {
-                String neighborId = link.getTarget();
+                String neighborId = link.getTargetID();
                 if (!visited.contains(neighborId)) {
-                    graph.getNodeById(neighborId).ifPresent(neighborNode -> {
+                    graph.getNode(neighborId).ifPresent(neighborNode -> {
                         visited.add(neighborId);
                         queue.add(Map.entry(neighborNode, currentDepth + 1));
                         traversalResult.append("  Visited: ").append(neighborNode.getLabel()).append(" (").append(neighborNode.getId()).append(") at depth ").append(currentDepth + 1).append("\n");
@@ -134,7 +112,7 @@ public class GraphAlgo {
         Stack<Map.Entry<GraphNode, Integer>> stack = new Stack<>();
         Set<String> visited = new HashSet<>();
 
-        Optional<GraphNode> startNodeOpt = graph.getNodeById(startNodeId);
+        Optional<GraphNode> startNodeOpt = graph.getNode(startNodeId);
         if (startNodeOpt.isEmpty()) {
             return traversalResult.append("  Start node not found.").toString();
         }
@@ -159,8 +137,8 @@ public class GraphAlgo {
             java.util.Collections.reverse(reversedOutgoingLinks);
 
             for (GraphLink link : reversedOutgoingLinks) {
-                String neighborId = link.getTarget();
-                Optional<GraphNode> neighborNodeOpt = graph.getNodeById(neighborId);
+                String neighborId = link.getTargetID();
+                Optional<GraphNode> neighborNodeOpt = graph.getNode(neighborId);
 
                 if (neighborNodeOpt.isPresent()) {
                     GraphNode neighborNode = neighborNodeOpt.get();
@@ -185,4 +163,53 @@ public class GraphAlgo {
         }
         return traversalResult.toString();
     }
+
+    public static String dfsTraversalToString(Graph graph, String startNodeQuery, int depthLimit) {
+        StringBuilder result = new StringBuilder();
+        Set<String> visited = new HashSet<>();
+        List<GraphLink> foundLinks = new ArrayList<>();
+
+        Optional<GraphNode> startNodeOpt = graph.getNode(startNodeQuery);
+        if (startNodeOpt.isEmpty()) {
+            return "Start node not found: " + startNodeQuery;
+        }
+
+        // recursive DFS
+        dfsHelper(graph, startNodeOpt.get().getId(), depthLimit, visited, foundLinks);
+
+        result.append("DFS from ").append(startNodeOpt.get().getLabel())
+                .append(" (depth = ").append(depthLimit).append(")\n");
+        result.append("========================\n");
+//
+//        result.append("Visited Nodes (Total: ").append(visited.size()).append("):\n");
+//        visited.forEach(nodeId -> graph.getNode(nodeId).ifPresent(node ->
+//                result.append("  - ").append(node.getId())
+//                        .append(" (").append(node.getLabel()).append(")\n")
+//        ));
+
+        result.append("\nLinks (Total: ").append(foundLinks.size()).append("):\n");
+        foundLinks.forEach(link -> result.append("  - ")
+                .append(link.getSourceID())
+                .append(" --(").append(link.getType()).append(")--> ")
+                .append(link.getTargetID())
+                .append("\n"));
+
+        result.append("========================\n");
+        return result.toString();
+    }
+
+    private static void dfsHelper(Graph graph, String currentId, int depth,
+                                  Set<String> visited, List<GraphLink> foundLinks) {
+        if (depth < 0 || visited.contains(currentId)) return;
+
+        visited.add(currentId);
+
+        if (depth == 0) return; // stop exploring deeper
+
+        for (GraphLink link : graph.getOutgoingLinks(currentId)) {
+            foundLinks.add(link);
+            dfsHelper(graph, link.getTargetID(), depth - 1, visited, foundLinks);
+        }
+    }
+
 }

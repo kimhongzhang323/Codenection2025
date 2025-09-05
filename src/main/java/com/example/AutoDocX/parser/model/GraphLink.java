@@ -8,22 +8,20 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class GraphLink {
-    private String source;
-    private String target;
+    private String sourceID;
+    private String targetID;
     private LinkType type;
 
     public enum LinkType {
-        CONTAINS,
         CALLS,
+        CONSTRUCTS,
         INHERITS,
         IMPLEMENTS,
-        READS,
-        WRITES,
         COMPOSES
     }
 
     @Override
     public String toString() {
-        return String.format("Link (Source: %s, Target: %s, Type: %s)", source, target, type);
+        return String.format("Link (Source: %s, Target: %s, Type: %s)", sourceID, targetID, type);
     }
 }

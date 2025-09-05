@@ -17,14 +17,15 @@ public class GraphNode {
     private String filePath;
     private int startLine;
     private int endLine;
-    private String accessModifier;
+    private String code; // full code chunk (class or method)
     private List<GraphLink> outgoingLinks = new ArrayList<>();
     private List<GraphLink> incomingLinks = new ArrayList<>();
 
+    private String clusterId;
+
     public enum NodeType {
         CLASS,
-        METHOD,
-        FIELD
+        METHOD
     }
 
     @Override

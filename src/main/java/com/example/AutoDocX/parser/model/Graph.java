@@ -6,12 +6,8 @@ import lombok.NoArgsConstructor;
 
 import java.util.List;
 import java.util.ArrayList;
-import java.util.Queue;
-import java.util.LinkedList;
-import java.util.Set;
-import java.util.HashSet;
 import java.util.Optional;
-import java.util.Map;
+import java.util.stream.Collectors;
 
 @Data
 @NoArgsConstructor
@@ -28,8 +24,20 @@ public class Graph {
         this.links.add(link);
     }
 
-    public Optional<GraphNode> getNodeById(String query) {
+    public Optional<GraphNode> getNode(String query) {
         return nodes.stream().filter(node -> node.getId().equals(query) || node.getLabel().equals(query)).findFirst();
+    }
+
+    public List<GraphLink> getOutgoingLinks(String nodeId) {
+        return links.stream()
+                .filter(link -> link.getSourceID().equals(nodeId))
+                .collect(Collectors.toList());
+    }
+
+    public List<GraphLink> getIncomingLinks(String nodeId) {
+        return links.stream()
+                .filter(link -> link.getTargetID().equals(nodeId))
+                .collect(Collectors.toList());
     }
 
     @Override
@@ -40,19 +48,18 @@ public class Graph {
 
         sb.append("Nodes (Total: ").append(nodes.size()).append("):\n");
         nodes.forEach(node -> {
-            sb.append("  - ").append(node.getId()).append(" (Type: ").append(node.getType()).append(", Label: ").append(node.getLabel()).append(")\n");
-            if (!node.getOutgoingLinks().isEmpty()) {
-                sb.append("    Outgoing Links:\n");
-                node.getOutgoingLinks().forEach(link -> sb.append("      -> ").append(link.getTarget()).append(" (Type: ").append(link.getType()).append(")\n"));
-            }
-            if (!node.getIncomingLinks().isEmpty()) {
-                sb.append("    Incoming Links:\n");
-                node.getIncomingLinks().forEach(link -> sb.append("      <- ").append(link.getSource()).append(" (Type: ").append(link.getType()).append(")\n"));
-            }
+            sb.append("  - ").append(node.getId())
+                    .append(" (Type: ").append(node.getType())
+                    .append(", Label: ").append(node.getLabel())
+                    .append(")\n");
         });
 
         sb.append("\nLinks (Total: ").append(links.size()).append("):\n");
-        links.forEach(link -> sb.append("  - ").append(link.getSource()).append(" --(").append(link.getType()).append(")--> ").append(link.getTarget()).append("\n"));
+        links.forEach(link -> sb.append("  - ")
+                .append(link.getSourceID())
+                .append(" --(").append(link.getType()).append(")--> ")
+                .append(link.getTargetID())
+                .append("\n"));
 
         sb.append("========================\n");
         return sb.toString();

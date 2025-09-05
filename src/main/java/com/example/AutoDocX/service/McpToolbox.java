@@ -2,19 +2,17 @@ package com.example.AutoDocX.service;
 
 import com.example.AutoDocX.model.ClonedRepo;
 import com.example.AutoDocX.parser.model.Graph;
+import com.example.AutoDocX.parser.model.GraphLink;
 import com.example.AutoDocX.parser.model.GraphNode;
 import com.example.AutoDocX.parser.model.GraphAlgo;
 import com.example.AutoDocX.service.RepoHandler.NodeNotFoundException;
 import org.springframework.stereotype.Service;
-import java.util.List;
-import java.util.Optional;
+
+import java.util.*;
 import java.util.stream.Collectors;
 import java.io.IOException;
-import java.util.Collections;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.Comparator;
 import java.nio.file.FileVisitResult;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
@@ -97,12 +95,47 @@ public class McpToolbox {
 
     public String findCentralNodes(Graph graph, int n) {
         List<GraphNode> centralNodes = GraphAlgo.findCentralClassNodes(graph, n);
+
         return centralNodes.stream()
-                .map(node -> node.getLabel() + " (Outgoing Links: " + GraphAlgo.calculateNodeOutgoingLinkCount(graph, node.getId()) + ")")
+                .map(node -> {
+                    // collect all links relevant to this class (including methods collapsed into class)
+                    List<GraphLink> links = GraphAlgo.getAllLinksForClass(graph, node);
+
+                    // incoming = who points to me (or my methods)
+                    String incoming = links.stream()
+                            .filter(link -> link.getTargetID().equals(node.getId()) ||
+                                    link.getTargetID().startsWith("method_" + node.getLabel()))
+                            .map(link -> graph.getNode(link.getSourceID()).orElse(null))
+                            .filter(Objects::nonNull)
+                            .map(GraphNode::getLabel)
+                            .distinct()
+                            .collect(Collectors.joining(", "));
+
+                    // outgoing = who I point to (or my methods point to)
+                    String outgoing = links.stream()
+                            .filter(link -> link.getSourceID().equals(node.getId()) ||
+                                    link.getSourceID().startsWith("method_" + node.getLabel()))
+                            .map(link -> graph.getNode(link.getTargetID()).orElse(null))
+                            .filter(Objects::nonNull)
+                            .map(GraphNode::getLabel)
+                            .distinct()
+                            .collect(Collectors.joining(", "));
+
+                    if (incoming.isEmpty()) incoming = "";
+                    if (outgoing.isEmpty()) outgoing = "";
+
+                    return node.getLabel() + " | Uses: [" + outgoing + "]; Used by: [" + incoming + "]";
+                })
                 .collect(Collectors.joining("\n"));
     }
 
+
+
     public String smartDfs(Graph graph, String startNodeId, int depthLimit, double minPopularityRatio) {
         return GraphAlgo.smartDfs(graph, startNodeId, depthLimit, minPopularityRatio);
+    }
+
+    public String getNeighbourSubgraph(Graph graph, String startNodeId, int depthLimit) {
+        return GraphAlgo.dfsTraversalToString(graph, startNodeId, depthLimit);
     }
 }

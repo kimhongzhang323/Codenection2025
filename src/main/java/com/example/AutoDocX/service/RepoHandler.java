@@ -131,7 +131,7 @@ public class RepoHandler {
 
     public String getCodeChunk(ClonedRepo clonedRepo, String nodeId) throws IOException, NodeNotFoundException {
         Graph graph = getGraph(clonedRepo);
-        Optional<GraphNode> nodeOpt = graph.getNodeById(nodeId);
+        Optional<GraphNode> nodeOpt = graph.getNode(nodeId);
 
         if (nodeOpt.isEmpty()) {
             throw new NodeNotFoundException("Node with ID " + nodeId + " not found in the graph for repository " + clonedRepo.getRepoLink());

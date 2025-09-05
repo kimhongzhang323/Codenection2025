@@ -142,10 +142,14 @@ public class Agent {
                 result = mcpToolbox.findCentralNodes(graph, n);
                 break;
             case "find_neighbour_nodes":
-                String smartDfsStartNodeId = Optional.ofNullable(paramsMap.get("node_id")).map(Object::toString).orElseThrow(() -> new IllegalArgumentException("Missing node_id for find_neighbour_nodes tool."));
-                int smartDfsDepthLimit = Optional.ofNullable(paramsMap.get("depth_limit")).map(val -> ((Number) val).intValue()).orElse(Integer.MAX_VALUE);
-                double smartDfsMinPopularityRatio = Optional.ofNullable(paramsMap.get("min_popularity_ratio")).map(val -> ((Number) val).doubleValue()).orElseThrow(() -> new IllegalArgumentException("Missing min_popularity_ratio for find_neighbour_nodes tool."));
-                result = mcpToolbox.smartDfs(graph, smartDfsStartNodeId, smartDfsDepthLimit, smartDfsMinPopularityRatio);
+                String startNodeId = Optional.ofNullable(paramsMap.get("node_id"))
+                        .map(Object::toString)
+                        .orElseThrow(() -> new IllegalArgumentException("Missing node_id for find_neighbour_nodes tool."));
+                int depthLimit = Optional.ofNullable(paramsMap.get("depth_limit"))
+                        .map(val -> ((Number) val).intValue())
+                        .orElse(2); // default = 2
+                result =
+                        mcpToolbox.getNeighbourSubgraph(graph, startNodeId, depthLimit);
                 break;
             default:
                 throw new IllegalArgumentException("Unknown tool: " + tool);
@@ -157,45 +161,6 @@ public class Agent {
 
     private List<Tool> getTools() {
         List<Tool> tools = new ArrayList<>();
-
-        // folder_tree_structure
-//        tools.add(Tool.builder()
-//                .functionDeclarations(FunctionDeclaration.builder()
-//                        .name("folder_tree_structure")
-//                        .description("Retrieves the tree structure of a folder within the repository up to a specified depth.")
-//                        .parameters(Schema.builder()
-//                                .type(Type.Known.OBJECT)
-//                                .properties(Map.of(
-//                                        "dirname", Schema.builder().type(Type.Known.STRING).description("The name of the directory, relative to the repository root.").build(),
-//                                        "depth", Schema.builder().type(Type.Known.NUMBER).description("The maximum depth to traverse. Optional. If not provided, it will traverse the entire directory.").build()
-//                                ))
-//                                .required(List.of("dirname"))
-//                                .build())
-//                        .build()).build());
-//
-//        // read_file
-//        tools.add(Tool.builder()
-//                .functionDeclarations(FunctionDeclaration.builder()
-//                        .name("read_file")
-//                        .description("Reads the content of a specified file within the repository.")
-//                        .parameters(Schema.builder()
-//                                .type(Type.Known.OBJECT)
-//                                .properties(Map.of("filename", Schema.builder().type(Type.Known.STRING).description("The path to the file, relative to the repository root.").build()))
-//                                .required(List.of("filename"))
-//                                .build())
-//                        .build()).build());
-//
-//        // get_nodes_in_file
-//        tools.add(Tool.builder()
-//                .functionDeclarations(FunctionDeclaration.builder()
-//                        .name("get_nodes_in_file")
-//                        .description("Returns the top-level graph nodes (classes) in a specific file.")
-//                        .parameters(Schema.builder()
-//                                .type(Type.Known.OBJECT)
-//                                .properties(Map.of("filename", Schema.builder().type(Type.Known.STRING).description("The path to the file, relative to the repository root.").build()))
-//                                .required(List.of("filename"))
-//                                .build())
-//                        .build()).build());
 
         // get_code
         tools.add(Tool.builder()
@@ -230,15 +195,14 @@ public class Agent {
                     .build(),
                 FunctionDeclaration.builder()
                     .name("find_neighbour_nodes")
-                    .description("Performs a depth-first search with popularity-based pruning.")
+                    .description("Performs a depth-first search on target node")
                     .parameters(Schema.builder()
                         .type(Type.Known.OBJECT)
                         .properties(Map.of(
                             "node_id", Schema.builder().type(Type.Known.STRING).description("The ID of the node to start the DFS from.").build(),
-                            "depth_limit", Schema.builder().type(Type.Known.NUMBER).description("The maximum depth to traverse. Optional.").build(),
-                            "min_popularity_ratio", Schema.builder().type(Type.Known.NUMBER).description("The minimum popularity ratio (0.0 to 1.0) for a neighbor node to be traversed.").build()
+                            "depth_limit", Schema.builder().type(Type.Known.NUMBER).description("The maximum depth to traverse. Optional.").build()
                         ))
-                        .required(List.of("node_id", "min_popularity_ratio"))
+                        .required(List.of("node_id"))
                         .build())
                     .build()
             ))
