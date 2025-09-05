@@ -1,8 +1,8 @@
-# Versioning
+# Overview
 
 -----------------------------------------------------
 
-## Overview
+## Overview of product
 
 It's common for developer tool related docs to version their docs, such as different docs for v1 and v2 of the same tool.
 

@@ -64,49 +64,12 @@ title: Hello World
 
 Run the app in development mode and see [http://localhost:3000/docs](http://localhost:3000/docs).
 
-<CodeBlockTabs defaultValue="npm">
-  <CodeBlockTabsList>
-    <CodeBlockTabsTrigger value="npm">
-      npm
-    </CodeBlockTabsTrigger>
-
-    <CodeBlockTabsTrigger value="pnpm">
-      pnpm
-    </CodeBlockTabsTrigger>
-
-    <CodeBlockTabsTrigger value="yarn">
-      yarn
-    </CodeBlockTabsTrigger>
-
-    <CodeBlockTabsTrigger value="bun">
-      bun
-    </CodeBlockTabsTrigger>
-  </CodeBlockTabsList>
-
-  <CodeBlockTab value="npm">
-    ```bash
-    npm run dev
-    ```
-  </CodeBlockTab>
-
-  <CodeBlockTab value="pnpm">
-    ```bash
-    pnpm run dev
-    ```
-  </CodeBlockTab>
-
-  <CodeBlockTab value="yarn">
-    ```bash
-    yarn dev
-    ```
-  </CodeBlockTab>
-
-  <CodeBlockTab value="bun">
-    ```bash
-    bun run dev
-    ```
-  </CodeBlockTab>
-</CodeBlockTabs>
+```package-tabs
+npm: npm run dev
+pnpm: pnpm run dev
+yarn: yarn dev
+bun: bun run dev
+```
 
 ## FAQ
 
@@ -145,97 +108,3 @@ Some common questions you may encounter.
       baseUrl: '/info', // to the new value [!code highlight]
     });
     ```
-  </Accordion>
-
-  <Accordion id="multi-docs" title="How to implement multi-docs?">
-    We recommend to use [Sidebar Tabs](/docs/ui/navigation/sidebar#sidebar-tabs).
-  </Accordion>
-</Accordions>
-
-### For Next.js
-
-<Accordions>
-  <Accordion id="dynamic-route" title="It uses Dynamic Route, will it be poor in performance?">
-    Next.js turns dynamic route into static routes when `generateStaticParams` is configured.
-    Hence, it is as fast as static pages.
-
-    You can [enable Static Exports](/docs/ui/static-export) on Next.js to get a static build output.
-  </Accordion>
-
-  <Accordion id="custom-layout-docs-page" title="How to create a page in /docs without docs layout?">
-    Same as managing layouts in Next.js App Router, remove the original MDX file from content directory (`/content/docs`).
-    This ensures duplicated pages will not cause errors.
-
-    Now, You can add the page to another route group, which isn't a descendant of docs layout.
-
-    For example, to replace `/docs/test`:
-
-    <Files>
-      <File name="(home)/docs/test/page.tsx" />
-
-      <Folder name="docs">
-        <File name="layout.tsx" />
-
-        <File name="[[...slug]]/page.tsx" />
-      </Folder>
-    </Files>
-
-    For `/docs`, you need to change the catch-all route to be non-optional:
-
-    <Files>
-      <File name="(home)/docs/page.tsx" />
-
-      <Folder name="docs" defaultOpen>
-        <File name="layout.tsx" />
-
-        <File name="[...slug]/page.tsx" />
-      </Folder>
-    </Files>
-  </Accordion>
-</Accordions>
-
-### Upgrade Fumadocs
-
-Make sure to upgrade Fumadocs when you've encountered any problems or trying out new features:
-
-```bash title="pnpm"
-pnpm update -i -r --latest
-```
-
-## Learn More
-
-New to here? Don't worry, we are welcome for your questions.
-
-If you find anything confusing, please give your feedback on [Github Discussion](https://github.com/fuma-nama/fumadocs/discussions)!
-
-### Writing Content
-
-For authoring docs, make sure to read:
-
-<Cards>
-  <Card href="/docs/ui/markdown" title="Markdown">
-    Fumadocs has some additional features for authoring content.
-  </Card>
-
-  <Card href="/docs/ui/navigation" title="Navigation">
-    Learn how to customise navigation links and sidebar items.
-  </Card>
-
-  <Card href="/docs/ui/page-conventions" title="Routing">
-    Learn how to organise content.
-  </Card>
-
-  <Card href="/docs/ui/components" title="Components" description="See all available components to enhance your docs" />
-</Cards>
-
-### Special Needs
-
-<Cards>
-  <Card href="/docs/ui/static-export" title="Configure Static Export" description="Learn how to enable static export on your docs" />
-
-  <Card href="/docs/ui/internationalization" title="Internationalization" description="Learn how to enable i18n" />
-
-  <Card href="/docs/ui/theme" title="Color Themes" description="Add themes to Fumadocs UI" />
-
-  <Card href="/docs/ui/customisation" title="Customise UI" description="A detailed guide on how to customise UI" />
-</Cards>
