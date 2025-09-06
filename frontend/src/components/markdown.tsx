@@ -8,6 +8,7 @@ import Mermaid from './mermaid.tsx';
 import FilesRenderer from './files_renderer';
 import Callout from './callout';
 import CopyMarkdownButton from './CopyMarkdownButton';
+import SummarizeButton from './SummarizeButton';
 
 const MarkdownRawContext = createContext<string>('');
 
@@ -110,8 +111,9 @@ const Markdown: React.FC<MarkdownProps> = ({ content }) => {
           >
             {children}
           </h1>
-          <div style={{ marginTop: '0.9rem', marginBottom: '1rem' }}>
+          <div style={{ marginTop: '0.9rem', marginBottom: '1rem', display: 'flex', gap: '16px', alignItems: 'center' }}>
             <CopyMarkdownButton content={raw} />
+            <SummarizeButton content={raw} />
           </div>
         </div>
       );
