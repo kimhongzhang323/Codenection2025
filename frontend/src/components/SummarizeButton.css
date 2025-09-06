@@ -1,0 +1,65 @@
+.summarize-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 10px;
+  border-radius: 8px;
+  border: 1px solid var(--bottom-dialog-border);
+  background: var(--search-input-bg);
+  color: var(--docs-normal-text);
+  font-size: 12px;
+  cursor: pointer;
+  outline: none;
+  transition: all 0.2s ease;
+}
+
+.summarize-button:hover {
+  background: var(--search-input-bg);
+  border-color: var(--docs-link-text);
+}
+
+.summarize-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.summarize-button__icon {
+  width: 16px;
+  height: 16px;
+}
+
+.summarize-button__spinner {
+  width: 12px;
+  height: 12px;
+  border: 2px solid var(--docs-normal-text);
+  border-top: 2px solid transparent;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.summarize-button__tooltip {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 8px;
+  padding: 8px 12px;
+  background: var(--search-input-bg);
+  border: 1px solid var(--bottom-dialog-border);
+  border-radius: 8px;
+  font-size: 12px;
+  color: var(--docs-normal-text);
+  white-space: nowrap;
+  z-index: 1000;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}

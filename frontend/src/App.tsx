@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Routes, Route, useNavigate } from 'react-router-dom'
+import { Routes, Route, useNavigate, useLocation, useParams } from 'react-router-dom'
 import { checkGithubUrlPublic, fetchGithubRepoDetails, type GithubRepoDetails } from './lib/utils'
 import { LinkIcon } from './components/url_icon'
 import { SearchIcon } from './components/search_icon'
@@ -11,6 +11,7 @@ import SignUpPage from './pages/SignUpPage'
 import TextSelectionDialog from './components/TextSelectionDialog'
 import { AIChatPanel } from './components/AIChatPanel'
 import { AIChatProvider } from './contexts/AIChatContext'
+import DocumentationSystem from './components/docs_flow'
 import './App.css'
 
 function HomePage() {
@@ -93,7 +94,7 @@ function HomePage() {
   function handleArrowClick() {
     if (repoData) {
       const slug = (repoData.fullName || '').toLowerCase()
-      navigate(`/${encodeURIComponent(slug)}`, {
+      navigate(`/docs-flow/${encodeURIComponent(slug)}`, {
         state: { repoData, repoUrl },
       })
     }
@@ -175,12 +176,44 @@ function HomePage() {
   )
 }
 
+function DocsFlowPage() {
+  const location = useLocation() as { state?: { repoData?: GithubRepoDetails; repoUrl?: string } }
+  const navigate = useNavigate()
+  const { repo } = useParams<{ repo: string }>()
+  const repoData = location.state?.repoData
+  const repoUrl = location.state?.repoUrl
+
+  const handleDocumentationCreated = () => {
+    // Navigate to the actual documentation page
+    if (repo) {
+      navigate(`/${repo}`, {
+        state: { repoData, repoUrl },
+      })
+    }
+  }
+
+  const handleBackToApp = () => {
+    // Navigate back to home page
+    navigate('/')
+  }
+
+  return (
+    <DocumentationSystem
+      hasExistingDoc={false}
+      isEditing={false}
+      onDocumentationCreated={handleDocumentationCreated}
+      onBackToApp={handleBackToApp}
+    />
+  )
+}
+
 function App() {
   return (
     <AIChatProvider>
       <Routes>
         <Route path="/" element={<HomePage />} />
         <Route path="/signup" element={<SignUpPage />} />
+        <Route path="/docs-flow/:repo" element={<DocsFlowPage />} />
         <Route path="/:repo" element={<DocumentationPage />} />
         <Route path="/:repo/:file" element={<DocumentationPage />} />
         <Route path="/documentation" element={<DocumentationPage />} />

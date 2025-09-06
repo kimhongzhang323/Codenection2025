@@ -10,6 +10,63 @@
   [![TypeScript](https://img.shields.io/badge/TypeScript-5.8.3-blue.svg)](https://www.typescriptlang.org/)
 </div>
 
+## 🏆 Competition Track
+
+**Track 3: Fix the Docs** - *Smarter, Faster, Maintainable Documentation for the Real World by iFAST*
+
+### Problem Statement
+
+In real-world tech environments, documentation is a critical but broken part of the software development lifecycle:
+
+- **Writing it is slow, repetitive, and often skipped**
+- **Reading it is painful and time-consuming**, especially for new joiners
+- **Maintaining it is impractical** in fast-changing systems — documentation quickly becomes outdated, misleading, or irrelevant
+
+This leads to **onboarding delays, wasted engineering time, and avoidable bugs** — all due to poor or outdated docs.
+
+### Our Solution Focus
+
+AutoDocX addresses **three key dimensions** of the documentation problem:
+
+#### 1. 📝 Simplify Writing
+- **Auto-generate starter docs** from code, git commits, or comments
+- **Templates and AI suggestions** to make writing faster
+- **Real-time writing assistants** and markdown validators
+- **AI-powered documentation generation** from GitHub repositories
+
+#### 2. 🔍 Speed Up Reading
+- **Summarization tools** (TL;DR for long docs)
+- **Q&A search**: Ask questions, get contextual answers (ChatGPT for docs)
+- **Visualizations**: Flow diagrams, API call graphs, changelogs
+- **Semantic search** for faster information discovery
+
+#### 3. 🔄 Make Maintenance Easy
+- **Detect stale documentation** (doc drift vs. code)
+- **Notify users** when dependent components change
+- **Auto-suggest doc updates** from diffs or pull requests
+- **Documentation drift detection** and automated sync monitoring
+
+## ⚡ Technical Approach
+
+### 🚀 Core Architecture
+
+- **Graph-Driven Understanding**: The codebase is represented as a knowledge graph (nodes = classes/methods/fields, edges = dependencies/relations). Exploration and reasoning always start from graph navigation.
+
+- **Agentic Workflow**: The LLM runs in an iterative loop, exploring the graph, retrieving supporting code, and drafting documentation.
+
+- **Tool-Augmented Reasoning**: The agent grounds all insights via toolbox queries (graph traversal, code access, structure inspection).
+
+- **Memory Organization**:
+  - **Episodic** – interaction flow & status
+  - **Code** – retrieved code chunks (summarized)
+  - **Structure** – graph insights & dependencies
+
+- **RAG + VectorDB**: Memory is complemented by semantic retrieval, enabling natural language search over code and prior context.
+
+- **Prototype Focus**: Automated, grounded README generation with graph-first comprehension enhanced by semantic retrieval.
+
+---
+
 ## 🚀 Overview
 
 AutoDocX is a **web-based documentation platform** that revolutionizes how developers create, maintain, and share software documentation. Unlike traditional CLI-driven tools, AutoDocX provides a **100% interface-driven experience** with AI-powered assistance for generating, editing, and maintaining documentation.
