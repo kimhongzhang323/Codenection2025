@@ -204,7 +204,7 @@ AutoDocX/
 
 * 📊 **Slides**: [AutoDocX Presentation](static/AutoDocX%20Presentation.pdf)
 * 🖼️ **System Architecture**: [system\_architecture.png](static/system_architecture.png)
-* 🎬 **Pitch Video**: [Watch on YouTube](https://youtu.be/BnzRJbGVgEc?si=l48UAncA7gmipZKz)
+* 🎬 **Pitch Video**: [Watch on YouTube](https://youtu.be/6p2vMe2D6QQ?si=nNkdo-BKu9MklqCb)
 
 ---
 
