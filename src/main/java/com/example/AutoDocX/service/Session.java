@@ -1,7 +1,5 @@
 package com.example.AutoDocX.service;
 
-import com.example.AutoDocX.service.memory.Memory;
-
 public class Session {
     private final String gitUrl;
     private final Memory memory;
