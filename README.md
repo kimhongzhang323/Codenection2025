@@ -89,18 +89,6 @@ AutoDocX is a **web-based documentation platform** that revolutionizes how devel
 ## 🏗️ Architecture
 
 ### System Overview
-
-```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   Frontend      │    │   Backend       │    │   External      │
-│   (React)       │◄──►│   (Spring Boot) │◄──►│   Services      │
-│                 │    │                 │    │                 │
-│ • Rich Editor   │    │ • REST API      │    │ • GitHub API    │
-│ • AI Chat       │    │ • AI Processing │    │ • OpenAI/LLM    │
-│ • Document View │    │ • Git Operations│    │ • Vector DB     │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
-```
-
 <img src="static/system_architecture.png" alt="System Architecture" style="width: 100%; max-width: 800px; height: auto;"/>
 
 ### Tech Stack
