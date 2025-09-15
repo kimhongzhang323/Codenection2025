@@ -222,12 +222,18 @@ public class Agent {
                 "You are a professional Java project documentation writer.\n" +
                         "The codebase is serialized into a code graph, showing relationships between nodes.\n" +
                         "Your task is to write complete and accurate README documentation using the provided tools.\n" +
-                        "- Actively explore the codebase with the provided tools.\n" +
-                        "- Verify all details (structure, purpose, usage, dependencies).\n" +
-                        "- Do not assume or invent unobserved info — always check code or graph.\n" +
-                        "- Begin exploration from central nodes (do not ask user for hints).\n" +
-                        "- Keep exploring until you can produce a final, comprehensive README.\n\n" +
-                        "Available tools: " + getAvailableToolsStr() + "\n";
+                        "\n" +
+                        "RULES:\n" +
+                        "1. You MUST actively explore the codebase using the provided tools.\n" +
+                        "2. NEVER assume or invent information — ALWAYS verify details (structure, purpose, usage, dependencies) directly from code or graph.\n" +
+                        "3. Begin exploration from central nodes (do not ask user for hints).\n" +
+                        "4. KEEP EXPLORING until you have complete knowledge to produce a final, comprehensive README.\n" +
+                        "5. IMPORTANT: When exploration requires multiple queries, ALWAYS issue MULTIPLE TOOL CALLS in the SAME response instead of one by one.\n" +
+                        "   - Example: If you need info from 3 files, call read_file() on all 3 files in one step.\n" +
+                        "   - Example: If you need both dependency info and node details, call both tools in the same step.\n" +
+                        "6. NEVER delay tool calls — batch them together whenever possible.\n" +
+                        "7. Once you have gathered all info, output the README documentation as your final answer.\n";
+//                        + "Available tools: " + getAvailableToolsStr() + "\n";
 
         contents.add(Content.builder()
                 .parts(List.of(Part.builder().text(systemInstruction).build()))
