@@ -55,8 +55,8 @@ public class PineconeIndexService {
             for (int i = 0; i < ids.size(); i++) {
                 Map<String, String> record = new HashMap<>();
                 record.put("_id", ids.get(i));
-                record.put("text", texts.get(i));   // ✅ match expected field
-                record.put("type", "code");         // optional metadata
+                record.put("text", texts.get(i));
+                record.put("type", "code");
                 upsertRecords.add(record);
             }
 

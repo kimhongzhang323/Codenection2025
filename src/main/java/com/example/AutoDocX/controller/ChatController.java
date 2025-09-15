@@ -28,12 +28,19 @@ public class ChatController {
 
     @PostMapping("/chat")
     public ResponseEntity<String> chat(@RequestBody ChatRequest chatRequest) {
+        String content = chatRequest.getContent();
+        if (content == null || content.trim().isEmpty()) {
+            return ResponseEntity.badRequest()
+                    .body("{\"error\": \"Message content cannot be empty.\"}");
+        }
+
         try {
-            String response = chatService.sendMessage(chatRequest.getContent());
+            String response = chatService.sendMessage(content);
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                     .body("{\"error\": \"Sorry, an error occurred while communicating with the AI service.\"}");
         }
     }
+
 }

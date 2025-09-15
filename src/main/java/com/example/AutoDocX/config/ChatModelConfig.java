@@ -1,43 +1,33 @@
 package com.example.AutoDocX.config;
 
+import dev.langchain4j.data.message.Content;
 import dev.langchain4j.model.chat.ChatModel;
-import dev.langchain4j.model.embedding.EmbeddingModel;
-import dev.langchain4j.model.vertexai.VertexAiEmbeddingModel;
-import dev.langchain4j.model.vertexai.gemini.VertexAiGeminiChatModel;
+import dev.langchain4j.model.googleai.GoogleAiGeminiChatModel;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import java.time.Duration;
+
 @Configuration
 public class ChatModelConfig {
-
-    private static final String PROJECT_ID = "codenection-470214";
-    private static final String CHAT_MODEL = "gemini-2.5-flash";
-    private static final String EMBEDDING_MODEL = "text-embedding-004";
-    private static final String LOCATION = "us-central1";
+    private Content input;
 
     @Value("${google.api.key}")
     private String apiKey;
 
     @Bean
     public ChatModel geminiChatModel() {
-        return VertexAiGeminiChatModel.builder()
-                .project(PROJECT_ID)
-                .location(LOCATION)
-                .modelName(CHAT_MODEL)
-                .logRequests(true)
-                .logResponses(true)
-                .seed(1234)
-                .maxRetries(2)
+        return GoogleAiGeminiChatModel.builder()
+                .apiKey(apiKey)
+                .modelName("gemini-2.5-flash")
+                .temperature(1.0)
+                .topP(0.95)
+                .topK(64)
+                .seed(42)
+                .maxOutputTokens(8192)
+                .timeout(Duration.ofSeconds(60))
                 .build();
     }
 
-    @Bean
-    public EmbeddingModel vertexAiEmbeddingModel() {
-        return VertexAiEmbeddingModel.builder()
-                .project(PROJECT_ID)
-                .location(LOCATION)
-                .modelName(EMBEDDING_MODEL)
-                .build();
-    }
 }
