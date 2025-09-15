@@ -16,7 +16,7 @@ public class PineconeIndexService {
 
     private final Pinecone pineconeClient;
     private final String indexName = "codenection";
-    private final String namespace = "default"; // ✅ configure namespace here
+    private final String namespace = "default";
 
     private static final int MAX_CONCURRENT_REQUESTS = 3;
     private static final int BATCH_SIZE = 50;

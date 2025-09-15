@@ -1,6 +1,6 @@
 package com.example.AutoDocX.controller;
 
-import com.example.AutoDocX.model.repo.Model;
+import com.example.AutoDocX.service.ChatService;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -12,10 +12,10 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/ai")
 public class ChatController {
 
-    private final Model model;
+    private final ChatService chatService;
 
-    public ChatController(Model model) {
-        this.model = model;
+    public ChatController(ChatService chatService) {
+        this.chatService = chatService;
     }
 
     @Data
@@ -29,11 +29,11 @@ public class ChatController {
     @PostMapping("/chat")
     public ResponseEntity<String> chat(@RequestBody ChatRequest chatRequest) {
         try {
-            String response = model.sendMessage(chatRequest.getContent());
+            String response = chatService.sendMessage(chatRequest.getContent());
             return ResponseEntity.ok(response);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Sorry, an error occurred while communicating with the AI service.");
+                    .body("{\"error\": \"Sorry, an error occurred while communicating with the AI service.\"}");
         }
     }
 }

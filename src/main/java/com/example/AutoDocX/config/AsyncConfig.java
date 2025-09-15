@@ -12,9 +12,9 @@ public class AsyncConfig {
     @Bean(name = "aiTaskExecutor")
     public Executor aiTaskExecutor() {
         ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-        executor.setCorePoolSize(5);        // Minimum threads
-        executor.setMaxPoolSize(20);        // Maximum threads
-        executor.setQueueCapacity(50);      // Queue size before spawning more threads
+        executor.setCorePoolSize(5);
+        executor.setMaxPoolSize(20);
+        executor.setQueueCapacity(50);
         executor.setThreadNamePrefix("AI-Executor-");
         executor.initialize();
         return executor;
