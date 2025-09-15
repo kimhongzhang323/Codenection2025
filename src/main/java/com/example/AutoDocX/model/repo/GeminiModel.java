@@ -5,14 +5,11 @@ import com.google.genai.types.Content;
 import com.google.genai.types.GenerateContentResponse;
 import com.google.genai.types.Part;
 import com.google.genai.types.Tool;
-import com.google.genai.types.GenerateContentConfig;
+import com.google.genai.types.FinishReason;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
-import java.util.HashMap;
-import java.util.Map;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 @Service("geminiModel")
 public class GeminiModel implements Model {
@@ -20,16 +17,18 @@ public class GeminiModel implements Model {
     private final Client genaiClient;
     private final String modelName;
 
-    public GeminiModel(@Value("${gemini.model.name}") String modelName, @Value("${gemini.api.key}") String apiKey) {
+    public GeminiModel(
+            @Value("${gemini.model.name}") String modelName,
+            @Value("${gemini.api.key}") String apiKey
+    ) {
         this.genaiClient = Client.builder().apiKey(apiKey).build();
         this.modelName = modelName;
     }
 
-    @Override
-    public Map<String, Object> sendMessage(List<Content> contents, List<Tool> tools) {
-        Map<String, Object> result = new HashMap<>();
+    // New version
+    public SendMessageResult sendMessageNew(List<Content> contents, List<Tool> tools) {
         try {
-            GenerateContentConfig config = GenerateContentConfig.builder()
+            var config = com.google.genai.types.GenerateContentConfig.builder()
                     .tools(tools)
                     .build();
 
@@ -39,66 +38,122 @@ public class GeminiModel implements Model {
                     config
             );
 
-            if (response.candidates().isPresent() && !response.candidates().get().isEmpty()) {
-                var candidate = response.candidates().get().get(0);
-
-                // If candidate has content, parse parts
-                Optional<com.google.genai.types.Content> candidateContentOpt = candidate.content();
-                if (candidateContentOpt.isPresent()) {
-                    com.google.genai.types.Content candidateContent = candidateContentOpt.get();
-                    List<Part> parts = candidateContent.parts().orElse(List.of());
-
-                    // Gather text across parts and find the first function call (if any)
-                    StringBuilder combinedText = new StringBuilder();
-                    boolean sawFunctionCall = false;
-                    String functionName = null;
-                    Object functionArgs = null;
-
-                    for (Part part : parts) {
-                        // Append any text parts
-                        part.text().ifPresent(t -> combinedText.append(t));
-
-                        // Capture the first function call (if any)
-                        if (!sawFunctionCall && part.functionCall().isPresent()) {
-                            sawFunctionCall = true;
-                            var fc = part.functionCall().get();
-                            functionName = fc.name().orElse(null);
-                            // args() is an Optional<Object> (could be Map or JSON-like)
-                            functionArgs = fc.args().orElse(null);
-                            // do not break — collect remaining text parts if present after this
-                        }
-                    }
-
-                    // If the model issued a function call, prefer returning the tool + params
-                    if (sawFunctionCall && functionName != null) {
-                        result.put("tool", functionName);
-                        result.put("param", functionArgs); // keep raw args (may be Optional/Map)
-                        if (combinedText.length() > 0) {
-                            result.put("assistant_text", combinedText.toString());
-                        }
-                        return result;
-                    }
-
-                    // No function call: treat text as final_answer
-                    if (combinedText.length() > 0) {
-                        result.put("final_answer", combinedText.toString());
-                        return result;
-                    }
-                }
-
-                // Fallback: if content absent but finish reason present, still try to gather text
-                // (This mirrors earlier handling but in a safer, simpler form.)
-                if (candidate.content().isEmpty()) {
-                    // Try to convert candidate to a text fallback if possible
-                    // If candidate content is missing, return a generic message
-                    result.put("final_answer", "No textual content produced by model candidate.");
-                }
-            } else {
-                result.put("final_answer", "No response from Gemini model.");
+            // Check candidates
+            if (response.candidates().isEmpty() || response.candidates().get().isEmpty()) {
+                // No candidate → treat as OUTPUT_ERROR
+                return new SendMessageResult(
+                        ModelFinishReason.OUTPUT_ERROR,
+                        Optional.empty(),
+                        List.of(),
+                        Optional.empty(),
+                        Optional.of("No response from Gemini model.")
+                );
             }
+
+            var candidate = response.candidates().get().get(0);
+
+            // Determine finish reason from Gemini
+            FinishReason.Known geminiFinish = candidate.finishReason().get().knownEnum();
+            ModelFinishReason mappedFinish;
+            switch (candidate.finishReason().get().knownEnum()) {
+                case STOP:
+                    mappedFinish = ModelFinishReason.FINAL;
+                    break;
+
+                case MAX_TOKENS:
+                    // This is user-controllable (too long input/output)
+                    mappedFinish = ModelFinishReason.INPUT_ERROR;
+                    break;
+
+                case BLOCKLIST:
+                case PROHIBITED_CONTENT:
+                case SPII:
+                case IMAGE_SAFETY:
+                case MALFORMED_FUNCTION_CALL:
+                case UNEXPECTED_TOOL_CALL:
+                    // Model messed up tool invocation
+                    mappedFinish = ModelFinishReason.OUTPUT_ERROR;
+                    break;
+
+                case SAFETY:
+                case RECITATION:
+                case LANGUAGE:
+                case FINISH_REASON_UNSPECIFIED:
+                    // Default → treat as FINAL but ambiguous
+                    mappedFinish = ModelFinishReason.FINAL;
+                    break;
+
+                case OTHER:
+                default:
+                    mappedFinish = ModelFinishReason.UNKNOWN;
+                    break;
+            }
+
+
+            // Now parse parts: collect all texts and all functionCalls
+            Optional<com.google.genai.types.Content> contentOpt = candidate.content();
+            StringBuilder allTextSB = new StringBuilder();
+            List<FunctionCallData> functionCalls = new ArrayList<>();
+
+            if (contentOpt.isPresent()) {
+                var content = contentOpt.get();
+                List<Part> parts = content.parts().orElse(List.of());
+
+                for (Part part : parts) {
+                    part.text().ifPresent(t -> allTextSB.append(t));
+                    if (part.functionCall().isPresent()) {
+                        var fc = part.functionCall().get();
+                        String fname = fc.name().orElse(null);
+                        Object fargs = fc.args().orElse(null);
+                        if (fname != null) {
+                            functionCalls.add(new FunctionCallData(fname, fargs));
+                        }
+                    }
+                }
+            }
+
+            String assistantText = !allTextSB.isEmpty() ? allTextSB.toString() : null;
+
+            // decide finalAnswer: if no function calls, then treat assistantText as final
+            Optional<String> finalAnswerOpt = Optional.empty();
+            if (functionCalls.isEmpty()) {
+                if (assistantText != null) {
+                    finalAnswerOpt = Optional.of(assistantText);
+                }
+            }
+
+            return new SendMessageResult(
+                    mappedFinish,
+                    Optional.ofNullable(assistantText),
+                    functionCalls,
+                    finalAnswerOpt,
+                    Optional.empty()
+            );
+
+        } catch (IllegalArgumentException iae) {
+            // input error e.g. malformed request, parameters wrong
+            return new SendMessageResult(
+                    ModelFinishReason.INPUT_ERROR,
+                    Optional.empty(),
+                    List.of(),
+                    Optional.empty(),
+                    Optional.of("Input error: " + iae.getMessage())
+            );
         } catch (Exception e) {
-            throw new RuntimeException("An unexpected error occurred while calling Gemini", e);
+            // other errors => probably output side
+            return new SendMessageResult(
+                    ModelFinishReason.OUTPUT_ERROR,
+                    Optional.empty(),
+                    List.of(),
+                    Optional.empty(),
+                    Optional.of("Exception when calling Gemini: " + e.getMessage())
+            );
         }
-        return result;
+    }
+
+    @Override
+    public Map<String, Object> sendMessage(List<Content> contents, List<Tool> tools) {
+        SendMessageResult res = sendMessageNew(contents, tools);
+        return res.toMap();
     }
 }

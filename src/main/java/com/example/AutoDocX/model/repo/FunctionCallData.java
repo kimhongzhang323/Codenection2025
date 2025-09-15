@@ -1,0 +1,33 @@
+package com.example.AutoDocX.model.repo;
+
+import lombok.Getter;
+
+import java.util.Objects;
+
+@Getter
+public class FunctionCallData {
+    private final String name;
+    private final Object args;  // you can use Map<String,Object> if args are JSON-like
+
+    public FunctionCallData(String name, Object args) {
+        this.name = name;
+        this.args = args;
+    }
+
+    @Override
+    public String toString() {
+        return "FunctionCallData{name='" + name + "', args=" + args + "}";
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof FunctionCallData that)) return false;
+        return Objects.equals(name, that.name) && Objects.equals(args, that.args);
+    }
+
+    @Override
+    public int hashCode() {
+        return Objects.hash(name, args);
+    }
+}
