@@ -32,7 +32,7 @@
             <dependency>
                 <groupId>dev.langchain4j</groupId>
                 <artifactId>langchain4j-embeddings</artifactId>
-                <version>1.4.0-beta10</version>
+                <version>1.4.0</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
@@ -74,22 +74,6 @@
             <artifactId>spring-ai-openai-spring-boot-starter</artifactId>
         </dependency>
 
-        <!-- DJL Dependencies -->
-        <dependency>
-            <groupId>ai.djl</groupId>
-            <artifactId>api</artifactId>
-            <version>0.34.0</version>
-        </dependency>
-        <dependency>
-            <groupId>ai.djl.pytorch</groupId>
-            <artifactId>pytorch-engine</artifactId>
-            <version>0.34.0</version>
-        </dependency>
-        <dependency>
-            <groupId>ai.djl.huggingface</groupId>
-            <artifactId>tokenizers</artifactId>
-            <version>0.34.0</version>
-        </dependency>
 
         <!-- Pinecone Java client -->
         <dependency>
@@ -118,11 +102,6 @@
             <groupId>com.vladsch.flexmark</groupId>
             <artifactId>flexmark-all</artifactId>
             <version>0.64.8</version>
-        </dependency>
-        <dependency>
-            <groupId>dev.langchain4j</groupId>
-            <artifactId>langchain4j</artifactId>
-            <version>0.32.0</version>
         </dependency>
         <dependency>
             <groupId>org.graphstream</groupId>
