@@ -6,8 +6,12 @@ import Markdown from '../components/markdown'
 import TableOfContents from '../components/table_of_content'
 import { AnimatedThemeToggler } from '../components/theme'
 import { BottomMiniDialog } from '../components/BottomMiniDialog'
-import { AIChatPanel } from '../components/AIChatPanel'
 import { SparklesIcon } from '../components/sparkles_icon'
+import { LightbulbIcon } from '../components/lightbulb_icon'
+import { useAIChat } from '../contexts/AIChatContext'
+import SearchDialog from '../components/SearchDialog'
+import SuggestionPanel from '../components/SuggestionPanel'
+import '../components/SuggestionPanel.css'
 
 type DocItem =
   | { type: 'separator'; label: string }
@@ -195,9 +199,12 @@ function DocumentationPage() {
     const saved = localStorage.getItem('sidebarCollapsed')
     return saved ? JSON.parse(saved) : false
   })
-  const [isChatOpen, setIsChatOpen] = useState(false)
+  const { toggleChat } = useAIChat()
   const scrollTimeoutRef = useRef<number | null>(null)
   const treeRef = useRef<HTMLElement>(null)
+  const [isSearchOpen, setIsSearchOpen] = useState(false)
+  const [isSuggestionPanelOpen, setIsSuggestionPanelOpen] = useState(false)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
 
   // Determine encoded repo slug for routing back to repo root
   const repoSlug = (() => {
@@ -335,11 +342,34 @@ function DocumentationPage() {
     }
   }, [])
 
+  // Auto-resize textarea when content changes or view mode changes
+  useEffect(() => {
+    if (viewMode === 'edit' && textareaRef.current) {
+      const textarea = textareaRef.current
+      textarea.style.height = 'auto'
+      textarea.style.height = textarea.scrollHeight + 'px'
+    }
+  }, [draftContent, viewMode])
+
   const handleSidebarToggle = () => {
     const newState = !isSidebarCollapsed
     setIsSidebarCollapsed(newState)
     localStorage.setItem('sidebarCollapsed', JSON.stringify(newState))
   }
+
+  // Open search dialog on Ctrl+K
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const isK = e.key.toLowerCase() === 'k'
+      const isCtrlOrMeta = e.ctrlKey || e.metaKey
+      if (isCtrlOrMeta && isK) {
+        e.preventDefault()
+        setIsSearchOpen(true)
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
 
   // Handle theme changes and persist to localStorage
   const handleThemeToggle = (isDark: boolean) => {
@@ -379,11 +409,22 @@ function DocumentationPage() {
         </div>
       )}
 
+      {/* Lightbulb Button - Above AI Chat Button */}
+      <div className="docs-lightbulb-button-container">
+        <button 
+          className="docs-lightbulb-button"
+          onClick={() => setIsSuggestionPanelOpen(true)}
+          aria-label="Open suggestions"
+        >
+          <LightbulbIcon size={18} />
+        </button>
+      </div>
+
       {/* AI Chat Button - Top Right Corner */}
       <div className="docs-ai-chat-button-container">
         <button 
           className="docs-ai-chat-button"
-          onClick={() => setIsChatOpen(!isChatOpen)}
+          onClick={toggleChat}
           aria-label="Open AI chat"
         >
           <SparklesIcon size={18} />
@@ -408,12 +449,12 @@ function DocumentationPage() {
                 }}
               />
             </div>
-            <div className="docs-sidebar__search">
+            <div className="docs-sidebar__search" onClick={() => setIsSearchOpen(true)} role="button" aria-label="Open search">
               <svg className="docs-sidebar__search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="11" cy="11" r="8"/>
                 <path d="m21 21-4.35-4.35"/>
               </svg>
-              <input type="text" placeholder="Search" aria-label="Search docs" />
+              <input type="text" placeholder="Search" aria-label="Search docs" readOnly />
               <div className="docs-sidebar__search-shortcut">
                 <span className="docs-sidebar__search-shortcut-key">Ctrl</span>
                 <span className="docs-sidebar__search-shortcut-key">K</span>
@@ -444,23 +485,30 @@ function DocumentationPage() {
           <div className="docs-main__container">
             {viewMode === 'edit' ? (
               <textarea
+                ref={textareaRef}
                 className="docs-edit-textarea"
                 value={draftContent}
-                onChange={(e) => setDraftContent(e.target.value)}
+                onChange={(e) => {
+                  setDraftContent(e.target.value)
+                  // Auto-resize textarea to fit content
+                  e.target.style.height = 'auto'
+                  e.target.style.height = e.target.scrollHeight + 'px'
+                }}
                 style={{
-                  width: '100%',
-                  height: '84vh',
+                  width: '110%',
+                  minHeight: '100vh',
+                  height: 'auto',
                   padding: '12px',
                   fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
-                  fontSize: '13px',
+                  fontSize: '14px',
                   lineHeight: 1.5,
                   color: 'var(--docs-normal-text)',
                   background: 'var(--docs-bg)',
-                  border: '1px solid var(--bottom-dialog-border)',
+                  border: 'none',
                   borderRadius: 8,
                   outline: 'none',
-                  scrollbarWidth: 'thin',
-                  scrollbarColor: 'var(--sidebar-border) transparent'
+                  resize: 'none',
+                  overflow: 'hidden'
                 }}
               />
             ) : (
@@ -479,11 +527,14 @@ function DocumentationPage() {
         mode={viewMode}
         onModeChange={(m) => setViewMode(m)}
       />
-      
-      {/* AI Chat Panel */}
-      <AIChatPanel 
-        isOpen={isChatOpen}
-        onToggle={() => setIsChatOpen(!isChatOpen)}
+
+      {/* Floating Search Dialog */}
+      <SearchDialog isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
+
+      {/* Suggestion Panel */}
+      <SuggestionPanel 
+        isOpen={isSuggestionPanelOpen} 
+        onClose={() => setIsSuggestionPanelOpen(false)} 
       />
 
     </div>

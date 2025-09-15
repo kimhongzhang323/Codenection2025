@@ -1,12 +1,16 @@
-import React from 'react';
+import React, { createContext, useContext } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { tomorrow, prism } from 'react-syntax-highlighter/dist/cjs/styles/prism';
-import Mermaid from './mermaid';
+import Mermaid from './mermaid.tsx';
 import FilesRenderer from './files_renderer';
 import Callout from './callout';
+import CopyMarkdownButton from './CopyMarkdownButton';
+import SummarizeButton from './SummarizeButton';
+
+const MarkdownRawContext = createContext<string>('');
 
 interface MarkdownProps {
   content: string;
@@ -83,12 +87,13 @@ const Markdown: React.FC<MarkdownProps> = ({ content }) => {
 
     p({ children, ...props }: { children?: React.ReactNode }) {
       return (
-        <p style={{ marginBottom: '1.5rem', fontSize: '1rem', lineHeight: 1.6, color: 'var(--docs-normal-text)', fontWeight: 300 }} {...props}>
+        <p style={{ marginBottom: '1.5rem', fontSize: '0.9rem', lineHeight: 1.6, color: 'var(--docs-normal-text)', fontWeight: 300 }} {...props}>
           {children}
         </p>
       );
     },
     h1({ children, ...props }: { children?: React.ReactNode }) {
+      const raw = useContext(MarkdownRawContext);
       const text = typeof children === 'string' ? children : '';
       const id = text
         .toLowerCase()
@@ -98,13 +103,19 @@ const Markdown: React.FC<MarkdownProps> = ({ content }) => {
         .replace(/^-|-$/g, '');
       
       return (
-        <h1 
-          id={id}
-          style={{ fontSize: '1.85rem', fontWeight: 600, marginTop: '0.75rem', marginBottom: '0.75rem', color: 'var(--docs-header-text)' }} 
-          {...props}
-        >
-          {children}
-        </h1>
+        <div>
+          <h1 
+            id={id}
+            style={{ fontSize: '1.7rem', fontWeight: 500, marginTop: '0.75rem', marginBottom: '1.2rem', color: 'var(--docs-header-text)' }} 
+            {...props}
+          >
+            {children}
+          </h1>
+          <div style={{ marginTop: '0.9rem', marginBottom: '1rem', display: 'flex', gap: '16px', alignItems: 'center' }}>
+            <CopyMarkdownButton content={raw} />
+            <SummarizeButton content={raw} />
+          </div>
+        </div>
       );
     },
     h2({ children, ...props }: { children?: React.ReactNode }) {
@@ -123,7 +134,7 @@ const Markdown: React.FC<MarkdownProps> = ({ content }) => {
           return (
             <h2 
               id={id}
-              style={{ fontSize: '0.9rem', fontWeight: 600, marginTop: '1rem', marginBottom: '0.75rem', color: 'var(--docs-header-text)' }} 
+              style={{ fontSize: '0.9rem', fontWeight: 500, marginTop: '1rem', marginBottom: '0.75rem', color: 'var(--docs-header-text)' }} 
               {...props}
             >
               {children}
@@ -134,7 +145,7 @@ const Markdown: React.FC<MarkdownProps> = ({ content }) => {
       return (
         <h2 
           id={id}
-          style={{ fontSize: '1.45rem', fontWeight: 600, marginTop: '2.25rem', marginBottom: '0.75rem', color: 'var(--docs-header-text)' }} 
+          style={{ fontSize: '1.35rem', fontWeight: 500, marginTop: '2.25rem', marginBottom: '0.75rem', color: 'var(--docs-header-text)' }} 
           {...props}
         >
           {children}
@@ -153,7 +164,7 @@ const Markdown: React.FC<MarkdownProps> = ({ content }) => {
       return (
         <h3 
           id={id}
-          style={{ fontSize: '1.35rem', fontWeight: 600, marginTop: '1.45rem', marginBottom: '0.2rem', color: 'var(--docs-header-text)' }} 
+          style={{ fontSize: '1.25rem', fontWeight: 500, marginTop: '1.45rem', marginBottom: '0.2rem', color: 'var(--docs-header-text)' }} 
           {...props}
         >
           {children}
@@ -172,7 +183,7 @@ const Markdown: React.FC<MarkdownProps> = ({ content }) => {
       return (
         <h4 
           id={id}
-          style={{ fontSize: '1.25rem', fontWeight: 500, marginTop: '0.5rem', marginBottom: '0.5rem', color: 'var(--docs-header-text)' }} 
+          style={{ fontSize: '1.15rem', fontWeight: 500, marginTop: '0.5rem', marginBottom: '0.5rem', color: 'var(--docs-header-text)' }} 
           {...props}
         >
           {children}
@@ -206,7 +217,7 @@ const Markdown: React.FC<MarkdownProps> = ({ content }) => {
         <li
           style={{
             marginBottom: '1rem',
-            fontSize: '0.95rem',
+            fontSize: '0.85rem',
             lineHeight: 1.6,
             color: 'var(--docs-normal-text)',
             fontWeight: 300,
@@ -222,8 +233,9 @@ const Markdown: React.FC<MarkdownProps> = ({ content }) => {
         <hr style={{ 
           border: 'none', 
           height: '0.5px', 
-          backgroundColor: 'var(--docs-text)', 
-          margin: '2rem 0',
+          backgroundColor: 'var(--docs-text)',
+          marginTop: '0.75rem',
+          marginBottom: '2rem',
           opacity: 0.1
         }} {...props} />
       );
@@ -321,7 +333,6 @@ const Markdown: React.FC<MarkdownProps> = ({ content }) => {
             <Mermaid
               chart={codeContent}
               className="w-full max-w-full"
-              zoomingEnabled={true}
             />
           </div>
         );
@@ -337,11 +348,10 @@ const Markdown: React.FC<MarkdownProps> = ({ content }) => {
         const theme = isDarkMode ? tomorrow : prism;
           
         return (
-          <div className="my-6 rounded-lg overflow-hidden text-sm shadow-sm">
+          <div className="my-6 rounded-lg overflow-hidden shadow-sm">
             <SyntaxHighlighter
               language={match[1]}
               style={theme}
-              className="!text-sm"
               customStyle={{
                 margin: 0,
                 borderRadius: '0.5rem',
@@ -349,6 +359,8 @@ const Markdown: React.FC<MarkdownProps> = ({ content }) => {
                 marginBottom: '0.5rem',
                 backgroundColor: codeBlockBg,
                 color: textColor,
+                fontSize: '0.85rem',
+                lineHeight: 1.6,
               }}
               showLineNumbers={true}
               wrapLines={true}
@@ -366,8 +378,9 @@ const Markdown: React.FC<MarkdownProps> = ({ content }) => {
       const inlineBg = isDarkModeInline ? '#212121' : '#f1f1f1';
       return (
         <code
-          className={`${className} inline-block font-mono text-sm px-2 py-1 rounded-md border shadow-sm text-gray-800 dark:text-gray-100`}
+          className={`${className} inline-block font-mono px-2 py-1 rounded-md border shadow-sm text-gray-800 dark:text-gray-100`}
           style={{
+            fontSize: '0.85rem',
             lineHeight: 1.6,
             verticalAlign: 'baseline',
             backgroundColor: inlineBg,
@@ -383,6 +396,7 @@ const Markdown: React.FC<MarkdownProps> = ({ content }) => {
 
   return (
     <div className="docs-md max-w-none px-2 py-4">
+      <MarkdownRawContext.Provider value={content}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm]}
         rehypePlugins={[rehypeRaw]}
@@ -390,6 +404,7 @@ const Markdown: React.FC<MarkdownProps> = ({ content }) => {
       >
         {content}
       </ReactMarkdown>
+      </MarkdownRawContext.Provider>
     </div>
   );
 };

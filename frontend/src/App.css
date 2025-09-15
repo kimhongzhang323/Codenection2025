@@ -77,16 +77,22 @@
   transform: translateY(0);
 }
 
+.home__signup-btn:focus,
+.home__signup-btn:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
 .home__logo {
   width: 220px;
   height: 220px;
   object-fit: contain;
-  margin-top: -20px;
+  margin-top: 0px;
   text-align: center;
 }
 
 .home__title {
-  margin: 0;
+  margin-top: 10px;
   font-size: 28px;
   font-weight: 700;
   text-align: center;
@@ -248,7 +254,7 @@
   display: flex;
   align-items: center;
   gap: 4px;
-  font-size: 13px;
+  font-size: 12px;
   color: #bdbdbd;
   text-align: left !important;
   justify-content: flex-start !important;

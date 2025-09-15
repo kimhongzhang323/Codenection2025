@@ -1,4 +1,3 @@
-/* Hide scrollbars for chat panel and all its children */
 .ai-chat-panel,
 .ai-chat-panel * {
   scrollbar-width: none !important; /* Firefox */
@@ -65,15 +64,17 @@
 /* Enhanced chat panel container */
 .ai-chat-panel {
   position: fixed;
-  top: 24px;
-  bottom: 24px;
-  right: 14px;
-  width: 360px;
-  height: calc(100vh - 48px);
+  /* Open above the bottom-right chat button */
+  bottom: 70px;
+  top: auto;
+  right: 24px;
+  width: 420px;
+  height: auto;
+  max-height: calc(100vh - 140px);
   background: var(--docs-bg);
   border: 1px solid var(--sidebar-border);
   border-radius: 20px;
-  box-shadow: 0 25px 80px rgba(0, 0, 0, 0.2);
+  box-shadow: none;
   display: flex;
   flex-direction: column;
   overflow: hidden;
@@ -97,22 +98,129 @@
   transform: translateY(0) scale(1);
 }
 
+/* Responsive sizing and placement */
+@media (max-width: 1200px) {
+  .ai-chat-panel {
+    width: 380px;
+  }
+}
+
+@media (max-width: 900px) {
+  .ai-chat-panel {
+    right: 16px;
+    bottom: 62px;
+    width: calc(100vw - 32px);
+    max-width: 560px;
+    max-height: calc(100vh - 120px);
+  }
+}
+
+@media (max-width: 768px) {
+  .ai-chat-panel {
+    right: 12px;
+    bottom: 58px;
+    width: calc(100vw - 24px);
+    max-width: 480px;
+    max-height: calc(100vh - 100px);
+  }
+  
+  .ai-chat-content {
+    padding: 16px;
+    padding-top: 50px;
+  }
+  
+  .ai-chat-input-box {
+    margin: 16px;
+    padding: 12px;
+    min-height: 120px;
+  }
+}
+
+@media (max-width: 640px) {
+  .ai-chat-panel {
+    right: 8px;
+    bottom: 54px;
+    width: calc(100vw - 16px);
+    max-width: 400px;
+    max-height: calc(100vh - 80px);
+  }
+  
+  .ai-chat-content {
+    padding: 12px;
+    padding-top: 45px;
+  }
+  
+  .ai-chat-input-box {
+    margin: 12px;
+    padding: 10px;
+    min-height: 100px;
+  }
+  
+  .ai-chat-top-controls {
+    padding: 8px 14px 10px 14px;
+  }
+  
+  .ai-chat-clear-button {
+    padding: 4px 8px;
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 480px) {
+  .ai-chat-panel {
+    right: 4px;
+    bottom: 50px;
+    width: calc(100vw - 8px);
+    max-width: 350px;
+    max-height: calc(100vh - 60px);
+  }
+  
+  .ai-chat-content {
+    padding: 10px;
+    padding-top: 40px;
+  }
+  
+  .ai-chat-input-box {
+    margin: 10px;
+    padding: 8px;
+    min-height: 80px;
+  }
+  
+  .ai-chat-top-controls {
+    padding: 6px 12px 8px 12px;
+  }
+  
+  .ai-chat-clear-button {
+    padding: 3px 6px;
+    font-size: 10px;
+  }
+  
+  .message-content {
+    padding: 8px 12px;
+    font-size: 13px;
+  }
+}
+
 /* Top controls */
 .ai-chat-top-controls {
   position: absolute;
-  top: 14px;
-  left: 18px;
-  right: 12px;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 30px;
   display: flex;
   justify-content: space-between;
   align-items: center;
   z-index: 10;
+  padding: 10px 18px 14px 18px;
+  background: var(--docs-bg);
+  border-bottom: 1px solid transparent;
 }
 
 /* Clear chat button */
 .ai-chat-clear-button {
   padding: 6px 12px;
-  border-radius: 10px;
+  border-radius: 8px;
   background: transparent;
   border: 1px solid var(--sidebar-border);
   color: var(--sidebar-text);
@@ -141,6 +249,7 @@
   align-items: center;
   justify-content: center;
   transition: all 0.2s ease;
+  transform: translateY(-1px);
 }
 
 
@@ -154,7 +263,8 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
-  background: linear-gradient(135deg, rgba(100, 108, 255, 0.02), rgba(139, 92, 246, 0.02));
+  /* Light mode conversation background */
+  background: #f5f5f5;
   scrollbar-width: none; /* Firefox */
   -ms-overflow-style: none; /* Internet Explorer 10+ */
 }
@@ -189,6 +299,13 @@
 .user-message .message-content {
   width: 100%;
   max-width: 100%;
+  background: #f1f1f1;
+  color: #000000;
+  border: 1px solid #d1d1d1;
+}
+
+/* Dark mode user message */
+:root.dark .user-message .message-content {
   background: #121212;
   color: #ffffff;
   border: 1px solid #333333;
@@ -201,28 +318,81 @@
   padding: 0;
 }
 
-/* Typing indicator */
-.typing-indicator {
+/* Shining text styles for AI thinking state */
+.shining-text {
+  background: linear-gradient(110deg, #404040, 35%, #ffffff, 50%, #404040, 75%, #404040);
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  color: transparent;
+  font-size: 14px;
+  font-weight: 400;
+  display: inline-block;
+  /* Ensure text clipping works */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Dark mode adjustments for shining text */
+:root.dark .shining-text {
+  background: linear-gradient(110deg, #666666, 35%, #ffffff, 50%, #666666, 75%, #666666);
+}
+
+/* Typing cursor animation */
+.typing-cursor {
+  display: inline-block;
+  width: 2px;
+  height: 1.2em;
+  background-color: var(--sidebar-text);
+  margin-left: 2px;
+  animation: blink 1s infinite;
+  vertical-align: middle;
+}
+
+@keyframes blink {
+  0%, 50% {
+    opacity: 1;
+  }
+  51%, 100% {
+    opacity: 0;
+  }
+}
+
+/* Dark mode typing cursor */
+:root.dark .typing-cursor {
+  background-color: #ffffff;
+}
+
+/* Empty state styles */
+.ai-chat-empty-state {
   display: flex;
-  gap: 4px;
+  flex-direction: column;
   align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 100px 20px;
+  color: var(--sidebar-text);
+  opacity: 0.7;
 }
 
-.typing-indicator span {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--sidebar-text);
+.ai-chat-empty-icon {
+  margin-bottom: 16px;
   opacity: 0.6;
-  animation: typingBounce 1.4s infinite ease-in-out;
 }
 
-.typing-indicator span:nth-child(1) {
-  animation-delay: -0.32s;
+.ai-chat-empty-state h3 {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0 0 8px 0;
+  color: var(--docs-text);
 }
 
-.typing-indicator span:nth-child(2) {
-  animation-delay: -0.16s;
+.ai-chat-empty-state p {
+  font-size: 14px;
+  margin: 0;
+  line-height: 1.4;
+  opacity: 0.8;
 }
 
 /* Blank chat box container */
@@ -269,6 +439,55 @@
 .ai-chat-at-button:hover {
   background: var(--docs-bg);
   border-color: var(--docs-border);
+}
+
+/* Web search button */
+.ai-chat-search-button {
+  display: flex;
+  align-items: center;
+  height: 27px;
+  gap: 0;
+  padding: 6px 8px;
+  border: 1px dashed var(--sidebar-border);
+  border-radius: 6px;
+  color: var(--sidebar-text);
+  font-size: 12px;
+  font-weight: 200;
+  background: transparent;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.ai-chat-search-button:hover {
+  border-color: var(--docs-border);
+  background: rgba(100, 108, 255, 0.05);
+}
+
+.ai-chat-search-button.active {
+  border-color: rgba(100, 108, 255, 0.3);
+  background: rgba(100, 108, 255, 0.1);
+  color: var(--docs-text);
+}
+
+.ai-chat-search-button svg {
+  width: 14px;
+  height: 14px;
+  opacity: 0.8;
+  flex-shrink: 0;
+  transform: translateY(1.5px);
+}
+
+.ai-chat-search-label {
+  font-size: 12px;
+  font-weight: 200;
+  color: inherit;
+  overflow: hidden;
+  white-space: nowrap;
+  display: inline-block;
+  vertical-align: baseline;
+  line-height: 1;
 }
 
 /* Tab indicator */
@@ -345,6 +564,13 @@
   width: 100%;
 }
 
+/* Left controls container */
+.ai-chat-left-controls {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
 /* Textarea */
 .ai-chat-textarea {
   flex: 1;
@@ -394,6 +620,15 @@
   transform: scale(0.95);
 }
 
+/* Remove focus outline for send button */
+.ai-chat-send-button:focus {
+  outline: none;
+}
+
+.ai-chat-send-button:focus-visible {
+  outline: none;
+}
+
 /* Enhanced animations */
 @keyframes messageSlideIn {
   from {
@@ -406,16 +641,7 @@
   }
 }
 
-@keyframes typingBounce {
-  0%, 80%, 100% {
-    transform: scale(0.8);
-    opacity: 0.5;
-  }
-  40% {
-    transform: scale(1);
-    opacity: 1;
-  }
-}
+
 
 /* Send icon animations */
 .square-arrow-up-icon {
@@ -538,7 +764,7 @@
 
 :root.dark .ai-chat-panel {
   background: #121212;
-  box-shadow: 0 25px 80px rgba(0, 0, 0, 0.5);
+  box-shadow: none;
   border-color: #333333;
 }
 
@@ -554,11 +780,31 @@
 /* Focus states for accessibility */
 .ai-chat-toggle:focus-visible,
 .ai-chat-close:focus-visible,
-.ai-chat-send:focus-visible {
+.ai-chat-send:focus-visible,
+.ai-chat-clear-button:focus-visible,
+.ai-chat-search-button:focus-visible {
   outline: 2px solid #646cff;
   outline-offset: 2px;
 }
 
 .ai-chat-input:focus-visible {
+  outline: none;
+}
+
+/* Remove default focus outline for buttons */
+.ai-chat-clear-button:focus,
+.ai-chat-search-button:focus,
+.ai-chat-mode-button:focus {
+  outline: none;
+}
+
+.ai-chat-clear-button:focus-visible,
+.ai-chat-search-button:focus-visible {
+  outline: 2px solid #646cff;
+  outline-offset: 2px;
+}
+
+/* Remove focus outline for mode button */
+.ai-chat-mode-button:focus-visible {
   outline: none;
 }

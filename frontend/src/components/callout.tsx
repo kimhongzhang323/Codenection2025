@@ -87,7 +87,7 @@ const Callout: React.FC<CalloutProps> = ({ title, variant = 'info', children }) 
           boxShadow: '0 0 0 1px rgba(59,130,246,0.35), 0 0 10px rgba(59,130,246,0.25)'
         }}
       />
-      <div style={{ display: 'flex', gap: '0.75rem', padding: '0.75rem 1rem', alignItems: 'flex-start' }}>
+      <div style={{ display: 'flex', gap: '0.75rem', padding: '0.75rem 1rem', alignItems: 'flex-start', fontSize: '0.9rem', lineHeight: 1.6, fontWeight: 300 }}>
         <div style={{ width: 4 }} />
         <div style={{ display: 'flex', gap: '0.5rem' }}>
           <div style={{ marginTop: 2 }}>
@@ -95,7 +95,7 @@ const Callout: React.FC<CalloutProps> = ({ title, variant = 'info', children }) 
           </div>
           <div>
             {title ? (
-              <div style={{ fontWeight: 400, fontSize: '1rem', color: colors.text, marginBottom: 6 }}>{title}</div>
+              <div style={{ fontWeight: 400, fontSize: '1.0rem', color: colors.text, marginBottom: 6 }}>{title}</div>
             ) : null}
             <div style={{ fontSize: '0.9rem', color: colors.subtext, lineHeight: 1.6, fontWeight: 300 }}>
               {children}
