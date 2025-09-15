@@ -3,8 +3,11 @@ import './DocumentationPage.css'
 import { GithubIcon } from '../components/github_icon'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import Markdown from '../components/markdown'
+import TableOfContents from '../components/table_of_content'
 import { AnimatedThemeToggler } from '../components/theme'
 import { BottomMiniDialog } from '../components/BottomMiniDialog'
+import { AIChatPanel } from '../components/AIChatPanel'
+import { SparklesIcon } from '../components/sparkles_icon'
 
 type DocItem =
   | { type: 'separator'; label: string }
@@ -154,7 +157,7 @@ function renderItem(item: DocItem, idx: number, onFileClick: (label: string) => 
   const folderPath = [...parentPath, item.label]
   const storageKey = folderPath.map((s) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-')).join('/')
   return (
-    <Collapsible key={`folder-${idx}`} label={item.label} defaultOpen={false} storageKey={storageKey}>
+    <Collapsible key={`folder-${idx}`} label={item.label} defaultOpen={item.label === 'Installation'} storageKey={storageKey}>
       {item.children.map((child, i) => (
         <div key={`child-${idx}-${i}`}>{renderItem(child, i, onFileClick, activeLabel, folderPath)}</div>
       ))}
@@ -192,6 +195,7 @@ function DocumentationPage() {
     const saved = localStorage.getItem('sidebarCollapsed')
     return saved ? JSON.parse(saved) : false
   })
+  const [isChatOpen, setIsChatOpen] = useState(false)
   const scrollTimeoutRef = useRef<number | null>(null)
   const treeRef = useRef<HTMLElement>(null)
 
@@ -374,6 +378,18 @@ function DocumentationPage() {
           </button>
         </div>
       )}
+
+      {/* AI Chat Button - Top Right Corner */}
+      <div className="docs-ai-chat-button-container">
+        <button 
+          className="docs-ai-chat-button"
+          onClick={() => setIsChatOpen(!isChatOpen)}
+          aria-label="Open AI chat"
+        >
+          <SparklesIcon size={18} />
+        </button>
+      </div>
+
       <div className={`docs-layout ${isSidebarCollapsed ? 'is-collapsed' : ''}`}>
         <aside className={`docs-sidebar ${isSidebarCollapsed ? 'is-collapsed' : ''}`}>
           <div className="docs-sidebar__header">
@@ -428,24 +444,30 @@ function DocumentationPage() {
           <div className="docs-main__container">
             {viewMode === 'edit' ? (
               <textarea
+                className="docs-edit-textarea"
                 value={draftContent}
                 onChange={(e) => setDraftContent(e.target.value)}
                 style={{
                   width: '100%',
-                  height: '80vh',
+                  height: '84vh',
                   padding: '12px',
                   fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
-                  fontSize: '16px',
+                  fontSize: '13px',
                   lineHeight: 1.5,
                   color: 'var(--docs-normal-text)',
                   background: 'var(--docs-bg)',
                   border: '1px solid var(--bottom-dialog-border)',
                   borderRadius: 8,
-                  outline: 'none'
+                  outline: 'none',
+                  scrollbarWidth: 'thin',
+                  scrollbarColor: 'var(--sidebar-border) transparent'
                 }}
               />
             ) : (
-              <Markdown content={draftContent || markdownContent} />
+              <>
+                <Markdown content={draftContent || markdownContent} />
+                <TableOfContents content={draftContent || markdownContent} />
+              </>
             )}
           </div>
         </main>
@@ -457,6 +479,13 @@ function DocumentationPage() {
         mode={viewMode}
         onModeChange={(m) => setViewMode(m)}
       />
+      
+      {/* AI Chat Panel */}
+      <AIChatPanel 
+        isOpen={isChatOpen}
+        onToggle={() => setIsChatOpen(!isChatOpen)}
+      />
+
     </div>
   )
 }
