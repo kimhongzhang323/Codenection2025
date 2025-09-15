@@ -10,20 +10,20 @@ import java.util.Optional;
 public class SendMessageResult {
     private final ModelFinishReason modelFinishReason;
     private final Optional<String> assistantText;  // any natural language text the model output
-    private final List<FunctionCallData> functionCalls;  // zero or more tool calls
-    private final Optional<String> finalAnswer;  // populated if no functionCalls and text is final answer
-    private final Optional<String> errorMessage; // if any error
+    private final List<ToolCallData> toolCalls;    // zero or more tool calls
+    private final Optional<String> finalAnswer;    // populated if no functionCalls and text is final answer
+    private final Optional<String> errorMessage;   // if any error
 
     public SendMessageResult(
             ModelFinishReason modelFinishReason,
             Optional<String> assistantText,
-            List<FunctionCallData> functionCalls,
+            List<ToolCallData> toolCalls,
             Optional<String> finalAnswer,
             Optional<String> errorMessage
     ) {
         this.modelFinishReason = modelFinishReason;
         this.assistantText = assistantText;
-        this.functionCalls = functionCalls;
+        this.toolCalls = toolCalls;
         this.finalAnswer = finalAnswer;
         this.errorMessage = errorMessage;
     }
@@ -33,9 +33,9 @@ public class SendMessageResult {
         var m = new java.util.HashMap<String, Object>();
         m.put("finish_reason", modelFinishReason.name());
         assistantText.ifPresent(text -> m.put("assistant_text", text));
-        if (!functionCalls.isEmpty()) {
+        if (!toolCalls.isEmpty()) {
             List<Map<String, Object>> fcList = new java.util.ArrayList<>();
-            for (FunctionCallData fc : functionCalls) {
+            for (ToolCallData fc : toolCalls) {
                 var fm = new java.util.HashMap<String, Object>();
                 fm.put("name", fc.getName());
                 fm.put("args", fc.getArgs());
@@ -46,5 +46,23 @@ public class SendMessageResult {
         finalAnswer.ifPresent(ans -> m.put("final_answer", ans));
         errorMessage.ifPresent(err -> m.put("error", err));
         return m;
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder("SendMessageResult {\n");
+        sb.append("  finishReason: ").append(modelFinishReason).append("\n");
+        assistantText.ifPresent(text -> sb.append("  assistantText: ").append(text).append("\n"));
+        if (!toolCalls.isEmpty()) {
+            sb.append("  toolCalls:\n");
+            for (ToolCallData fc : toolCalls) {
+                sb.append("    - name: ").append(fc.getName())
+                        .append(", args: ").append(fc.getArgs()).append("\n");
+            }
+        }
+        finalAnswer.ifPresent(ans -> sb.append("  finalAnswer: ").append(ans).append("\n"));
+        errorMessage.ifPresent(err -> sb.append("  errorMessage: ").append(err).append("\n"));
+        sb.append("}");
+        return sb.toString();
     }
 }

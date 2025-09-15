@@ -1,7 +1,10 @@
 package com.example.AutoDocX.service;
 
 import com.example.AutoDocX.model.ClonedRepo;
+import com.example.AutoDocX.model.repo.ModelFinishReason;
+import com.example.AutoDocX.model.repo.ToolCallData;
 import com.example.AutoDocX.model.repo.Model;
+import com.example.AutoDocX.model.repo.SendMessageResult;
 import com.example.AutoDocX.parser.model.Graph;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -10,7 +13,6 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 /**
@@ -34,12 +36,20 @@ public class Agent {
     private final Model model;
     private final ObjectMapper objectMapper; // For formatting model params
 
-    public Agent(RepoHandler repoHandler, McpToolbox mcpToolbox, SessionManager sessionManager, @Qualifier("geminiModel") Model model) {
+    private final List<Tool> tools;
+
+    public Agent(
+            RepoHandler repoHandler,
+            McpToolbox mcpToolbox,
+            SessionManager sessionManager,
+            @Qualifier("geminiModel") Model model
+    ) {
         this.repoHandler = repoHandler;
         this.mcpToolbox = mcpToolbox;
         this.sessionManager = sessionManager;
         this.model = model;
         this.objectMapper = new ObjectMapper();
+        this.tools = buildDefaultTools(); // init default set
     }
 
     public String handlePrompt(String gitUrl, String userPrompt) {
@@ -49,8 +59,7 @@ public class Agent {
     private String agentLoop(String gitUrl, String userPrompt) {
         Session session = sessionManager.getSession(gitUrl);
         ClonedRepo repo = repoHandler.getRepo(gitUrl);
-        if (repo == null)
-            return "Repository not found.";
+        if (repo == null) return "Repository not found.";
 
         Graph graph;
         try {
@@ -59,66 +68,52 @@ public class Agent {
             return "Error loading graph: " + e.getMessage();
         }
 
-        AtomicInteger iterations = new AtomicInteger(0);
+        int iterations = 0;
         String currentResponse = "";
 
-        while (iterations.getAndIncrement() < MAX_ITERATIONS) {
-            List<Tool> tools = getTools();
+        while (iterations++ < MAX_ITERATIONS) {
             List<Content> contents = buildContent(session.getMemory(), userPrompt);
-            System.out.println("DEBUG: Context (Contents) sent to LLM:\n" + formatContents(contents));
-            System.out.println("DEBUG: Context (Tools) sent to LLM:\n" + formatTools(tools));
 
-            Map<String, Object> modelResponseMap = model.sendMessage(contents, tools);
-            printModelResponseMap(modelResponseMap);
+            System.out.println("DEBUG: Sending to Gemini");
+            System.out.println(formatContents(contents));
 
-            try {
-                boolean toolHandled = false;
+            // ✅ new structured response
+            SendMessageResult result = model.sendMessageNew(contents, tools);
+            System.out.println("DEBUG: Model Response\n" + result);
 
-                // If there's a tool call present -> execute it and log results
-                if (modelResponseMap.containsKey("tool") && modelResponseMap.containsKey("param")) {
-                    String toolNameRaw = Optional.ofNullable(modelResponseMap.get("tool")).map(Object::toString).orElse("UNKNOWN_TOOL");
-                    String toolName = toolNameRaw.startsWith("Optional[") && toolNameRaw.endsWith("]") ? toolNameRaw.substring(9, toolNameRaw.length() - 1) : toolNameRaw;
-                    toolName = toolName.replace("-", "_");
+            // ✅ execute all tool calls if present
+            if (!result.getToolCalls().isEmpty()) {
+                for (ToolCallData fc : result.getToolCalls()) {
+                    String toolName = fc.getName();
+                    Object toolArgs = fc.getArgs();
 
-                    Object toolParamsRaw = modelResponseMap.get("param");
-                    Object toolParams = toolParamsRaw instanceof Optional ? ((Optional<?>) toolParamsRaw).orElse(null) : toolParamsRaw;
-
-                    System.out.println("DEBUG: LLM chose tool: " + toolName + " with param: " + toolParams);
-
-                    // Execute tool
-                    String toolResult = handleToolCall(toolName, toolParams, repo, graph, session);
-                    System.out.println("DEBUG: Tool \"" + toolName + "\" executed. Result:\n" + toolResult);
-
-                    toolHandled = true;
+                    System.out.println("DEBUG: Executing tool: " + toolName + " with args: " + toolArgs);
+                    String toolResult = handleToolCall(toolName, toolArgs, repo, graph, session);
+                    System.out.println("DEBUG: Tool result: " + toolResult);
                 }
-
-                // capture it and exit the loop.
-                if (modelResponseMap.containsKey("final_answer")) {
-                    currentResponse = Optional.ofNullable(modelResponseMap.get("final_answer")).map(Object::toString).orElse("");
-                    System.out.println("DEBUG: LLM provided final answer:\n" + currentResponse);
-                    session.getMemory().episodic().addEntry("model", currentResponse);
-                    break;
-                }
-
-                // If there was a tool call but no final answer, continue the loop so LLM can react to tool_result on next turn.
-                if (toolHandled) {
-                    // continue to next iteration (the loop will send updated memory)
-                    continue;
-                }
-
-                // If neither tool nor final answer present
-                currentResponse = "Model returned unrecognized JSON format: " + formatModelResponseMap(modelResponseMap);
-                System.out.println("DEBUG: Unrecognized JSON format.\n" + currentResponse);
-                session.getMemory().episodic().addEntry("error:unrecognized_json", currentResponse);
-                break;
-
-            } catch (Exception e) {
-                currentResponse = "Error parsing model response as JSON: " + e.getMessage() + ". Raw response: " + formatModelResponseMap(modelResponseMap);
-                System.out.println("DEBUG: JSON parsing error.\n" + currentResponse);
-                session.getMemory().episodic().addEntry("error:json_parsing_error", currentResponse);
-                break; // Exit loop on JSON parsing error
+                continue;
             }
+
+            // ✅ handle errors
+            if (result.getModelFinishReason() == ModelFinishReason.OUTPUT_ERROR ||
+                    result.getModelFinishReason() == ModelFinishReason.INPUT_ERROR) {
+                currentResponse = "Model stopped due to " + result.getModelFinishReason();
+                session.getMemory().episodic().addEntry("error:model_finish", currentResponse);
+                break;
+            }
+
+            // ✅ handle final answer
+            if (result.getFinalAnswer().isPresent()) {
+                currentResponse = result.getFinalAnswer().get();
+            } else {
+                System.out.println("Model returned no usable output");
+                break ;
+            }
+
+            session.getMemory().episodic().addEntry("model", currentResponse);
+            break;
         }
+
         return getFinalResponse(session.getMemory());
     }
 
@@ -322,7 +317,7 @@ public class Agent {
         return String.valueOf(unwrapped);
     }
 
-    private List<Tool> getTools() {
+    private List<Tool> buildDefaultTools() {
         List<Tool> tools = new ArrayList<>();
 
         tools.add(Tool.builder()
@@ -366,41 +361,41 @@ public class Agent {
                                         ))
                                         .required(List.of("node_id"))
                                         .build())
-                                .build(),
-                        FunctionDeclaration.builder()
-                                .name("read_file")
-                                .description("Reads the file contents of a given filename from repository root.")
-                                .parameters(Schema.builder()
-                                        .type(Type.Known.OBJECT)
-                                        .properties(Map.of(
-                                                "filename", Schema.builder().type(Type.Known.STRING).description("Path to the file relative to repo root.").build()
-                                        ))
-                                        .required(List.of("filename"))
-                                        .build())
-                                .build(),
-                        FunctionDeclaration.builder()
-                                .name("folder_tree_structure")
-                                .description("Gets the tree structure for a directory.")
-                                .parameters(Schema.builder()
-                                        .type(Type.Known.OBJECT)
-                                        .properties(Map.of(
-                                                "dirname", Schema.builder().type(Type.Known.STRING).description("Directory path relative to repo root.").build(),
-                                                "depth", Schema.builder().type(Type.Known.NUMBER).description("Depth limit for tree traversal (optional).").build()
-                                        ))
-                                        .required(List.of("dirname"))
-                                        .build())
-                                .build(),
-                        FunctionDeclaration.builder()
-                                .name("get_nodes_in_file")
-                                .description("List class nodes in a given file path.")
-                                .parameters(Schema.builder()
-                                        .type(Type.Known.OBJECT)
-                                        .properties(Map.of(
-                                                "filename", Schema.builder().type(Type.Known.STRING).description("File path relative to repo root.").build()
-                                        ))
-                                        .required(List.of("filename"))
-                                        .build())
                                 .build()
+//                        FunctionDeclaration.builder()
+//                                .name("read_file")
+//                                .description("Reads the file contents of a given filename from repository root.")
+//                                .parameters(Schema.builder()
+//                                        .type(Type.Known.OBJECT)
+//                                        .properties(Map.of(
+//                                                "filename", Schema.builder().type(Type.Known.STRING).description("Path to the file relative to repo root.").build()
+//                                        ))
+//                                        .required(List.of("filename"))
+//                                        .build())
+//                                .build(),
+//                        FunctionDeclaration.builder()
+//                                .name("folder_tree_structure")
+//                                .description("Gets the tree structure for a directory.")
+//                                .parameters(Schema.builder()
+//                                        .type(Type.Known.OBJECT)
+//                                        .properties(Map.of(
+//                                                "dirname", Schema.builder().type(Type.Known.STRING).description("Directory path relative to repo root.").build(),
+//                                                "depth", Schema.builder().type(Type.Known.NUMBER).description("Depth limit for tree traversal (optional).").build()
+//                                        ))
+//                                        .required(List.of("dirname"))
+//                                        .build())
+//                                .build(),
+//                        FunctionDeclaration.builder()
+//                                .name("get_nodes_in_file")
+//                                .description("List class nodes in a given file path.")
+//                                .parameters(Schema.builder()
+//                                        .type(Type.Known.OBJECT)
+//                                        .properties(Map.of(
+//                                                "filename", Schema.builder().type(Type.Known.STRING).description("File path relative to repo root.").build()
+//                                        ))
+//                                        .required(List.of("filename"))
+//                                        .build())
+//                                .build()
                 ))
                 .build());
 
@@ -408,7 +403,7 @@ public class Agent {
     }
 
     private String getAvailableToolsStr() {
-        List<String> toolNames = getTools().stream()
+        List<String> toolNames = tools.stream()
                 .flatMap(tool -> tool.functionDeclarations().stream())
                 .flatMap(List::stream)
                 .map(declaration -> declaration.name().orElse("UNKNOWN_TOOL"))
@@ -454,45 +449,27 @@ public class Agent {
         return sb.toString();
     }
 
-    private String formatTools(List<Tool> tools) {
-        StringBuilder sb = new StringBuilder();
-        for (Tool tool : tools) {
-            tool.functionDeclarations().ifPresent(declarations -> {
-                for (FunctionDeclaration declaration : declarations) {
-                    sb.append("  - Name: ").append(declaration.name().orElse("N/A")).append("\n");
-                    sb.append("    Description: ").append(declaration.description().orElse("N/A")).append("\n");
-                    declaration.parameters().ifPresent(schema -> {
-                        sb.append("    Parameters:\n");
-                        schema.type().ifPresent(type -> sb.append("      Type: ").append(type).append("\n"));
-                        schema.properties().ifPresent(properties -> {
-                            sb.append("      Properties:\n");
-                            properties.forEach((name, propSchema) -> {
-                                sb.append("        - ").append(name).append(": (").append(propSchema.type().orElse(new Type("Unknown"))).append(") ").append(propSchema.description().orElse("N/A")).append("\n");
-                            });
-                        });
-                        schema.required().ifPresent(required -> sb.append("      Required: ").append(required).append("\n"));
-                    });
-                }
-            });
-        }
-        return sb.toString();
-    }
-
-    private void printModelResponseMap(Map<String, Object> response) {
-        System.out.println("=== Model Response Map ===");
-        response.forEach((key, value) -> {
-            if (value instanceof Map) {
-                System.out.println(key + " ->");
-                ((Map<?, ?>) value).forEach((k, v) -> System.out.println("   " + k + ": " + v));
-            } else if (value instanceof Iterable) {
-                System.out.println(key + " ->");
-                for (Object item : (Iterable<?>) value) {
-                    System.out.println("   - " + item);
-                }
-            } else {
-                System.out.println(key + " -> " + value);
-            }
-        });
-        System.out.println("=============================");
-    }
+//    private String formatTools(List<Tool> tools) {
+//        StringBuilder sb = new StringBuilder();
+//        for (Tool tool : tools) {
+//            tool.functionDeclarations().ifPresent(declarations -> {
+//                for (FunctionDeclaration declaration : declarations) {
+//                    sb.append("  - Name: ").append(declaration.name().orElse("N/A")).append("\n");
+//                    sb.append("    Description: ").append(declaration.description().orElse("N/A")).append("\n");
+//                    declaration.parameters().ifPresent(schema -> {
+//                        sb.append("    Parameters:\n");
+//                        schema.type().ifPresent(type -> sb.append("      Type: ").append(type).append("\n"));
+//                        schema.properties().ifPresent(properties -> {
+//                            sb.append("      Properties:\n");
+//                            properties.forEach((name, propSchema) -> {
+//                                sb.append("        - ").append(name).append(": (").append(propSchema.type().orElse(new Type("Unknown"))).append(") ").append(propSchema.description().orElse("N/A")).append("\n");
+//                            });
+//                        });
+//                        schema.required().ifPresent(required -> sb.append("      Required: ").append(required).append("\n"));
+//                    });
+//                }
+//            });
+//        }
+//        return sb.toString();
+//    }
 }

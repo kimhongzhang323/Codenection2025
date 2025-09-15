@@ -5,11 +5,11 @@ import lombok.Getter;
 import java.util.Objects;
 
 @Getter
-public class FunctionCallData {
+public class ToolCallData {
     private final String name;
     private final Object args;  // you can use Map<String,Object> if args are JSON-like
 
-    public FunctionCallData(String name, Object args) {
+    public ToolCallData(String name, Object args) {
         this.name = name;
         this.args = args;
     }
@@ -22,7 +22,7 @@ public class FunctionCallData {
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (!(o instanceof FunctionCallData that)) return false;
+        if (!(o instanceof ToolCallData that)) return false;
         return Objects.equals(name, that.name) && Objects.equals(args, that.args);
     }
 

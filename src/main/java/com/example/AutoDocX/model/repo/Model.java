@@ -7,4 +7,5 @@ import java.util.List;
 
 public interface Model {
     Map<String, Object> sendMessage(List<Content> contents, List<Tool> tools);
+    SendMessageResult sendMessageNew(List<Content> contents, List<Tool> tools);
 }

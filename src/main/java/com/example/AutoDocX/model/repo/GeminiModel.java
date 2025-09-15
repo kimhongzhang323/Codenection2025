@@ -93,7 +93,7 @@ public class GeminiModel implements Model {
             // Now parse parts: collect all texts and all functionCalls
             Optional<com.google.genai.types.Content> contentOpt = candidate.content();
             StringBuilder allTextSB = new StringBuilder();
-            List<FunctionCallData> functionCalls = new ArrayList<>();
+            List<ToolCallData> functionCalls = new ArrayList<>();
 
             if (contentOpt.isPresent()) {
                 var content = contentOpt.get();
@@ -106,7 +106,7 @@ public class GeminiModel implements Model {
                         String fname = fc.name().orElse(null);
                         Object fargs = fc.args().orElse(null);
                         if (fname != null) {
-                            functionCalls.add(new FunctionCallData(fname, fargs));
+                            functionCalls.add(new ToolCallData(fname, fargs));
                         }
                     }
                 }
