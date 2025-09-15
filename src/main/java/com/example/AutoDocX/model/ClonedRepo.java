@@ -5,6 +5,8 @@ import lombok.NoArgsConstructor;
 
 import java.nio.file.Path;
 
+import com.example.AutoDocX.parser.model.Graph;
+
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -12,4 +14,5 @@ public class ClonedRepo {
     private String repoLink;
     private Path clonedPath;
     private String commitHash;
+    private Graph graph;
 }
