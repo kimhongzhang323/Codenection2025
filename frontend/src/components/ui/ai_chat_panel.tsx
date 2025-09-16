@@ -1,13 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react'
-import './AIChatPanel.css'
-import { XIcon } from './close_icon'
-import { SquareArrowUpIcon } from './send_icon'
-import { AtSignIcon } from './mention_icon'
+import './ai_chat_panel.css'
+import { XIcon } from '../icons/close_icon'
+import { SquareArrowUpIcon } from '../icons/send_icon'
+import { AtSignIcon } from '../icons/mention_icon'
 import { ShiningText } from './shining_text'
-import { GlobeIcon } from './globe_icon'
-import { SparklesIcon } from './sparkles_icon'
+import { GlobeIcon } from '../icons/globe_icon'
+import { SparklesIcon } from '../icons/sparkles_icon'
 import { motion, AnimatePresence } from 'framer-motion'
-import { useAIChat } from '../contexts/AIChatContext'
+import { useAIChat } from '../../contexts/AIChatContext'
 
 interface Message {
   id: string

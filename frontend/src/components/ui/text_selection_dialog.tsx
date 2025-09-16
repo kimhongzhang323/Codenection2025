@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react'
-import { useTextSelection } from '../hooks/useTextSelection'
+import { useTextSelection } from '../../hooks/useTextSelection'
 import { ShiningText } from './shining_text'
-import { XIcon } from './close_icon'
+import { XIcon } from '../icons/close_icon'
 import { motion, AnimatePresence } from 'framer-motion'
-import { useAIChat } from '../contexts/AIChatContext'
-import { UpvoteIcon } from './upvote_icon'
-import { DownvoteIcon } from './downvote_icon'
-import './TextSelectionDialog.css'
+import { useAIChat } from '../../contexts/AIChatContext'
+import { UpvoteIcon } from '../icons/upvote_icon'
+import { DownvoteIcon } from '../icons/downvote_icon'
+import './text_selection_dialog.css'
 
 interface AIResponse {
   id: string

@@ -347,6 +347,7 @@ html:not(.dark) .docs-sidebar__collapse-icon {
 .docs-folder__button.is-open .docs-folder__chevron { transform: rotate(90deg); }
 /* Subtree indented slightly for nicer alignment */
 .docs-folder__children { padding-left: 12px; transition: max-height 240ms ease; }
+.docs-folder__children.no-transition { transition: none; }
 
 /* Footer */
 .docs-sidebar__footer {

@@ -1,17 +1,16 @@
 import { useEffect, useRef, useState } from 'react'
-import './DocumentationPage.css'
-import { GithubIcon } from '../components/github_icon'
+import './documentation_page.css'
+import { GithubIcon } from '../components/icons/github_icon'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import Markdown from '../components/markdown'
-import TableOfContents from '../components/table_of_content'
+import TableOfContents from '../components/ui/table_of_content'
 import { AnimatedThemeToggler } from '../components/theme'
-import { BottomMiniDialog } from '../components/BottomMiniDialog'
-import { SparklesIcon } from '../components/sparkles_icon'
-import { LightbulbIcon } from '../components/lightbulb_icon'
+import { BottomMiniDialog } from '../components/ui/bottom_mini_dialog'
+import { SparklesIcon } from '../components/icons/sparkles_icon'
+import { LightbulbIcon } from '../components/icons/lightbulb_icon'
 import { useAIChat } from '../contexts/AIChatContext'
-import SearchDialog from '../components/SearchDialog'
-import SuggestionPanel from '../components/SuggestionPanel'
-import '../components/SuggestionPanel.css'
+import SearchDialog from '../components/ui/search_dialog'
+import SuggestionPanel from '../components/ui/suggestion_panel'
 
 type DocItem =
   | { type: 'separator'; label: string }
@@ -33,8 +32,22 @@ function Collapsible({ label, children, defaultOpen = false, storageKey }: { lab
   const [open, setOpen] = useState(initialOpen)
   const contentRef = useRef<HTMLDivElement>(null)
   const [maxHeight, setMaxHeight] = useState<string>(initialOpen ? 'none' : '0px')
+  const [allowTransitions, setAllowTransitions] = useState(false)
+
+  // Enable transitions after initial render to prevent animation on page refresh
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setAllowTransitions(true)
+    }, 50) // Small delay to ensure DOM is ready
+    return () => clearTimeout(timer)
+  }, [])
 
   useEffect(() => {
+    // Skip animation if transitions are not allowed yet
+    if (!allowTransitions) {
+      return
+    }
+
     const el = contentRef.current
     if (!el) return
     if (open) {
@@ -72,7 +85,7 @@ function Collapsible({ label, children, defaultOpen = false, storageKey }: { lab
       </button>
       <div
         ref={contentRef}
-        className="docs-folder__children"
+        className={`docs-folder__children ${!allowTransitions ? 'no-transition' : ''}`}
         style={{ maxHeight, overflow: 'hidden' }}
         aria-hidden={!open}
       >

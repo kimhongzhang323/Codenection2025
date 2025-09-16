@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import './SearchDialog.css'
+import './search_dialog.css'
 
 export type SearchDialogProps = {
   isOpen: boolean
