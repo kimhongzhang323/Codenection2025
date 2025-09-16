@@ -102,9 +102,8 @@ public class Agent {
                 break;
             }
 
-            // ✅ handle final answer
-            if (result.getFinalAnswer().isPresent()) {
-                currentResponse = result.getFinalAnswer().get();
+            if (result.getText().isPresent()) {
+                currentResponse = result.getText().get();
             } else {
                 System.out.println("Model returned no usable output");
                 break ;
