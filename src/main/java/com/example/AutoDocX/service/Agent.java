@@ -68,6 +68,11 @@ public class Agent {
             return "Error loading graph: " + e.getMessage();
         }
 
+		if (!session.isInitialStructureLogged()) {
+            session.getMemory().addStructureEntry("graph_structure", graph.toString());
+            session.setInitialStructureLogged(true);
+        }
+
         int iterations = 0;
         String currentResponse = "";
 

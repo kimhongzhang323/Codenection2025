@@ -181,6 +181,6 @@ public class Memory {
         }
         this.structure.addEntry(key, toStore);
         // Log to episodic as well (audit)
-        this.episodic.addEntry("structure_store_log:" + key, content.length() > MAX_STORE_CHARS ? (content.substring(0, MAX_STORE_CHARS) + TRUNCATION_NOTICE) : content);
+        this.episodic.addEntry(key, content.length() > MAX_STORE_CHARS ? (content.substring(0, MAX_STORE_CHARS) + TRUNCATION_NOTICE) : content);
     }
 }
