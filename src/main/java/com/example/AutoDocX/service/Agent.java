@@ -53,12 +53,16 @@ public class Agent {
     }
 
     public String handlePrompt(String gitUrl, String userPrompt) {
-        return agentLoop(gitUrl, userPrompt);
+        return handlePrompt(gitUrl, userPrompt, null);
     }
 
-    private String agentLoop(String gitUrl, String userPrompt) {
-        Session session = sessionManager.getSession(gitUrl);
-        ClonedRepo repo = repoHandler.getRepo(gitUrl);
+    public String handlePrompt(String gitUrl, String userPrompt, String branch) {
+        return agentLoop(gitUrl, userPrompt, branch);
+    }
+
+    private String agentLoop(String gitUrl, String userPrompt, String branch) {
+        Session session = sessionManager.getSession(gitUrl, branch);
+        ClonedRepo repo = repoHandler.getRepo(gitUrl, branch);
         if (repo == null) return "Repository not found.";
 
         Graph graph;
@@ -232,7 +236,7 @@ public class Agent {
                         "2. NEVER assume or invent information — ALWAYS verify details (structure, purpose, usage, dependencies) directly from code or graph.\n" +
                         "3. Begin exploration from central nodes (do not ask user for hints).\n" +
                         "4. KEEP EXPLORING until you have complete knowledge to produce a final, comprehensive README.\n" +
-                        "5. IMPORTANT: When exploration requires multiple queries, ALWAYS issue MULTIPLE TOOL CALLS in the SAME response instead of one by one.\n" +
+                        "5. IMPORTANT: When exploration requires multiple queries, ALWAYS issue MULTIPLE TOOL CALLS in THE SAME response instead of one by one.\n" +
                         "   - Example: If you need info from 3 files, call read_file() on all 3 files in one step.\n" +
                         "   - Example: If you need both dependency info and node details, call both tools in the same step.\n" +
                         "6. NEVER delay tool calls — batch them together whenever possible.\n" +

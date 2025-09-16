@@ -9,6 +9,11 @@ public class SessionManager {
     private final Map<String, Session> sessions = new ConcurrentHashMap<>();
 
     public Session getSession(String gitUrl) {
-        return sessions.computeIfAbsent(gitUrl, Session::new);
+        return getSession(gitUrl, null);
+    }
+
+    public Session getSession(String gitUrl, String branch) {
+        String sessionKey = gitUrl + (branch == null ? "" : "#" + branch);
+        return sessions.computeIfAbsent(sessionKey, k -> new Session(gitUrl, branch));
     }
 }

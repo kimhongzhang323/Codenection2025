@@ -50,6 +50,12 @@ public class TestController {
         return mcpToolbox.findCentralNodes(graph, n);
     }
 
+    @GetMapping("/central-classes-pagerank")
+    public String getCentralClassesByPageRank(@RequestParam(defaultValue = "5") int n) throws IOException {
+        Graph graph = buildGraphInternal();
+        return mcpToolbox.findCentralNodesByPageRank(graph, n);
+    }
+
     @GetMapping("/neighbours")
     public String getNeighbours(
             @RequestParam String startNodeId,

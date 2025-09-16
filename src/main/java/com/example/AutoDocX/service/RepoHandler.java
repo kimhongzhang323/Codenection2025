@@ -98,25 +98,54 @@ public class RepoHandler {
     }
 
     public ClonedRepo getRepo(String repoLink) {
-        ClonedRepo clonedRepo = cache.get(repoLink);
+        return getRepo(repoLink, null);
+    }
+
+    public ClonedRepo getRepo(String repoLink, String branch) {
+        String cacheKey = repoLink + (branch == null ? "" : "#" + branch);
+        ClonedRepo clonedRepo = cache.get(cacheKey);
         if (clonedRepo != null) {
-            logger.info("Retrieved repository from cache: {}", repoLink);
+            logger.info("Retrieved repository from cache: {}", cacheKey);
             return clonedRepo;
         } else {
-            logger.info("Repository not found in cache, attempting to clone: {}", repoLink);
+            logger.info("Repository not found in cache, attempting to clone: {}", cacheKey);
             try {
                 Path targetDir = Paths.get("cloned-repos", UUID.randomUUID().toString());
-                String commitHash = gitService.cloneRepo(repoLink, targetDir);
-                clonedRepo = new ClonedRepo(repoLink, targetDir, commitHash, null);
-                cache.put(repoLink, clonedRepo);
+                String commitHash = gitService.cloneRepo(repoLink, branch, targetDir);
+                clonedRepo = new ClonedRepo(repoLink, branch, targetDir, commitHash, null);
+                cache.put(cacheKey, clonedRepo);
                 saveReposToJson(); // Persist after new repo is cloned
-                logger.info("Cloned and added repository to cache: {}", repoLink);
+                logger.info("Cloned and added repository to cache: {}", cacheKey);
                 return clonedRepo;
             } catch (GitAPIException e) {
-                logger.error("Failed to clone repository {}: {}", repoLink, e.getMessage(), e);
+                logger.error("Failed to clone repository {}: {}", cacheKey, e.getMessage(), e);
                 return null; // Or throw a custom exception
             }
         }
+    }
+
+    public String getCommit(String repoLink, String branch, String commitHash) throws IOException, GitAPIException {
+        ClonedRepo repo = getRepo(repoLink, branch);
+        if (repo == null) {
+            return "Repository not found for " + repoLink + (branch == null ? "" : "#" + branch);
+        }
+        return gitService.getCommitDetails(repo.getClonedPath(), commitHash);
+    }
+
+    public String getCommitHistory(String repoLink, String branch) throws IOException, GitAPIException {
+        ClonedRepo repo = getRepo(repoLink, branch);
+        if (repo == null) {
+            return "Repository not found for " + repoLink + (branch == null ? "" : "#" + branch);
+        }
+        return gitService.getCommitHistory(repo.getClonedPath());
+    }
+
+    public List<String> getModifiedFilesInCommit(String repoLink, String branch, String commitHash) throws IOException, GitAPIException {
+        ClonedRepo repo = getRepo(repoLink, branch);
+        if (repo == null) {
+            throw new IOException("Repository not found for " + repoLink + (branch == null ? "" : "#" + branch));
+        }
+        return gitService.getModifiedFilesInCommit(repo.getClonedPath(), commitHash);
     }
 
     public Graph getGraph(ClonedRepo clonedRepo) throws IOException {
