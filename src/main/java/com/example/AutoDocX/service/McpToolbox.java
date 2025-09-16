@@ -95,8 +95,16 @@ public class McpToolbox {
 
     public String findCentralNodes(Graph graph, int n) {
         List<GraphNode> centralNodes = GraphAlgo.findCentralClassNodes(graph, n);
+        return formatNodeLinks(graph, centralNodes);
+    }
 
-        return centralNodes.stream()
+    public String findCentralNodesByPageRank(Graph graph, int n) {
+        List<GraphNode> centralNodes = GraphAlgo.findCentralNodesByPageRank(graph, n);
+        return formatNodeLinks(graph, centralNodes);
+    }
+
+    private String formatNodeLinks(Graph graph, List<GraphNode> nodes) {
+        return nodes.stream()
                 .map(node -> {
                     // collect all links relevant to this class (including methods collapsed into class)
                     List<GraphLink> links = GraphAlgo.getAllLinksForClass(graph, node);

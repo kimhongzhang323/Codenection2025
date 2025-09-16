@@ -37,6 +37,78 @@ public class GraphAlgo {
         return all;
     }
 
+    public static List<GraphNode> findCentralNodesByPageRank(Graph graph, int n) {
+        Map<String, Double> pageRankScores = calculatePageRank(graph, 0.85, 20);
+
+        return graph.getNodes().stream()
+                .filter(node -> node.getType() == GraphNode.NodeType.CLASS)
+                .sorted((a, b) -> {
+                    double scoreA = pageRankScores.getOrDefault(a.getId(), 0.0);
+                    double scoreB = pageRankScores.getOrDefault(b.getId(), 0.0);
+                    return Double.compare(scoreB, scoreA); // descending
+                })
+                .limit(n)
+                .collect(Collectors.toList());
+    }
+
+    private static Map<String, Double> calculatePageRank(Graph graph, double dampingFactor, int iterations) {
+        Map<String, Double> pageRankScores = new HashMap<>();
+        List<GraphNode> nodes = graph.getNodes();
+        int numNodes = nodes.size();
+        if (numNodes == 0) return pageRankScores;
+
+        // Initialize scores
+        for (GraphNode node : nodes) {
+            pageRankScores.put(node.getId(), 1.0 / numNodes);
+        }
+
+        List<String> utilityPackages = Arrays.asList("/util/", "/utils/", "/helper/", "/helpers/", "/config/", "/common/");
+
+        for (int i = 0; i < iterations; i++) {
+            Map<String, Double> newPageRankScores = new HashMap<>();
+            double danglingSum = 0.0;
+
+            // Distribute rank from dangling nodes (nodes with no outgoing links)
+            for (GraphNode node : nodes) {
+                if (graph.getOutgoingLinks(node.getId()).isEmpty()) {
+                    danglingSum += pageRankScores.get(node.getId());
+                }
+            }
+
+            // Calculate new ranks for each node
+            for (GraphNode node : nodes) {
+                double newRank = (1.0 - dampingFactor) / numNodes; // Base probability
+                double incomingRankSum = 0;
+
+                for (GraphLink incomingLink : graph.getIncomingLinks(node.getId())) {
+                    GraphNode sourceNode = graph.getNode(incomingLink.getSourceID()).orElse(null);
+                    if (sourceNode != null) {
+                        int outgoingLinksCount = graph.getOutgoingLinks(sourceNode.getId()).size();
+                        if (outgoingLinksCount > 0) {
+                            double sourceRank = pageRankScores.get(sourceNode.getId());
+                            double packageWeight = 1.0;
+
+                            // Apply penalty for utility packages
+                            String sourcePath = sourceNode.getFilePath().replace('\\', '/');
+                            if (utilityPackages.stream().anyMatch(sourcePath::contains)) {
+                                packageWeight = 0.2; // Penalize utility code
+                            }
+
+                            incomingRankSum += (sourceRank / outgoingLinksCount) * packageWeight;
+                        }
+                    }
+                }
+                
+                // Add rank from dangling nodes
+                incomingRankSum += danglingSum / numNodes;
+
+                newPageRankScores.put(node.getId(), newRank + (dampingFactor * incomingRankSum));
+            }
+            pageRankScores = newPageRankScores;
+        }
+        return pageRankScores;
+    }
+
 
     private static int countOutgoingCalls(Graph graph, GraphNode node) {
         return (int) node.getOutgoingLinks().stream()

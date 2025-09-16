@@ -197,7 +197,7 @@ public class Agent {
             }
             case "find_central_nodes": {
                 int n = Optional.ofNullable(paramsMap.get("n")).map(val -> ((Number) val).intValue()).orElse(5);
-                result = mcpToolbox.findCentralNodes(graph, n);
+                result = mcpToolbox.findCentralNodesByPageRank(graph, n);
                 break;
             }
             case "find_neighbour_nodes": {
