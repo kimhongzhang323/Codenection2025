@@ -2,14 +2,14 @@ import type { Variants } from 'framer-motion';
 import { motion, useAnimation } from 'framer-motion';
 import type { HTMLAttributes, MouseEvent } from 'react';
 import { forwardRef, useCallback, useImperativeHandle, useRef } from 'react';
-import { cn } from '../lib/utils';
+import { cn } from '../../lib/utils';
 
-export interface CheckIconHandle {
+export interface XIconHandle {
   startAnimation: () => void;
   stopAnimation: () => void;
 }
 
-interface CheckIconProps extends HTMLAttributes<HTMLDivElement> {
+interface XIconProps extends HTMLAttributes<HTMLDivElement> {
   size?: number;
 }
 
@@ -17,24 +17,14 @@ const pathVariants: Variants = {
   normal: {
     opacity: 1,
     pathLength: 1,
-    scale: 1,
-    transition: {
-      duration: 0.3,
-      opacity: { duration: 0.1 },
-    },
   },
   animate: {
     opacity: [0, 1],
     pathLength: [0, 1],
-    scale: [0.5, 1],
-    transition: {
-      duration: 0.4,
-      opacity: { duration: 0.1 },
-    },
   },
 };
 
-const CheckIcon = forwardRef<CheckIconHandle, CheckIconProps>(
+const XIcon = forwardRef<XIconHandle, XIconProps>(
   ({ onMouseEnter, onMouseLeave, className, size = 18, ...props }, ref) => {
     const controls = useAnimation();
     const isControlledRef = useRef(false);
@@ -68,7 +58,6 @@ const CheckIcon = forwardRef<CheckIconHandle, CheckIconProps>(
       },
       [controls, onMouseLeave]
     );
-
     return (
       <div
         className={cn('home__input-icon', className)}
@@ -86,13 +75,17 @@ const CheckIcon = forwardRef<CheckIconHandle, CheckIconProps>(
           strokeWidth="2"
           strokeLinecap="round"
           strokeLinejoin="round"
-          aria-hidden="true"
         >
           <motion.path
             variants={pathVariants}
-            initial="normal"
             animate={controls}
-            d="M4 12 9 17L20 6"
+            d="M18 6 6 18"
+          />
+          <motion.path
+            transition={{ delay: 0.2 }}
+            variants={pathVariants}
+            animate={controls}
+            d="m6 6 12 12"
           />
         </svg>
       </div>
@@ -100,6 +93,6 @@ const CheckIcon = forwardRef<CheckIconHandle, CheckIconProps>(
   }
 );
 
-CheckIcon.displayName = 'CheckIcon';
+XIcon.displayName = 'XIcon';
 
-export { CheckIcon };
+export { XIcon };

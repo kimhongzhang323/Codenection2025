@@ -6,9 +6,9 @@ import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { tomorrow, prism } from 'react-syntax-highlighter/dist/cjs/styles/prism';
 import Mermaid from './mermaid.tsx';
 import FilesRenderer from './files_renderer';
-import Callout from './callout';
-import CopyMarkdownButton from './CopyMarkdownButton';
-import SummarizeButton from './SummarizeButton';
+import Callout from './ui/callout';
+import CopyMarkdownButton from './ui/copy_markdown_button';
+import SummarizeButton from './ui/summarize_button';
 
 const MarkdownRawContext = createContext<string>('');
 

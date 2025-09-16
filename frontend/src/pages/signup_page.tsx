@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import './SignUpPage.css';
+import './signup_page.css';
 
 const SignUp: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);

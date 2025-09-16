@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
-import { useTextSelection } from '../hooks/useTextSelection'
-import { XIcon } from './close_icon'
+import { useTextSelection } from '../../hooks/useTextSelection'
+import { XIcon } from '../icons/close_icon'
+import './suggestion_panel.css'
 
 interface SuggestionPanelProps {
   isOpen: boolean

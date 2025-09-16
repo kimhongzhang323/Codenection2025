@@ -2,7 +2,7 @@ import type { Variants } from 'framer-motion';
 import { motion, useAnimation } from 'framer-motion';
 import type { HTMLAttributes, MouseEvent } from 'react';
 import { forwardRef, useCallback, useImperativeHandle, useRef } from 'react';
-import { cn } from '../lib/utils';
+import { cn } from '../../lib/utils';
 
 export interface SparklesIconHandle {
   startAnimation: () => void;

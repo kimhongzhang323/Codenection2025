@@ -1,6 +1,7 @@
-import React, { useState } from 'react'
-import { TldrIcon } from './tldr_icon'
-import './SummarizeButton.css'
+import React, { useState, useRef } from 'react'
+import { TldrIcon } from '../icons/tldr_icon'
+import type { TldrIconHandle } from '../icons/tldr_icon'
+import './summarize_button.css'
 
 interface SummarizeButtonProps {
   content: string
@@ -10,6 +11,19 @@ const SummarizeButton: React.FC<SummarizeButtonProps> = ({ content: _content }) 
   const [isSummarizing, setIsSummarizing] = useState(false)
   const [summary, setSummary] = useState<string | null>(null)
   const [showSummary, setShowSummary] = useState(false)
+  const iconRef = useRef<TldrIconHandle>(null)
+
+  const handleMouseEnter = () => {
+    if (!isSummarizing && iconRef.current) {
+      iconRef.current.startAnimation()
+    }
+  }
+
+  const handleMouseLeave = () => {
+    if (!isSummarizing && iconRef.current) {
+      iconRef.current.stopAnimation()
+    }
+  }
 
   async function handleSummarize() {
     if (isSummarizing) return
@@ -17,7 +31,7 @@ const SummarizeButton: React.FC<SummarizeButtonProps> = ({ content: _content }) 
     setIsSummarizing(true)
     try {
       // Call the AI chat context to generate a summary
-      const { useAIChat } = await import('../contexts/AIChatContext')
+      const { useAIChat } = await import('../../contexts/AIChatContext')
       const { openChat } = useAIChat()
       
       // Open AI chat
@@ -50,6 +64,8 @@ const SummarizeButton: React.FC<SummarizeButtonProps> = ({ content: _content }) 
     <div style={{ position: 'relative', display: 'inline-block' }}>
       <button
         onClick={handleSummarize}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
         disabled={isSummarizing}
         aria-label="Summarize for TL;DR"
         title="Summarize for TL;DR"
@@ -57,7 +73,7 @@ const SummarizeButton: React.FC<SummarizeButtonProps> = ({ content: _content }) 
           display: 'inline-flex',
           alignItems: 'center',
           gap: 8,
-          padding: '6px 10px',
+          padding: '6px 12px 6px 10px',
           borderRadius: 8,
           border: '1px solid var(--bottom-dialog-border)',
           background: isSummarizing ? 'var(--search-input-bg)' : 'var(--search-input-bg)',
@@ -81,10 +97,10 @@ const SummarizeButton: React.FC<SummarizeButtonProps> = ({ content: _content }) 
               }}
             />
           ) : (
-            <TldrIcon size={16} />
+            <TldrIcon ref={iconRef} size={16} />
           )}
         </span>
-        <span>{isSummarizing ? 'Summarizing...' : 'TL;DR'}</span>
+        <span>{isSummarizing ? 'Summarizing...' : 'Summarize'}</span>
       </button>
       
       {showSummary && summary && (

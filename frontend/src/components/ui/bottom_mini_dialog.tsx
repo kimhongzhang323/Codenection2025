@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
-import './BottomMiniDialog.css'
+import './bottom_mini_dialog.css'
 
 interface BottomMiniDialogProps {
   content: string

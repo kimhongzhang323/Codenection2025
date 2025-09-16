@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import './CopyMarkdownButton.css'
+import './copy_markdown_button.css'
 
 interface CopyMarkdownButtonProps {
   content: string
@@ -25,7 +25,7 @@ const CopyMarkdownButton: React.FC<CopyMarkdownButtonProps> = ({ content }) => {
         display: 'inline-flex',
         alignItems: 'center',
         gap: 8,
-        padding: '6px 10px',
+        padding: '6px 12px 6px 10px',
         borderRadius: 8,
         border: '1px solid var(--bottom-dialog-border)',
         background: 'var(--search-input-bg)',
