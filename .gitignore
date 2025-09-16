@@ -50,5 +50,7 @@ coverage/
 /todo.md
 /prd.md
 cloned-repos
-src/main/resources
+src/main/resources/application.properties
+src/main/resources/application.yml
+.cursor
 

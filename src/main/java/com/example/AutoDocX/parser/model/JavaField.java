@@ -11,6 +11,9 @@ public class JavaField {
     private String name;
     private String type;
     private String accessModifier;
+    private int startLine;
+    private int endLine;
+    private String filePath;
 
     @Override
     public String toString() {

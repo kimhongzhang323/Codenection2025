@@ -317,7 +317,7 @@ const File = forwardRef<
         {...props}
       >
                  {fileIcon ?? <FileIcon style={{ width: '18px', height: '18px' }} />}
-        {children}
+        <span style={{ fontSize: '0.9rem', lineHeight: 1.6, fontWeight: 300, color: 'var(--docs-normal-text)' }}>{children}</span>
       </button>
     );
   },

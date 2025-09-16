@@ -1,12 +1,17 @@
 import { useState, useEffect } from 'react'
-import { Routes, Route, useNavigate } from 'react-router-dom'
+import { Routes, Route, useNavigate, useLocation, useParams } from 'react-router-dom'
 import { checkGithubUrlPublic, fetchGithubRepoDetails, type GithubRepoDetails } from './lib/utils'
-import { LinkIcon } from './components/url_icon'
-import { SearchIcon } from './components/search_icon'
-import { CheckIcon } from './components/check_icon'
-import { XIcon } from './components/close_icon'
-import { ArrowRightIcon } from './components/arrow_icon'
-import DocumentationPage from './pages/DocumentationPage'
+import { LinkIcon } from './components/icons/url_icon'
+import { SearchIcon } from './components/icons/search_icon'
+import { CheckIcon } from './components/icons/check_icon'
+import { XIcon } from './components/icons/close_icon'
+import { ArrowRightIcon } from './components/icons/arrow_icon'
+import DocumentationPage from './pages/documentation_page'
+import SignUpPage from './pages/signup_page'
+import TextSelectionDialog from './components/ui/text_selection_dialog'
+import { AIChatPanel } from './components/ui/ai_chat_panel'
+import { AIChatProvider } from './contexts/AIChatContext'
+import DocumentationSystem from './components/docs_flow'
 import './App.css'
 
 function HomePage() {
@@ -89,16 +94,20 @@ function HomePage() {
   function handleArrowClick() {
     if (repoData) {
       const slug = (repoData.fullName || '').toLowerCase()
-      navigate(`/${encodeURIComponent(slug)}`, {
+      navigate(`/docs-flow/${encodeURIComponent(slug)}`, {
         state: { repoData, repoUrl },
       })
     }
   }
 
+  function handleSignUpClick() {
+    navigate('/signup')
+  }
+
   return (
     <main className="home">
       <div className="home__signup-container">
-        <button className="home__signup-btn">
+        <button className="home__signup-btn" onClick={handleSignUpClick}>
           Sign Up
         </button>
         {showTooltip && (
@@ -167,14 +176,51 @@ function HomePage() {
   )
 }
 
+function DocsFlowPage() {
+  const location = useLocation() as { state?: { repoData?: GithubRepoDetails; repoUrl?: string } }
+  const navigate = useNavigate()
+  const { repo } = useParams<{ repo: string }>()
+  const repoData = location.state?.repoData
+  const repoUrl = location.state?.repoUrl
+
+  const handleDocumentationCreated = () => {
+    // Navigate to the actual documentation page
+    if (repo) {
+      navigate(`/${repo}`, {
+        state: { repoData, repoUrl },
+      })
+    }
+  }
+
+  const handleBackToApp = () => {
+    // Navigate back to home page
+    navigate('/')
+  }
+
+  return (
+    <DocumentationSystem
+      hasExistingDoc={false}
+      isEditing={false}
+      onDocumentationCreated={handleDocumentationCreated}
+      onBackToApp={handleBackToApp}
+    />
+  )
+}
+
 function App() {
   return (
-    <Routes>
-      <Route path="/" element={<HomePage />} />
-      <Route path="/:repo" element={<DocumentationPage />} />
-      <Route path="/:repo/:file" element={<DocumentationPage />} />
-      <Route path="/documentation" element={<DocumentationPage />} />
-    </Routes>
+    <AIChatProvider>
+      <Routes>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/signup" element={<SignUpPage />} />
+        <Route path="/docs-flow/:repo" element={<DocsFlowPage />} />
+        <Route path="/:repo" element={<DocumentationPage />} />
+        <Route path="/:repo/:file" element={<DocumentationPage />} />
+        <Route path="/documentation" element={<DocumentationPage />} />
+      </Routes>
+      <TextSelectionDialog />
+      <AIChatPanel />
+    </AIChatProvider>
   )
 }
 
