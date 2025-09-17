@@ -6,6 +6,7 @@ import com.example.AutoDocX.parser.model.GraphLink;
 import com.example.AutoDocX.parser.model.GraphNode;
 import com.example.AutoDocX.parser.model.GraphAlgo;
 import com.example.AutoDocX.service.RepoHandler.NodeNotFoundException;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -17,13 +18,18 @@ import java.nio.file.FileVisitResult;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.attribute.BasicFileAttributes;
 import java.nio.file.AccessDeniedException;
+import com.example.AutoDocX.model.repo.Model;
+import com.google.genai.types.Content;
+import com.google.genai.types.Part;
 
 @Service
 public class McpToolbox {
     private final RepoHandler repoHandler;
+    private final Model model;
 
-    public McpToolbox(RepoHandler repoHandler) {
+    public McpToolbox(RepoHandler repoHandler, @Qualifier("geminiModel") Model model) {
         this.repoHandler = repoHandler;
+        this.model = model;
     }
 
     public String getCode(ClonedRepo repo, String nodeId) throws IOException, NodeNotFoundException {
@@ -103,6 +109,11 @@ public class McpToolbox {
         return formatNodeLinks(graph, centralNodes);
     }
 
+    public String findHubNodes(Graph graph, int n) {
+        List<GraphNode> hubNodes = GraphAlgo.findCentralNodesByPageRank(graph, n);
+        return formatNodeLinks(graph, hubNodes);
+    }
+
     private String formatNodeLinks(Graph graph, List<GraphNode> nodes) {
         return nodes.stream()
                 .map(node -> {
@@ -145,5 +156,80 @@ public class McpToolbox {
 
     public String getNeighbourSubgraph(Graph graph, String startNodeId, int depthLimit) {
         return GraphAlgo.dfsTraversalToString(graph, startNodeId, depthLimit);
+    }
+
+    /**
+     * Assembles a structured JSON summary for a node, handling different node types.
+     * This is a local operation with NO model call.
+     * @param graph The code graph.
+     * @param nodeId The ID of the node to summarize.
+     * @param description The description of the node's purpose, to be inserted directly.
+     * @return A JSON string containing the combined summary.
+     */
+    public String compactNode(Graph graph, String nodeId, String description) {
+        GraphNode node = graph.getNode(nodeId)
+                .orElseThrow(() -> new IllegalArgumentException("Node not found: " + nodeId));
+
+        switch (node.getType()) {
+            case CLASS:
+                return compactClassNode(graph, node, description);
+            case METHOD:
+                return compactMethodNode(graph, node, description);
+            default:
+                // Default for FIELD or other types
+                return String.format("{\"type\": \"%s\", \"label\": \"%s\", \"purpose\": \"%s\"}",
+                        node.getType(), node.getLabel(), description.replace("\"", "'"));
+        }
+    }
+
+    private String compactClassNode(Graph graph, GraphNode classNode, String description) {
+        String className = classNode.getLabel();
+
+        List<String> publicMethods = graph.getNodes().stream()
+                .filter(node -> node.getType() == GraphNode.NodeType.METHOD &&
+                                node.getId().startsWith("method_" + className + "_"))
+                .map(GraphNode::getLabel)
+                .collect(Collectors.toList());
+
+        List<String> dependencies = graph.getLinks().stream()
+                .filter(link -> link.getSourceID().equals(classNode.getId()))
+                .map(link -> graph.getNode(link.getTargetID()).orElse(null))
+                .filter(Objects::nonNull)
+                .map(GraphNode::getLabel)
+                .distinct()
+                .collect(Collectors.toList());
+
+        StringBuilder summary = new StringBuilder();
+        summary.append("{\n");
+        summary.append("  \"type\": \"CLASS\",\n");
+        summary.append("  \"class\": \"").append(className).append("\",\n");
+        summary.append("  \"purpose\": \"").append(description.replace("\"", "'")).append("\",\n");
+        summary.append("  \"public_methods\": [\"").append(String.join("\", \"", publicMethods)).append("\"],\n");
+        summary.append("  \"dependencies\": [\"").append(String.join("\", \"", dependencies)).append("\"]\n");
+        summary.append("}");
+
+        return summary.toString();
+    }
+
+    private String compactMethodNode(Graph graph, GraphNode methodNode, String description) {
+        String methodName = methodNode.getLabel();
+
+        List<String> calls = graph.getLinks().stream()
+                .filter(link -> link.getSourceID().equals(methodNode.getId()))
+                .map(link -> graph.getNode(link.getTargetID()).orElse(null))
+                .filter(Objects::nonNull)
+                .map(GraphNode::getLabel)
+                .distinct()
+                .collect(Collectors.toList());
+
+        StringBuilder summary = new StringBuilder();
+        summary.append("{\n");
+        summary.append("  \"type\": \"METHOD\",\n");
+        summary.append("  \"method\": \"").append(methodName).append("\",\n");
+        summary.append("  \"purpose\": \"").append(description.replace("\"", "'")).append("\",\n");
+        summary.append("  \"calls\": [\"").append(String.join("\", \"", calls)).append("\"]\n");
+        summary.append("}");
+
+        return summary.toString();
     }
 }

@@ -16,7 +16,7 @@ This phase is handled by two specialized agents that create a high-level "map" o
     2.  **Identify Core Components**: It uses the **Hub Score algorithm** (`findHubNodes`) to identify the most important "orchestrator" classes that represent the core business logic.
     3.  **Explore and Compact**: For each important node, it performs a two-step process:
         *   It fetches the full source code using `get_code`.
-        *   It immediately calls the **`compact_node`** tool. This tool uses an internal LLM call to replace the full source code in memory with a structured JSON object containing the node's purpose, public methods, and dependencies. This is the crucial **Context Compaction** step that prevents memory overflow.
+        *   It immediately calls the **`summarise_code`** tool. This tool uses an internal LLM call to replace the full source code in memory with a structured JSON object containing the node's purpose, public methods, and dependencies. This is the crucial **Context Compaction** step that prevents memory overflow.
 *   **Output**: A "memory" containing a high-level, structured summary of the project's most important components.
 
 **Agent 2: The Planner Agent (The "Architect")**

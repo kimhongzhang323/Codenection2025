@@ -3,6 +3,7 @@ package com.example.AutoDocX.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import lombok.Getter;
 
 import java.util.*;
 
@@ -14,6 +15,7 @@ import java.util.*;
  *
  * Each MemoryStore supports pretty-printing of the latest N entries and stores entries as (key, valueString).
  */
+@Getter
 public class Memory {
 
     // Tunable truncation to avoid huge noisy entries in code/structure stores
@@ -23,10 +25,7 @@ public class Memory {
     private final MemoryStore episodic = new MemoryStore("Episodic");
     private final MemoryStore code = new MemoryStore("Code");
     private final MemoryStore structure = new MemoryStore("Structure");
-
-    public MemoryStore episodic() { return episodic; }
-    public MemoryStore code() { return code; }
-    public MemoryStore structure() { return structure; }
+    private final MemoryStore summary = new MemoryStore("Summary");
 
     /**
      * Pretty-print all stores, each limited to latestN entries.
@@ -36,6 +35,7 @@ public class Memory {
         sb.append("=== Episodic Memory ===\n").append(episodic.toString(latestN)).append("\n\n");
         sb.append("=== Code Memory ===\n").append(code.toString(latestN)).append("\n\n");
         sb.append("=== Structure Memory ===\n").append(structure.toString(latestN)).append("\n");
+        sb.append("=== Structure Memory ===\n").append(summary.toString(latestN)).append("\n");
         return sb.toString();
     }
 
@@ -77,13 +77,21 @@ public class Memory {
                 valueStr = "null";
             } else {
                 try {
-                    // Try to pretty-print JSON for structured objects
                     valueStr = mapper.writeValueAsString(value);
                 } catch (JsonProcessingException e) {
                     valueStr = value.toString();
                 }
             }
             entries.add(new MemoryEntry(key, valueStr));
+        }
+
+        public synchronized void removeEntry(String key) {
+            entries.removeIf(e -> e.getQuery().equals(key));
+        }
+
+        public synchronized void replaceEntry(String key, Object value) {
+            removeEntry(key);
+            addEntry(key, value);
         }
 
         /**
@@ -151,36 +159,5 @@ public class Memory {
         public String getResult() {
             return result;
         }
-    }
-
-    // ---------- Helpers for safe storing from Agent ----------
-
-    /**
-     * Store code-like content but truncate if too large.
-     * Use when you want to persist code readouts into code memory without noise explosion.
-     */
-    public void addCodeEntry(String key, String content) {
-        if (content == null) content = "null";
-        String toStore = content;
-        if (content.length() > MAX_STORE_CHARS) {
-            toStore = content.substring(0, MAX_STORE_CHARS) + TRUNCATION_NOTICE;
-        }
-        this.code.addEntry(key, toStore);
-        // Always also log full result in episodic for audit
-        this.episodic.addEntry("code_store_log:" + key, content.length() > MAX_STORE_CHARS ? (content.substring(0, MAX_STORE_CHARS) + TRUNCATION_NOTICE) : content);
-    }
-
-    /**
-     * Store structure-like content but truncate if too large.
-     */
-    public void addStructureEntry(String key, String content) {
-        if (content == null) content = "null";
-        String toStore = content;
-        if (content.length() > MAX_STORE_CHARS) {
-            toStore = content.substring(0, MAX_STORE_CHARS) + TRUNCATION_NOTICE;
-        }
-        this.structure.addEntry(key, toStore);
-        // Log to episodic as well (audit)
-        this.episodic.addEntry(key, content.length() > MAX_STORE_CHARS ? (content.substring(0, MAX_STORE_CHARS) + TRUNCATION_NOTICE) : content);
     }
 }
