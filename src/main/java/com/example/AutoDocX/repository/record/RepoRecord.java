@@ -10,4 +10,5 @@ import lombok.NoArgsConstructor;
 public class RepoRecord {
     private String repoLink;
     private String clonedPath;
+    private String branch;
 }
