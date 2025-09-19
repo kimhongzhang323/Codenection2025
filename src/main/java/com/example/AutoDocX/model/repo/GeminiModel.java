@@ -132,7 +132,7 @@ public class GeminiModel implements Model {
                 part.text().ifPresent(allTextSB::append);
                 part.functionCall().ifPresent(fc -> {
                     String fname = fc.name().orElse(null);
-                    Object fargs = fc.args().orElse(null);
+                    Map<String, Object> fargs = fc.args().orElse(null);
                     if (fname != null) {
                         functionCalls.add(new ToolCallData(fname, fargs));
                     }

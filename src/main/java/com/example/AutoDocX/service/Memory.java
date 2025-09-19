@@ -113,25 +113,11 @@ public class Memory {
                 slice = new ArrayList<>(entries);
             }
 
-            // Represent as list of maps for nicer JSON output
-            List<Map<String, String>> asList = new ArrayList<>();
+            StringBuilder sb = new StringBuilder();
             for (MemoryEntry e : slice) {
-                Map<String, String> m = new LinkedHashMap<>();
-                m.put("key", e.getQuery());
-                m.put("value", e.getResult());
-                asList.add(m);
+                sb.append(e.getQuery()).append(": ").append(e.getResult()).append("\n");
             }
-
-            try {
-                return mapper.writerWithDefaultPrettyPrinter().writeValueAsString(asList);
-            } catch (JsonProcessingException ex) {
-                // fallback
-                StringBuilder sb = new StringBuilder();
-                for (MemoryEntry e : slice) {
-                    sb.append(e.getQuery()).append(": ").append(e.getResult()).append("\n");
-                }
-                return sb.toString();
-            }
+            return sb.toString();
         }
 
         @Override

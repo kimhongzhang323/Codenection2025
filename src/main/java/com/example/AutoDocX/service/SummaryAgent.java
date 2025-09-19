@@ -15,10 +15,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Autowired;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
-import java.util.Optional;
+import java.util.*;
 
 
 @Service
@@ -57,9 +54,11 @@ public class SummaryAgent {
         } catch (Exception e) {
             return "Error loading graph: " + e.getMessage();
         }
+        ToolExecutionContext toolExecutionContext = new ToolExecutionContext(repo, graph, session);
 
         if (!session.isInitialStructureLogged()) {
             session.getMemory().getStructure().addEntry("graph_structure", graph.toString());
+            mcpToolKit.executeTool("find_central_nodes", Map.of("n", 10), toolExecutionContext);
             session.setInitialStructureLogged(true);
         }
 
@@ -78,9 +77,8 @@ public class SummaryAgent {
             System.out.println("DEBUG (SummaryAgent): Model Response\n" + result);
 
             if (!result.getToolCalls().isEmpty()) {
-                ToolExecutionContext context = new ToolExecutionContext(repo, graph, session);
                 for (ToolCallData fc : result.getToolCalls()) {
-                    mcpToolKit.executeTool(fc.getName(), fc.getArgs(), context);
+                    mcpToolKit.executeTool(fc.getName(), fc.getArgs(), toolExecutionContext);
                 }
                 continue; // Loop again to let the model process tool results
             }
@@ -103,36 +101,66 @@ public class SummaryAgent {
     private List<Content> buildContent(Memory memory, String userPrompt) {
         List<Content> contents = new ArrayList<>();
         String systemInstruction =
-                        "You are an expert software architect. Your goal is to analyze a codebase and produce:\n" +
-                        " - A general introduction to the project (its scope and purpose).\n" +
-                        " - An architectural overview of major modules and their interactions.\n" +
-                        " - A comprehensive map of ALL nodes worth documenting later (modules, services, APIs, utilities, etc.).\n" +
-                        "\n" +
-                        "The codebase is serialized into a code graph, showing relationships between nodes.\n" +
-                        "\n" +
-                        "PRINCIPLES:\n" +
-                        " - Be factual: verify all claims from the provided tools; do not invent structure, names, or dependencies.\n" +
-                        " - Prefer breadth over depth: aim to identify ALL important components, not to retrieve every single file.\n" +
-                        " - Use `find_neighbour_nodes` freely to expand the map, since it is low-cost compared to retrieving code.\n" +
-                        " - You may create high-level summaries for nodes even if their code was not retrieved, but ONLY when their importance is very likely (e.g., central position, strong connections, or descriptive name).\n" +
-                        " - Your mission is preparatory: you are building the *plan* for a documentation workflow. The output should clearly mark all parts worth documenting, not just a minimal subset.\n" +
-                        "\n" +
-                        "RULES:\n" +
-                        "1. You MUST actively explore the graph until you have identified ALL important nodes worth documenting, not just a few central ones.\n" +
-                        "2. If there is code in the code memory, you must use the `summarise_code` tool to summarise it. This ensures memory is compact and knowledge is preserved.\n" +
-                        "3. Use `find_neighbour_nodes` iteratively to expand exploration. Continue expanding until you are confident you have mapped the full project structure (all major modules, layers, services, and utilities).\n" +
-                        "4. IMPORTANT: When exploration requires multiple queries, ALWAYS issue MULTIPLE TOOL CALLS in THE SAME response instead of one by one.\n" +
-                        "   - Example: If you need info from 3 nodes, call get_code() on all 3 in one step.\n" +
-                        "   - Example: If you need both dependency info and node details, call both tools in the same step.\n" +
-                        "   - Example: If you need to summarise code, call summarise_code on all relevant nodes in one step.\n" +
-                        "5. Summarise every important node:\n" +
-                        "   - If code is available, use `summarise_code`.\n" +
-                        "   - If code is not retrieved but the node is clearly important, create a high-level inferred summary (mark it as inferred).\n" +
-                        "6. Do not stop early. Stop ONLY when you have produced a full project-level overview AND a complete list of all nodes that should be documented.\n" +
-                        "7. Final output must include:\n" +
-                        "   - A general introduction to the project.\n" +
-                        "   - An architectural overview of modules and their relationships.\n" +
-                        "   - A comprehensive inventory of nodes worth documenting, each marked as `summarised` (code) or `inferred` (context-only).\n";
+"""
+You are an expert software architect. Your task is to explore a codebase and prepare a project-level summary.
+Your mission is preparatory: you are building the *plan* for a FULL documentation workflow.
+
+GOALS
+- Give a concise introduction to the project (scope and purpose).
+- Provide an architectural overview of key modules and their interactions.
+- Build a complete inventory of nodes worth documenting (modules, services, APIs, utilities, etc.).
+
+PRINCIPLES
+- Be factual: do not invent names or dependencies.
+- Breadth first: aim to cover all important components.
+- Use `find_neighbour_nodes` freely with deep depth (example 5) to expand coverage.
+- Use `get_code` selectively, you don't always need the entire code to infer.
+- Fewer retrieved code snippets does NOT mean a smaller or weaker final summary. Always aim for full coverage.
+
+RULES
+1. Actively expand the graph until you are confident all major modules, layers, and utilities are mapped.
+2. IMPORTANT: When exploration requires multiple queries, ALWAYS issue MULTIPLE TOOL CALLS in THE SAME response instead of one by one.
+   - Example: If you need info from 3 nodes, call get_code() on all 3 in one step.
+   - Example: If you need to make summary, then get dependency info and node details, call ALL tools in the same step.
+3. You MUST always actively use the summarise_code tool to build context (memory disappears gradually):
+   - When code memory is available, use `summarise_code`
+   - Without code but obvious usage → use `summarise_code` with summary starting with "(inferred)"
+4. Stop ONLY when you can provide:
+   - A general project intro
+   - An architectural overview
+   - A comprehensive inventory of ALL nodes (each marked `summarised` (with code) or `inferred` (just from links)) together with their definitions
+""";
+//                        "You are an expert software architect. Your goal is to analyze a codebase and produce:\n" +
+//                        " - A general introduction to the project (its scope and purpose).\n" +
+//                        " - An architectural overview of major modules and their interactions.\n" +
+//                        " - A comprehensive map of ALL nodes worth documenting later (modules, services, APIs, utilities, etc.).\n" +
+//                        "\n" +
+//                        "The codebase is serialized into a code graph, showing relationships between nodes.\n" +
+//                        "\n" +
+//                        "PRINCIPLES:\n" +
+//                        " - Be factual: do not invent structure, names, or dependencies.\n" +
+//                        " - Prefer breadth over depth: aim to identify ALL important components, not to retrieve every single code content.\n" +
+//                        " - Use `find_neighbour_nodes` freely to expand the map, since it is low-cost compared to retrieving code.\n" +
+//                        " - `get_code` is expensive and should only be used in half of all nodes. selectively use it on nodes that can possibly change the overview\n" +
+//                        " - You may create summaries for nodes as even if their code was not retrieved, but you must start the summary with 'inferred'.\n" +
+//                        " - Your mission is preparatory: you are building the *plan* for a documentation workflow. The output should clearly mark all parts worth documenting, not just a minimal subset.\n" +
+//                        "\n" +
+//                        "RULES:\n" +
+//                        "1. You MUST actively explore the graph until you have identified ALL important nodes worth documenting, not just a few central ones.\n" +
+//                        "2. If there is code in the code memory, you must use the `summarise_code` tool to summarise it. This ensures memory is compact and knowledge is preserved.\n" +
+//                        "3. Use `find_neighbour_nodes` iteratively to expand exploration. Continue expanding until you are confident you have mapped the full project structure (all major modules, layers, services, and utilities).\n" +
+//                        "4. IMPORTANT: When exploration requires multiple queries, ALWAYS issue MULTIPLE TOOL CALLS in THE SAME response instead of one by one.\n" +
+//                        "   - Example: If you need info from 3 nodes, call get_code() on all 3 in one step.\n" +
+//                        "   - Example: If you need both dependency info and node details, call both tools in the same step.\n" +
+//                        "   - Example: If you need to summarise code, call summarise_code on all relevant nodes in one step.\n" +
+//                        "5. Summarise every important node:\n" +
+//                        "   - If code is available, use `summarise_code`.\n" +
+//                        "   - If code is not retrieved but the node is clearly important, create a high-level inferred summary (mark it as inferred).\n" +
+//                        "6. Stop ONLY when you believe enough information is retrieved to make a full project-level overview AND a complete list of all nodes that should be documented.\n" +
+//                        "7. Final output must include:\n" +
+//                        "   - A general introduction to the project.\n" +
+//                        "   - An architectural overview of modules and their relationships.\n" +
+//                        "   - A comprehensive inventory of nodes worth documenting, together with their summary, each marked as `summarised` (code) or `inferred` (context-only).\n";
 
 
         contents.add(Content.builder().role("user").parts(Part.builder().text(systemInstruction).build()).build());
@@ -155,18 +183,15 @@ public class SummaryAgent {
         }
 
         // === Code Summary ===
-        String codeSummary = memory.summarizeCode(15);
+        String codeSummary = memory.getCode().toString(20);
         if (!codeSummary.isBlank()) {
-            contents.add(Content.builder().role("user").parts(Part.builder().text("CODE MEMORY:\n" + codeSummary).build()).build());
+            contents.add(Content.builder().parts(Part.builder().text("CODE MEMORY:\n" + codeSummary).build()).role("user").build());
         }
 
         // === Summary Memory ===
         String summary = memory.getSummary().toString();
         if (!summary.isBlank()) {
-            contents.add(Content.builder()
-                    .parts(List.of(Part.builder().text("EXISTING CODE SUMMARY:\n" + summary).build()))
-                    .role("user")
-                    .build());
+            contents.add(Content.builder().parts(Part.builder().text("EXISTING CODE SUMMARY:\n" + summary).build()).role("user").build());
         }
 
         // Add the current prompt

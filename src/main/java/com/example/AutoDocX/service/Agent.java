@@ -99,7 +99,7 @@ public class Agent {
             if (!result.getToolCalls().isEmpty()) {
                 for (ToolCallData fc : result.getToolCalls()) {
                     String toolName = fc.getName();
-                    Object toolArgs = fc.getArgs();
+                    Map<String, Object> toolArgs = fc.getArgs();
 
                     System.out.println("DEBUG: Executing tool: " + toolName + " with args: " + toolArgs);
                     String toolResult = handleToolCall(toolName, toolArgs, repo, graph, session);
@@ -133,7 +133,7 @@ public class Agent {
     /**
      * Centralized tool call handling. Also stores tool results into relevant memory stores.
      */
-    private String handleToolCall(String tool, Object param, ClonedRepo repo, Graph graph, Session session) {
+    private String handleToolCall(String tool, Map<String, Object> param, ClonedRepo repo, Graph graph, Session session) {
         ToolExecutionContext context = new ToolExecutionContext(repo, graph, session);
         return mcpToolKit.executeTool(tool, param, context);
     }

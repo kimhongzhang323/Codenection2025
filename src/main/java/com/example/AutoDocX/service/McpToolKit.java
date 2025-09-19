@@ -121,7 +121,7 @@ public class McpToolKit {
     }
 
     @SuppressWarnings("unchecked")
-    public String executeTool(String toolName, Object params, ToolExecutionContext context) {
+    public String executeTool(String toolName, Map<String, Object> params, ToolExecutionContext context) {
         String result;
         String paramForMemory;
         try {
@@ -131,7 +131,7 @@ public class McpToolKit {
         }
 
         try {
-            result = execute(toolName, (Map<String, Object>) params, context);
+            result = execute(toolName, params, context);
 
             // After successful execution, store result in appropriate memory slices (with truncation where needed)
             switch (toolName) {
@@ -146,12 +146,13 @@ public class McpToolKit {
                     context.getSession().getMemory().getStructure().addEntry(toolName + ":" + extractNameFromParams(params), result);
                     break;
                 case "summarise_code":
-                case "summarize_nodes_bulk":
 //					System.out.println("|    DEBUG: saving to summary memory: " + extractNameFromParams(params) + " -> " + result);
 //					System.out.println("|    DEBUG: removing from code memory: " + extractNameFromParams(params));
                     context.getSession().getMemory().getSummary().addEntry(extractNameFromParams(params), result);
-//                    context.getSession().getMemory().getCode().removeEntry(extractNameFromParams(params));
+                    context.getSession().getMemory().getCode().removeEntry(extractNameFromParams(params));
                     break;
+                case "summarize_nodes_bulk":
+                    throw new UnsupportedOperationException("Feature incomplete");
                 default:
                     System.out.println("WARNING: unknown tool: " + toolName + " (" + paramForMemory + ")");
                     break;
