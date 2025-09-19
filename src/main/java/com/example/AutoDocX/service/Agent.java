@@ -43,7 +43,7 @@ public class Agent {
             RepoHandler repoHandler,
             McpToolbox mcpToolbox,
             SessionManager sessionManager,
-            @Qualifier("geminiModel") Model model,
+            @Qualifier("geminiCentral") Model model,
             SummaryAgent summaryAgent,
             McpToolKit mcpToolKit
     ) {

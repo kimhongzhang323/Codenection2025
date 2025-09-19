@@ -9,6 +9,7 @@ import com.google.genai.types.Tool;        // Added import for Tool
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -25,7 +26,7 @@ public class ChatController {
 
     private final Model model;
 
-    public ChatController(Model model) {
+    public ChatController(@Qualifier("geminiCentral") Model model) {
         this.model = model;
     }
 

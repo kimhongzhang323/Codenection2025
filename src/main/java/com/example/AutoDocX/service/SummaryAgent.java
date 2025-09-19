@@ -37,7 +37,7 @@ public class SummaryAgent {
             RepoHandler repoHandler,
             SessionManager sessionManager,
             McpToolKit mcpToolKit,
-            @Qualifier("geminiModel") Model model
+            @Qualifier("geminiCentral") Model model
     ) {
         this.repoHandler = repoHandler;
         this.sessionManager = sessionManager;

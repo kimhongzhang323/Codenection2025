@@ -93,6 +93,22 @@ public class McpToolKit {
                         .build())
                 .build());
 
+        declarations.add(FunctionDeclaration.builder()
+                .name("summarize_nodes_bulk")
+                .description("Receives a list of nodes to summarize, and sends them to LLM in bulk to be summarized and stored in the summary memory.")
+                .parameters(Schema.builder()
+                        .type(Type.Known.OBJECT)
+                        .properties(Map.of(
+                                "node_ids", Schema.builder()
+                                        .type(Type.Known.ARRAY)
+                                        .description("The list of node IDs to summarize.")
+                                        .items(Schema.builder().type(Type.Known.STRING).build())
+                                        .build()
+                        ))
+                        .required(List.of("node_ids"))
+                        .build())
+                .build());
+
         return declarations;
     }
 
@@ -130,6 +146,7 @@ public class McpToolKit {
                     context.getSession().getMemory().getStructure().addEntry(toolName + ":" + extractNameFromParams(params), result);
                     break;
                 case "summarise_code":
+                case "summarize_nodes_bulk":
 //					System.out.println("|    DEBUG: saving to summary memory: " + extractNameFromParams(params) + " -> " + result);
 //					System.out.println("|    DEBUG: removing from code memory: " + extractNameFromParams(params));
                     context.getSession().getMemory().getSummary().addEntry(extractNameFromParams(params), result);
@@ -167,6 +184,10 @@ public class McpToolKit {
                 String nodeId = (String) paramsMap.get("node_id");
                 String description = (String) paramsMap.get("description");
                 return mcpToolbox.compactNode(context.getGraph(), nodeId, description);
+            }
+            case "summarize_nodes_bulk": {
+                List<String> nodeIds = (List<String>) paramsMap.get("node_ids");
+                return mcpToolbox.summarizeNodesBulk(context.getGraph(), nodeIds, context.getSession());
             }
             default:
                 throw new IllegalArgumentException("Unknown tool: " + toolName);

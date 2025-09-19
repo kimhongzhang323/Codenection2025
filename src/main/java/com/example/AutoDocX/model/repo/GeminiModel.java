@@ -5,6 +5,7 @@ import com.google.genai.types.Content;
 import com.google.genai.types.GenerateContentResponse;
 import com.google.genai.types.Part;
 import com.google.genai.types.Tool;
+import com.google.genai.types.GenerateContentResponseUsageMetadata;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -54,19 +55,22 @@ public class GeminiModel implements Model {
                         ModelFinishReason.OUTPUT_ERROR,
                         Optional.empty(),
                         List.of(),
-                        Optional.of("No response from Gemini model.")
+                        Optional.of("No response from Gemini model."),
+                        0
                 );
             }
 
             var candidate = response.candidates().get().get(0);
             ModelFinishReason mappedFinish = mapFinishReason(candidate);
             ParsedCandidate parsed = parseCandidate(candidate);
+            int totalTokens = response.usageMetadata().map(GenerateContentResponseUsageMetadata::totalTokenCount).map(Optional::get).orElse(0);
 
             return new SendMessageResult(
                     mappedFinish,
                     Optional.ofNullable(parsed.assistantText),
                     parsed.functionCalls,
-                    Optional.empty()
+                    Optional.empty(),
+                    totalTokens
             );
 
         } catch (IllegalArgumentException iae) {
@@ -74,14 +78,16 @@ public class GeminiModel implements Model {
                     ModelFinishReason.INPUT_ERROR,
                     Optional.empty(),
                     List.of(),
-                    Optional.of("Input error: " + iae.getMessage())
+                    Optional.of("Input error: " + iae.getMessage()),
+                    0
             );
         } catch (Exception e) {
             return new SendMessageResult(
                     ModelFinishReason.OUTPUT_ERROR,
                     Optional.empty(),
                     List.of(),
-                    Optional.of("Exception when calling Gemini: " + e.getMessage())
+                    Optional.of("Exception when calling Gemini: " + e.getMessage()),
+                    0
             );
         }
     }

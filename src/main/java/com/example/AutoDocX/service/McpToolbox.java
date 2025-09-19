@@ -1,11 +1,14 @@
 package com.example.AutoDocX.service;
 
 import com.example.AutoDocX.model.ClonedRepo;
+import com.example.AutoDocX.model.repo.GeminiModel;
+import com.example.AutoDocX.model.repo.SendMessageResult;
 import com.example.AutoDocX.parser.model.Graph;
 import com.example.AutoDocX.parser.model.GraphLink;
 import com.example.AutoDocX.parser.model.GraphNode;
 import com.example.AutoDocX.parser.model.GraphAlgo;
 import com.example.AutoDocX.service.RepoHandler.NodeNotFoundException;
+import com.google.genai.types.Tool;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
@@ -27,7 +30,7 @@ public class McpToolbox {
     private final RepoHandler repoHandler;
     private final Model model;
 
-    public McpToolbox(RepoHandler repoHandler, @Qualifier("geminiModel") Model model) {
+    public McpToolbox(RepoHandler repoHandler, @Qualifier("geminiCentral") Model model) {
         this.repoHandler = repoHandler;
         this.model = model;
     }
@@ -231,5 +234,30 @@ public class McpToolbox {
         summary.append("}");
 
         return summary.toString();
+    }
+
+    public String summarizeNodesBulk(Graph graph, List<String> nodeIds, Session session) {
+        List<AbstractMap.SimpleEntry<List<Content>, List<Tool>>> requests = new ArrayList<>();
+        List<String> originalNodeIds = new ArrayList<>(nodeIds); // Keep original order
+
+        for (String nodeId : nodeIds) {
+            String neighbors = getNeighbourSubgraph(graph, nodeId, 1);
+            String prompt = "Give a one-sentence summary of the node '" + nodeId + "' based on its name and its neighbors: " + neighbors;
+            List<Content> contents = List.of(Content.builder().role("user").parts(Part.builder().text(prompt).build()).build());
+            requests.add(GeminiModel.createArgs(contents, List.of()));
+        }
+
+        model.sendMessageBulkAsync(requests).thenAccept(results -> {
+            for (int i = 0; i < results.size(); i++) {
+                SendMessageResult result = results.get(i);
+                String nodeId = originalNodeIds.get(i);
+                result.getText().ifPresent(summary -> {
+                    session.getMemory().getSummary().addEntry(nodeId, summary);
+                    System.out.println("DEBUG: Bulk summarized " + nodeId);
+                });
+            }
+        });
+
+        return "Bulk summarization process initiated for " + nodeIds.size() + " nodes.";
     }
 }
