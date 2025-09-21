@@ -44,6 +44,17 @@ public class SummaryAgent {
     }
 
     public String run(String gitUrl, String branch) {
+        return runCore(gitUrl, branch, null);
+    }
+
+    // Overload: allow callers to provide a focus prompt to steer exploration toward specific parts
+    // without ignoring the rest of the project (breadth-first remains required by the prompt).
+    public String run(String gitUrl, String branch, String focusPrompt) {
+        return runCore(gitUrl, branch, focusPrompt);
+    }
+
+    // DRY core implementation used by both run() overloads; focusPrompt may be null
+    private String runCore(String gitUrl, String branch, String focusPrompt) {
         Session session = sessionManager.getSession(gitUrl, branch);
         ClonedRepo repo = repoHandler.getRepo(gitUrl, branch);
         if (repo == null) return "Repository not found.";
@@ -65,7 +76,10 @@ public class SummaryAgent {
         int iterations = 0;
         while (iterations++ < MAX_ITERATIONS) {
             List<Tool> summaryTools = mcpToolKit.getExplorationTools();
-            String loopPrompt = "Explore the codebase breadth-first. Use tools in batches. After finishing tool calls, call update_understanding with a concise plan: current understanding + next actions.";
+            String basePrompt = "Explore the codebase breadth-first. Use tools in batches. After finishing tool calls, call update_understanding with a concise plan: current understanding + next actions.";
+            String loopPrompt = (focusPrompt != null && !focusPrompt.isBlank())
+                    ? basePrompt + "\nFOCUS (but do NOT ignore other parts): " + focusPrompt
+                    : basePrompt;
             List<Content> contents = buildLoopContent(session.getMemory(), loopPrompt);
 
             System.out.println("DEBUG (SummaryAgent): Sending to Gemini");
@@ -87,12 +101,15 @@ public class SummaryAgent {
             }
         }
 
-        // Final summary generation step
-        return generateFinalSummary(session);
+    // Final summary generation step
+    String defaultFinalPrompt = "Now produce the final project-level summary. Use your recorded understanding and memory. Provide: intro, architecture overview, and complete inventory of nodes (mark summarised vs inferred).";
+    String finalPrompt = (focusPrompt != null && !focusPrompt.isBlank())
+        ? defaultFinalPrompt + "\nFOCUS (but do NOT ignore other parts): " + focusPrompt
+        : defaultFinalPrompt;
+    return generateFinalSummary(session, finalPrompt);
     }
 
-    private String generateFinalSummary(Session session) {
-        String finalPrompt = "Now produce the final project-level summary. Use your recorded understanding and memory. Provide: intro, architecture overview, and complete inventory of nodes (mark summarised vs inferred).";
+    private String generateFinalSummary(Session session, String finalPrompt) {
         List<Content> contents = null;
         try {
             contents = buildFinalSummaryContent(session.getMemory(), finalPrompt, repoHandler.getGraph(session));
