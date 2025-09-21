@@ -260,4 +260,9 @@ public class McpToolbox {
 
         return "Bulk summarization process initiated for " + nodeIds.size() + " nodes.";
     }
+
+    public String updateUnderstanding(Session session, String text) {
+        session.getMemory().getSummary().replaceEntry("understanding", text);
+        return text;
+    }
 }

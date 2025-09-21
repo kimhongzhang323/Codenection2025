@@ -159,6 +159,10 @@ public class RepoHandler {
         return clonedRepo.getGraph();
     }
 
+    public Graph getGraph(Session session) throws IOException {
+        return getGraph(getRepo(session.getGitUrl(), session.getBranch()));
+    }
+
     public String getCodeChunk(ClonedRepo clonedRepo, String nodeId) throws IOException, NodeNotFoundException {
         Graph graph = getGraph(clonedRepo);
         Optional<GraphNode> nodeOpt = graph.getNode(nodeId);

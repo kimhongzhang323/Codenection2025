@@ -2,11 +2,10 @@ package com.example.AutoDocX.service;
 
 import com.example.AutoDocX.model.ClonedRepo;
 import com.example.AutoDocX.model.repo.Model;
-import com.example.AutoDocX.model.repo.ModelFinishReason;
 import com.example.AutoDocX.model.repo.SendMessageResult;
 import com.example.AutoDocX.model.repo.ToolCallData;
 import com.example.AutoDocX.parser.model.Graph;
-import com.fasterxml.jackson.core.JsonProcessingException;
+import com.example.AutoDocX.parser.model.GraphNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.genai.types.Content;
 import com.google.genai.types.Part;
@@ -15,13 +14,14 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Autowired;
 
+import java.io.IOException;
 import java.util.*;
-
+import java.util.stream.Collectors;
 
 @Service
 public class SummaryAgent {
 
-    private static final int MAX_ITERATIONS = 10;
+    private static final int MAX_ITERATIONS = 5;
 
     private final RepoHandler repoHandler;
     private final SessionManager sessionManager;
@@ -63,15 +63,13 @@ public class SummaryAgent {
         }
 
         int iterations = 0;
-        String finalSummary = "No summary generated.";
-        List<Tool> summaryTools = mcpToolKit.getSummaryTools();
-        String userPrompt = "Explore the codebase, identify the most important components, and create a compact summary of the project's architecture";
-
         while (iterations++ < MAX_ITERATIONS) {
-            List<Content> contents = buildContent(session.getMemory(), userPrompt);
+            List<Tool> summaryTools = mcpToolKit.getExplorationTools();
+            String loopPrompt = "Explore the codebase breadth-first. Use tools in batches. After finishing tool calls, call update_understanding with a concise plan: current understanding + next actions.";
+            List<Content> contents = buildLoopContent(session.getMemory(), loopPrompt);
 
             System.out.println("DEBUG (SummaryAgent): Sending to Gemini");
-            System.out.println(formatContents(contents)); // Optional: for deep debugging
+            System.out.println(formatContents(contents));
 
             SendMessageResult result = model.sendMessageNew(contents, summaryTools);
             System.out.println("DEBUG (SummaryAgent): Model Response\n" + result);
@@ -80,55 +78,68 @@ public class SummaryAgent {
                 for (ToolCallData fc : result.getToolCalls()) {
                     mcpToolKit.executeTool(fc.getName(), fc.getArgs(), toolExecutionContext);
                 }
-                continue; // Loop again to let the model process tool results
+                // continue loop to let the model process tool results; understanding update is required by prompt
+                continue;
             }
 
             if (result.getText().isPresent()) {
-                finalSummary = result.getText().get();
-                session.getMemory().getSummary().replaceEntry("project_summary", finalSummary);
-                break; // Summary is complete
-            }
-
-            if (result.getModelFinishReason() != ModelFinishReason.OUTPUT_ERROR) {
-                finalSummary = "Summary generation stopped unexpectedly. Reason: " + result.getModelFinishReason();
-                break;
+                session.getMemory().getEpisodic().addEntry("model", result.getText().get());
             }
         }
 
-        return finalSummary;
+        // Final summary generation step
+        return generateFinalSummary(session);
     }
 
-    private List<Content> buildContent(Memory memory, String userPrompt) {
+    private String generateFinalSummary(Session session) {
+        String finalPrompt = "Now produce the final project-level summary. Use your recorded understanding and memory. Provide: intro, architecture overview, and complete inventory of nodes (mark summarised vs inferred).";
+        List<Content> contents = null;
+        try {
+            contents = buildFinalSummaryContent(session.getMemory(), finalPrompt, repoHandler.getGraph(session));
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        System.out.println("DEBUG (SummaryAgent): Sending to Gemini");
+        System.out.println(formatContents(contents));
+        SendMessageResult result = model.sendMessageNew(contents, List.of());
+        System.out.println("DEBUG (SummaryAgent): Model Response\n" + result);
+
+        if (result.getText().isPresent()) {
+            String finalSummary = result.getText().get();
+            session.getMemory().getSummary().replaceEntry("project_summary", finalSummary);
+            return finalSummary;
+        }
+        return "No summary generated.";
+    }
+
+    private List<Content> buildLoopContent(Memory memory, String userPrompt) {
         List<Content> contents = new ArrayList<>();
         String systemInstruction =
 """
 You are an expert software architect. Your task is to explore a codebase and prepare a project-level summary.
-Your mission is preparatory: you are building the *plan* for a FULL documentation workflow.
-
-GOALS
-- Give a concise introduction to the project (scope and purpose).
-- Provide an architectural overview of key modules and their interactions.
-- Build a complete inventory of nodes worth documenting (modules, services, APIs, utilities, etc.).
+Your mission is preparatory: you are building the base understanding for a FULL documentation workflow.
 
 PRINCIPLES
 - Be factual: do not invent names or dependencies.
 - Breadth first: aim to cover all important components.
 - Use `find_neighbour_nodes` freely with deep depth (example 5) to expand coverage.
 - Use `get_code` selectively, you don't always need the entire code to infer.
-- Fewer retrieved code snippets does NOT mean a smaller or weaker final summary. Always aim for full coverage.
 
 RULES
-1. Actively expand the graph until you are confident all major modules, layers, and utilities are mapped.
+1. Actively expand the graph to make sure all major modules, layers, and utilities are mapped.
 2. IMPORTANT: When exploration requires multiple queries, ALWAYS issue MULTIPLE TOOL CALLS in THE SAME response instead of one by one.
-   - Example: If you need info from 3 nodes, call get_code() on all 3 in one step.
-   - Example: If you need to make summary, then get dependency info and node details, call ALL tools in the same step.
+    - Example: If you need info from 3 nodes, call get_code() on all 3 in one step.
+    - Example: If you need to make summary, get dependency info and node details call ALL tools in the same step.
 3. You MUST always actively use the summarise_code tool to build context (memory disappears gradually):
-   - When code memory is available, use `summarise_code`
-   - Without code but obvious usage → use `summarise_code` with summary starting with "(inferred)"
-4. Stop ONLY when you can provide:
-   - A general project intro
-   - An architectural overview
-   - A comprehensive inventory of ALL nodes (each marked `summarised` (with code) or `inferred` (just from links)) together with their definitions
+    - When code memory is available, use `summarise_code`
+    - Without code but obvious usage → use `summarise_code` with summary starting with "(inferred)"
+4. CRITICAL: You MUST always call update_understanding in each response, capturing:
+    - Current understanding of the project (what you know so far)
+    - What to do next (concrete next steps and target nodes)
+
+IMPORTANT:
+Every single response MUST include a call to update_understanding.
+Never produce a response without it.
 """;
 //                        "You are an expert software architect. Your goal is to analyze a codebase and produce:\n" +
 //                        " - A general introduction to the project (its scope and purpose).\n" +
@@ -162,55 +173,75 @@ RULES
 //                        "   - An architectural overview of modules and their relationships.\n" +
 //                        "   - A comprehensive inventory of nodes worth documenting, together with their summary, each marked as `summarised` (code) or `inferred` (context-only).\n";
 
+                contents.add(Content.builder().role("user").parts(Part.builder().text(systemInstruction).build()).build());
+
+                // Structure Memory (recent)
+                List<Memory.MemoryEntry> structureEntries = memory.getStructure().getEntries();
+                if (!structureEntries.isEmpty()) {
+                    StringBuilder structureSection = new StringBuilder("STRUCTURE MEMORY:\n");
+                    int start = Math.max(0, structureEntries.size() - 15);
+                    for (int i = start; i < structureEntries.size(); i++) {
+                        Memory.MemoryEntry e = structureEntries.get(i);
+                        structureSection.append("- ").append(e.getQuery()).append(": ").append(e.getResult()).append("\n");
+                    }
+                    contents.add(Content.builder().parts(Part.builder().text(structureSection.toString()).build()).role("user").build());
+                }
+
+                // Code Memory (recent)
+                String codeSummary = memory.getCode().toString(20);
+                if (!codeSummary.isBlank()) {
+                    contents.add(Content.builder().parts(Part.builder().text("CODE MEMORY:\n" + codeSummary).build()).role("user").build());
+                }
+
+                // Summary Memory including understanding
+                String summary = memory.getSummary().toString();
+                if (!summary.isBlank()) {
+                    contents.add(Content.builder().parts(Part.builder().text("EXISTING CODE SUMMARY:\n" + summary).build()).role("user").build());
+                }
+
+                // User prompt for this loop
+                contents.add(Content.builder().role("user").parts(Part.builder().text(userPrompt).build()).build());
+
+                return contents;
+            }
+
+            private List<Content> buildFinalSummaryContent(Memory memory, String userPrompt, Graph graph) {
+                List<Content> contents = new ArrayList<>();
+
+                String systemInstruction =
+        """
+You are an expert software architect. Produce the final comprehensive project summary using the accumulated memory and the 'understanding' entry.
+
+Deliver:
+- Project introduction
+- Architectural overview of modules and relationships
+- Complete inventory of nodes to document, each marked summarised (based on code summary) or inferred (context-only)
+""";
 
         contents.add(Content.builder().role("user").parts(Part.builder().text(systemInstruction).build()).build());
 
-//        String memoryStr = "";
-
-        // === Structure Memory (recent only) ===
-        List<Memory.MemoryEntry> structureEntries = memory.getStructure().getEntries();
-        if (!structureEntries.isEmpty()) {
-            StringBuilder structureSection = new StringBuilder("STRUCTURE MEMORY:\n");
-            int start = Math.max(0, structureEntries.size() - 15);
-            for (int i = start; i < structureEntries.size(); i++) {
-                Memory.MemoryEntry e = structureEntries.get(i);
-                structureSection.append("- ").append(e.getQuery()).append(": ").append(e.getResult()).append("\n");
-            }
-            contents.add(Content.builder()
-                    .parts(List.of(Part.builder().text(structureSection.toString()).build()))
-                    .role("user")
-                    .build());
+        String understanding = Optional.ofNullable(memory.getSummary().getEntry("understanding")).orElse("");
+        if (!understanding.isBlank()) {
+            contents.add(Content.builder().role("user").parts(Part.builder().text("CURRENT UNDERSTANDING:\n" + understanding).build()).build());
         }
 
-        // === Code Summary ===
-        String codeSummary = memory.getCode().toString(20);
-        if (!codeSummary.isBlank()) {
-            contents.add(Content.builder().parts(Part.builder().text("CODE MEMORY:\n" + codeSummary).build()).role("user").build());
-        }
-
-        // === Summary Memory ===
         String summary = memory.getSummary().toString();
         if (!summary.isBlank()) {
-            contents.add(Content.builder().parts(Part.builder().text("EXISTING CODE SUMMARY:\n" + summary).build()).role("user").build());
+            contents.add(Content.builder().role("user").parts(Part.builder().text("EXISTING CODE SUMMARY:\n" + summary).build()).build());
         }
 
-        // Add the current prompt
+        String codeSummary = memory.getCode().toString(20);
+        if (!codeSummary.isBlank()) {
+            contents.add(Content.builder().role("user").parts(Part.builder().text("CODE MEMORY:\n" + codeSummary).build()).build());
+        }
+
+        String projectStructure = graph.getNodes().stream().filter(node -> node.getType() == GraphNode.NodeType.CLASS).map(node -> node.getId()).collect(Collectors.joining("\n"));
+        if (!projectStructure.isBlank()) {
+            contents.add(Content.builder().role("user").parts(Part.builder().text("ALL NODES:\n" + projectStructure).build()).build());
+        }
+
         contents.add(Content.builder().role("user").parts(Part.builder().text(userPrompt).build()).build());
-
         return contents;
-    }
-
-    @SuppressWarnings("unchecked")
-    private String extractNameFromParams(Object param) {
-        if (param == null) return "null";
-        Object unwrapped = (param instanceof Optional) ? ((Optional<?>) param).orElse(null) : param;
-        if (unwrapped instanceof Map) {
-            Map<String, Object> map = (Map<String, Object>) unwrapped;
-            if (map.containsKey("node_id")) return String.valueOf(map.get("node_id"));
-            if (map.containsKey("n")) return "n=" + String.valueOf(map.get("n"));
-            if (map.containsKey("code")) return "code_snippet";
-        }
-        return String.valueOf(unwrapped);
     }
 
     private String formatContents(List<Content> contents) {

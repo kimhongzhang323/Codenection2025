@@ -89,6 +89,14 @@ public class Memory {
             entries.removeIf(e -> e.getQuery().equals(key));
         }
 
+        public synchronized String getEntry(String key) {
+            return entries.stream()
+                    .filter(entry -> entry.getQuery().equals(key))
+                    .findFirst()
+                    .map(entry -> entry.getResult())
+                    .orElse(null);
+        }
+
         public synchronized void replaceEntry(String key, Object value) {
             removeEntry(key);
             addEntry(key, value);

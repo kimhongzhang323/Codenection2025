@@ -109,11 +109,26 @@ public class McpToolKit {
                         .build())
                 .build());
 
+        declarations.add(FunctionDeclaration.builder()
+                .name("update_understanding")
+                .description("Replace or create the 'understanding' entry in summary memory with the current plan/understanding and next actions.")
+                .parameters(Schema.builder()
+                        .type(Type.Known.OBJECT)
+                        .properties(Map.of(
+                                "text", Schema.builder()
+                                        .type(Type.Known.STRING)
+                                        .description("Short plan: current understanding of the project and what to do next.")
+                                        .build()
+                        ))
+                        .required(List.of("text"))
+                        .build())
+                .build());
+
         return declarations;
     }
 
-    public List<Tool> getSummaryTools() {
-        List<String> summaryToolNames = List.of("get_code", "find_central_nodes", "find_neighbour_nodes", "summarise_code");
+    public List<Tool> getExplorationTools() {
+        List<String> summaryToolNames = List.of("get_code", "find_central_nodes", "find_neighbour_nodes", "summarise_code", "update_understanding");
         List<FunctionDeclaration> summaryDeclarations = allTools.stream()
                 .filter(tool -> summaryToolNames.contains(tool.name().orElse("")))
                 .collect(Collectors.toList());
@@ -146,13 +161,15 @@ public class McpToolKit {
                     context.getSession().getMemory().getStructure().addEntry(toolName + ":" + extractNameFromParams(params), result);
                     break;
                 case "summarise_code":
-//					System.out.println("|    DEBUG: saving to summary memory: " + extractNameFromParams(params) + " -> " + result);
-//					System.out.println("|    DEBUG: removing from code memory: " + extractNameFromParams(params));
                     context.getSession().getMemory().getSummary().addEntry(extractNameFromParams(params), result);
                     context.getSession().getMemory().getCode().removeEntry(extractNameFromParams(params));
                     break;
                 case "summarize_nodes_bulk":
-                    throw new UnsupportedOperationException("Feature incomplete");
+                    // handled internally (bulk async); nothing to store synchronously here
+                    break;
+                case "update_understanding":
+                    context.getSession().getMemory().getSummary().replaceEntry("understanding", result);
+                    break;
                 default:
                     System.out.println("WARNING: unknown tool: " + toolName + " (" + paramForMemory + ")");
                     break;
@@ -189,6 +206,10 @@ public class McpToolKit {
             case "summarize_nodes_bulk": {
                 List<String> nodeIds = (List<String>) paramsMap.get("node_ids");
                 return mcpToolbox.summarizeNodesBulk(context.getGraph(), nodeIds, context.getSession());
+            }
+            case "update_understanding": {
+                String text = (String) paramsMap.get("text");
+                return mcpToolbox.updateUnderstanding(context.getSession(), text);
             }
             default:
                 throw new IllegalArgumentException("Unknown tool: " + toolName);

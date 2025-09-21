@@ -83,7 +83,7 @@ public class Agent {
 
         int iterations = 0;
         String currentResponse = "";
-        List<Tool> agentTools = mcpToolKit.getSummaryTools(); // For now, agent uses summary tools
+        List<Tool> agentTools = mcpToolKit.getExplorationTools(); // For now, agent uses summary tools
 
         while (iterations++ < MAX_ITERATIONS) {
             List<Content> contents = buildContent(session.getMemory(), userPrompt);
