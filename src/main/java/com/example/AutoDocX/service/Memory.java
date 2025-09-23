@@ -26,6 +26,7 @@ public class Memory {
     private final MemoryStore code = new MemoryStore("Code");
     private final MemoryStore structure = new MemoryStore("Structure");
     private final MemoryStore summary = new MemoryStore("Summary");
+    private final MemoryStore plan = new MemoryStore("Plan");
 
     /**
      * Pretty-print all stores, each limited to latestN entries.
@@ -34,8 +35,9 @@ public class Memory {
         StringBuilder sb = new StringBuilder();
         sb.append("=== Episodic Memory ===\n").append(episodic.toString(latestN)).append("\n\n");
         sb.append("=== Code Memory ===\n").append(code.toString(latestN)).append("\n\n");
-        sb.append("=== Structure Memory ===\n").append(structure.toString(latestN)).append("\n");
-        sb.append("=== Structure Memory ===\n").append(summary.toString(latestN)).append("\n");
+        sb.append("=== Structure Memory ===\n").append(structure.toString(latestN)).append("\n\n");
+        sb.append("=== Summary Memory ===\n").append(summary.toString(latestN)).append("\n\n");
+        sb.append("=== Plan Memory ===\n").append(plan.toString(latestN)).append("\n");
         return sb.toString();
     }
 

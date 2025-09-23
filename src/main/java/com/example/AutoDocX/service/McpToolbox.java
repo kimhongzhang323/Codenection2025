@@ -24,11 +24,14 @@ import java.nio.file.AccessDeniedException;
 import com.example.AutoDocX.model.repo.Model;
 import com.google.genai.types.Content;
 import com.google.genai.types.Part;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.core.JsonProcessingException;
 
 @Service
 public class McpToolbox {
     private final RepoHandler repoHandler;
     private final Model model;
+    private final ObjectMapper mapper = new ObjectMapper();
 
     public McpToolbox(RepoHandler repoHandler, @Qualifier("geminiCentral") Model model) {
         this.repoHandler = repoHandler;
@@ -264,5 +267,95 @@ public class McpToolbox {
     public String updateUnderstanding(Session session, String text) {
         session.getMemory().getSummary().replaceEntry("understanding", text);
         return text;
+    }
+
+    // ===== Planning helpers =====
+    public String writeDocPlan(Session session, Object planObj) throws JsonProcessingException {
+        // planObj is expected to be a List<Map<String,Object>> compatible structure
+        String json = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(planObj);
+        session.getMemory().getPlan().replaceEntry("plan", json);
+        return "OK: plan written with " + ((planObj instanceof java.util.Collection) ? ((java.util.Collection<?>) planObj).size() : 1) + " section(s).";
+    }
+
+    public String clearDocPlan(Session session) {
+        session.getMemory().getPlan().removeEntry("plan");
+        return "OK: plan cleared.";
+    }
+
+    public String getDocPlan(Session session) {
+        String plan = session.getMemory().getPlan().getEntry("plan");
+        return plan == null ? "[]" : plan;
+    }
+
+    public String executePlan(Session session, ClonedRepo repo, Graph graph) {
+        String planJson = getDocPlan(session);
+        List<Map<String, Object>> sections;
+        try {
+            sections = mapper.readValue(planJson, new com.fasterxml.jackson.core.type.TypeReference<List<Map<String, Object>>>(){});
+        } catch (Exception e) {
+            return "Plan parse failed: " + e.getMessage();
+        }
+
+        List<AbstractMap.SimpleEntry<List<com.google.genai.types.Content>, List<com.google.genai.types.Tool>>> requests = new ArrayList<>();
+        for (Map<String, Object> sec : sections) {
+            String sectionName = String.valueOf(sec.getOrDefault("section_name", "Section"));
+            String focus = String.valueOf(sec.getOrDefault("focus", ""));
+            @SuppressWarnings("unchecked")
+            List<String> nodes = (List<String>) sec.getOrDefault("nodes", List.of());
+
+            String system = "You are a senior technical writer. Produce the documentation content for the given section. Keep it concise and accurate.";
+            StringBuilder user = new StringBuilder();
+            user.append("SECTION: ").append(sectionName).append("\n");
+            user.append("FOCUS: ").append(focus).append("\n\n");
+            user.append("RECENT SUMMARY: \n").append(session.getMemory().getSummary().toString(5)).append("\n\n");
+
+            List<com.google.genai.types.Content> contents = new ArrayList<>();
+            contents.add(com.google.genai.types.Content.builder().role("system").parts(List.of(com.google.genai.types.Part.fromText(system))).build());
+            contents.add(com.google.genai.types.Content.builder().role("user").parts(List.of(com.google.genai.types.Part.fromText(user.toString()))).build());
+
+            ToolExecutionContext ctx = new ToolExecutionContext(repo, graph, session);
+            for (String nodeId : nodes) {
+                try {
+                    String code = getCode(repo, nodeId);
+                    String neigh = getNeighbourSubgraph(graph, nodeId, 2);
+                    contents.add(com.google.genai.types.Content.builder().role("user").parts(List.of(com.google.genai.types.Part.fromText("NODE:" + nodeId + "\nCODE:\n" + code + "\nNEIGHBORS:\n" + neigh))).build());
+                } catch (Exception e) {
+                    contents.add(com.google.genai.types.Content.builder().role("user").parts(List.of(com.google.genai.types.Part.fromText("NODE:" + nodeId + "\nERROR: " + e.getMessage()))).build());
+                }
+            }
+
+            // For execution, we don't need tools; just pure generation
+            requests.add(new AbstractMap.SimpleEntry<>(contents, List.of()));
+        }
+
+        List<SendMessageResult> results = ((com.example.AutoDocX.model.repo.GeminiCentral) model).sendMessageBulk(requests);
+        Map<String, String> sectionOutputs = new LinkedHashMap<>();
+        for (int i = 0; i < results.size(); i++) {
+            String sectionName = String.valueOf(sections.get(i).getOrDefault("section_name", "Section"));
+            SendMessageResult r = results.get(i);
+            String text = r.getText().orElse("No output.");
+            sectionOutputs.put(sectionName, text);
+            session.getMemory().getSummary().replaceEntry("doc_section:" + sectionName, text);
+        }
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("# Project Documentation\n\n");
+        sb.append("## Table of Contents\n");
+        int idx = 1;
+        for (String name : sectionOutputs.keySet()) sb.append(idx++).append(". ").append(name).append("\n");
+        sb.append("\n");
+        for (Map.Entry<String, String> e : sectionOutputs.entrySet()) {
+            sb.append("## ").append(e.getKey()).append("\n\n");
+            sb.append(e.getValue()).append("\n\n");
+        }
+
+        String finalDoc = sb.toString();
+        session.getMemory().getSummary().replaceEntry("final_documentation", finalDoc);
+        return finalDoc;
+    }
+
+    public String updateDocumentation(Session session, String content) {
+        session.getMemory().getSummary().replaceEntry("documentation", content);
+        return "OK: documentation updated (" + content.length() + " chars)";
     }
 }

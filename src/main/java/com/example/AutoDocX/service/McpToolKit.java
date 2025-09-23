@@ -20,7 +20,7 @@ public class McpToolKit {
     private final McpToolbox mcpToolbox;
     private final List<FunctionDeclaration> allTools;
     private final ObjectMapper objectMapper;
-
+    
 
     public McpToolKit(McpToolbox mcpToolbox, ObjectMapper objectMapper) {
         this.mcpToolbox = mcpToolbox;
@@ -109,30 +109,95 @@ public class McpToolKit {
                         .build())
                 .build());
 
-        declarations.add(FunctionDeclaration.builder()
-                .name("update_understanding")
-                .description("Replace or create the 'understanding' entry in summary memory with the current plan/understanding and next actions.")
-                .parameters(Schema.builder()
+    declarations.add(FunctionDeclaration.builder()
+        .name("update_understanding")
+        .description("Replace or create the 'understanding' entry in summary memory with the current plan/understanding and next actions.")
+        .parameters(Schema.builder()
+            .type(Type.Known.OBJECT)
+            .properties(Map.of(
+                "text", Schema.builder()
+                    .type(Type.Known.STRING)
+                    .description("Short plan: current understanding of the project and what to do next.")
+                    .build()
+            ))
+            .required(List.of("text"))
+            .build())
+        .build());
+
+    // Documentation Agent (KISS) toolset: get_summary, update_plan, execute_plan
+    declarations.add(FunctionDeclaration.builder()
+        .name("get_summary")
+        .description("Generate or refresh a project summary using the code graph. Args: query (string), iterations (optional, number).")
+        .parameters(Schema.builder()
+            .type(Type.Known.OBJECT)
+            .properties(Map.of(
+                "query", Schema.builder().type(Type.Known.STRING).description("What to focus on in the summary").build(),
+                "iterations", Schema.builder().type(Type.Known.NUMBER).description("Optional iterations hint").build()
+            ))
+            .required(List.of("query"))
+            .build())
+        .build());
+
+    declarations.add(FunctionDeclaration.builder()
+        .name("update_plan")
+        .description("Replace the current documentation plan. Plan is an array of sections with {section_name, focus, nodes[]}.")
+        .parameters(Schema.builder()
+            .type(Type.Known.OBJECT)
+            .properties(Map.of(
+                "plan", Schema.builder()
+                    .type(Type.Known.ARRAY)
+                    .description("Array of sections to document.")
+                    .items(Schema.builder()
                         .type(Type.Known.OBJECT)
                         .properties(Map.of(
-                                "text", Schema.builder()
-                                        .type(Type.Known.STRING)
-                                        .description("Short plan: current understanding of the project and what to do next.")
-                                        .build()
+                            "section_name", Schema.builder().type(Type.Known.STRING).build(),
+                            "focus", Schema.builder().type(Type.Known.STRING).build(),
+                            "nodes", Schema.builder().type(Type.Known.ARRAY).items(Schema.builder().type(Type.Known.STRING).build()).build()
                         ))
-                        .required(List.of("text"))
                         .build())
-                .build());
+                    .build()
+            ))
+            .required(List.of("plan"))
+            .build())
+        .build());
+
+    declarations.add(FunctionDeclaration.builder()
+        .name("execute_plan")
+        .description("Execute the current plan: generate all section docs in parallel and compose the final documentation. Stores final_documentation in memory and returns it.")
+        .parameters(Schema.builder().type(Type.Known.OBJECT).build())
+        .build());
+
+    declarations.add(FunctionDeclaration.builder()
+        .name("update_documentation")
+        .description("Write or replace the current assembled documentation text into summary memory under key 'documentation'.")
+        .parameters(Schema.builder()
+            .type(Type.Known.OBJECT)
+            .properties(Map.of(
+                "content", Schema.builder().type(Type.Known.STRING).description("Full or partial documentation content to store.").build()
+            ))
+            .required(List.of("content"))
+            .build())
+        .build());
 
         return declarations;
     }
 
     public List<Tool> getExplorationTools() {
-        List<String> summaryToolNames = List.of("get_code", "find_central_nodes", "find_neighbour_nodes", "summarise_code", "update_understanding");
-        List<FunctionDeclaration> summaryDeclarations = allTools.stream()
-                .filter(tool -> summaryToolNames.contains(tool.name().orElse("")))
-                .collect(Collectors.toList());
-        return List.of(Tool.builder().functionDeclarations(summaryDeclarations).build());
+        List<String> names = List.of("get_code", "find_central_nodes", "find_neighbour_nodes", "summarise_code", "update_understanding");
+        return buildTools(names);
+    }
+
+    // KISS: unified agent tools
+    public List<Tool> getDocumentationAgentTools() {
+        List<String> names = List.of("get_summary", "update_plan", "execute_plan", "update_documentation");
+        return buildTools(names);
+    }
+
+    private List<Tool> buildTools(List<String> names) {
+    List<FunctionDeclaration> decls = allTools.stream()
+        .filter(tool -> names.contains(tool.name().orElse("")))
+        .collect(Collectors.toList());
+    return List.of(Tool.builder().functionDeclarations(decls).build());
     }
 
     @SuppressWarnings("unchecked")
@@ -210,6 +275,18 @@ public class McpToolKit {
             case "update_understanding": {
                 String text = (String) paramsMap.get("text");
                 return mcpToolbox.updateUnderstanding(context.getSession(), text);
+            }
+            // 'get_summary' tool is declared but executed by DocumentationAgent to avoid cyclic dependency
+            case "update_plan": {
+                Object planObj = paramsMap.get("plan");
+                return mcpToolbox.writeDocPlan(context.getSession(), planObj);
+            }
+            case "execute_plan": {
+                return mcpToolbox.executePlan(context.getSession(), context.getRepo(), context.getGraph());
+            }
+            case "update_documentation": {
+                String content = String.valueOf(paramsMap.getOrDefault("content", ""));
+                return mcpToolbox.updateDocumentation(context.getSession(), content);
             }
             default:
                 throw new IllegalArgumentException("Unknown tool: " + toolName);

@@ -21,7 +21,7 @@ import java.util.stream.Collectors;
 @Service
 public class SummaryAgent {
 
-    private static final int MAX_ITERATIONS = 5;
+    private static final int DEFAULT_MAX_ITERATIONS = 5;
 
     private final RepoHandler repoHandler;
     private final SessionManager sessionManager;
@@ -44,17 +44,27 @@ public class SummaryAgent {
     }
 
     public String run(String gitUrl, String branch) {
-        return runCore(gitUrl, branch, null);
+        return runCore(gitUrl, branch, null, null);
     }
 
     // Overload: allow callers to provide a focus prompt to steer exploration toward specific parts
     // without ignoring the rest of the project (breadth-first remains required by the prompt).
     public String run(String gitUrl, String branch, String focusPrompt) {
-        return runCore(gitUrl, branch, focusPrompt);
+        return runCore(gitUrl, branch, focusPrompt, null);
+    }
+
+    // Overload: allow callers to set iteration limit
+    public String run(String gitUrl, String branch, Integer iterations) {
+        return runCore(gitUrl, branch, null, iterations);
+    }
+
+    // Overload: focus + iteration limit
+    public String run(String gitUrl, String branch, String focusPrompt, Integer iterations) {
+        return runCore(gitUrl, branch, focusPrompt, iterations);
     }
 
     // DRY core implementation used by both run() overloads; focusPrompt may be null
-    private String runCore(String gitUrl, String branch, String focusPrompt) {
+    private String runCore(String gitUrl, String branch, String focusPrompt, Integer iterationLimit) {
         Session session = sessionManager.getSession(gitUrl, branch);
         ClonedRepo repo = repoHandler.getRepo(gitUrl, branch);
         if (repo == null) return "Repository not found.";
@@ -73,8 +83,9 @@ public class SummaryAgent {
             session.setInitialStructureLogged(true);
         }
 
-        int iterations = 0;
-        while (iterations++ < MAX_ITERATIONS) {
+    int iterations = 0;
+    int maxIterations = (iterationLimit == null || iterationLimit <= 0) ? DEFAULT_MAX_ITERATIONS : iterationLimit;
+    while (iterations++ < maxIterations) {
             List<Tool> summaryTools = mcpToolKit.getExplorationTools();
             String basePrompt = "Explore the codebase breadth-first. Use tools in batches. After finishing tool calls, call update_understanding with a concise plan: current understanding + next actions.";
             String loopPrompt = (focusPrompt != null && !focusPrompt.isBlank())
@@ -140,18 +151,18 @@ PRINCIPLES
 - Be factual: do not invent names or dependencies.
 - Breadth first: aim to cover all important components.
 - Use `find_neighbour_nodes` freely with deep depth (example 5) to expand coverage.
-- Use `get_code` selectively, you don't always need the entire code to infer.
 
 RULES
 1. Actively expand the graph to make sure all major modules, layers, and utilities are mapped.
 2. IMPORTANT: When exploration requires multiple queries, ALWAYS issue MULTIPLE TOOL CALLS in THE SAME response instead of one by one.
-    - Example: If you need info from 3 nodes, call get_code() on all 3 in one step.
-    - Example: If you need to make summary, get dependency info and node details call ALL tools in the same step.
-3. You MUST always actively use the summarise_code tool to build context (memory disappears gradually):
+    - Example: If you need info from 15 nodes, call get_code() on all 15 nodes in one step.
+    - Example: Call a mixture of summarise_code, find_neighbour_nodes, get_code, and update_understanding all in the same step.
+    - Example: you should call 20+ tools in one go to speed up exploration
+3. You MUST always use the summarise_code tool to build context (memory disappears gradually):
     - When code memory is available, use `summarise_code`
-    - Without code but obvious usage → use `summarise_code` with summary starting with "(inferred)"
+    - Without code but obvious usage → use `summarise_code` with summary starting with "(inferred) ..."
 4. CRITICAL: You MUST always call update_understanding in each response, capturing:
-    - Current understanding of the project (what you know so far)
+    - Current understanding of the project (what you know so far, including previous understandings)
     - What to do next (concrete next steps and target nodes)
 
 IMPORTANT:
@@ -232,7 +243,7 @@ You are an expert software architect. Produce the final comprehensive project su
 Deliver:
 - Project introduction
 - Architectural overview of modules and relationships
-- Complete inventory of nodes to document, each marked summarised (based on code summary) or inferred (context-only)
+- Complete inventory of nodes to document, each marked summarised (based on code summary) or inferred (context-only). Format node_id: (inferred/summarised) {summary}
 """;
 
         contents.add(Content.builder().role("user").parts(Part.builder().text(systemInstruction).build()).build());
