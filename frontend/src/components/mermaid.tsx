@@ -1,5 +1,7 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, memo, useCallback, useMemo } from 'react';
 import mermaid from 'mermaid';
+import Modal from 'react-modal';
+import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
 
 // Initialize mermaid with defaults - Japanese aesthetic
 mermaid.initialize({
@@ -19,9 +21,9 @@ mermaid.initialize({
   },
   themeCSS: `
     .node rect, .node circle, .node ellipse, .node polygon, .node path {
-      fill: #f8f4e6;
-      stroke: #d7c4bb;
-      stroke-width: 1px;
+      fill: #ffffff;
+      stroke: none;
+      stroke-width: 0;
     }
     .edgePath .path {
       stroke: #9b7cb9;
@@ -35,17 +37,17 @@ mermaid.initialize({
       color: #333333;
     }
     .cluster rect {
-      fill: #f8f4e6;
-      stroke: #d7c4bb;
-      stroke-width: 1px;
+      fill: #ffffff;
+      stroke: none;
+      stroke-width: 0;
     }
     [data-theme="dark"] .node rect,
     [data-theme="dark"] .node circle,
     [data-theme="dark"] .node ellipse,
     [data-theme="dark"] .node polygon,
     [data-theme="dark"] .node path {
-      fill: #222222;
-      stroke: #5d4037;
+      fill: #ffffff;
+      stroke: none;
     }
     [data-theme="dark"] .edgePath .path {
       stroke: #9370db;
@@ -57,8 +59,8 @@ mermaid.initialize({
       color: #f0f0f0;
     }
     [data-theme="dark"] .cluster rect {
-      fill: #222222;
-      stroke: #5d4037;
+      fill: #ffffff;
+      stroke: none;
     }
     .clickable {
       transition: all 0.3s ease;
@@ -77,89 +79,282 @@ interface MermaidProps {
   className?: string;
 }
 
-// Floating Dialog component for the diagram
-const DiagramDialog: React.FC<{
+// Set the app element for react-modal accessibility
+if (typeof window !== 'undefined') {
+  Modal.setAppElement(document.getElementById('root') || document.body);
+}
+
+// Global cache for rendered diagrams - persists across component unmounts
+const GLOBAL_DIAGRAM_CACHE = new Map<string, { svg: string; originalSvg?: string; error: string | null }>();
+
+// Zoomable Modal Dialog component for the diagram
+const ZoomableModal: React.FC<{
   isOpen: boolean;
   onClose: () => void;
-  children: React.ReactNode;
-}> = ({ isOpen, onClose, children }) => {
-  const dialogRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        onClose();
-      }
-    };
-
-    if (isOpen) {
-      document.addEventListener('keydown', handleKeyDown);
+  svg: string;
+}> = memo(({ isOpen, onClose, svg }) => {
+  // Calculate responsive initial scale that fits diagram within viewer bounds
+  const calculateInitialScale = (svgString: string) => {
+    const widthMatch = svgString.match(/width="([^"]*)"/) || svgString.match(/viewBox="[^"]*?\s+[^"]*?\s+([^"]*?)\s+[^"]*?"/);
+    const heightMatch = svgString.match(/height="([^"]*)"/) || svgString.match(/viewBox="[^"]*?\s+[^"]*?\s+[^"]*?\s+([^"]*?)"/);
+    
+    // Modal viewer dimensions (accounting for padding and UI elements)
+    const viewerWidth = window.innerWidth * 0.9; // 90% of viewport width
+    const viewerHeight = window.innerHeight * 0.8; // 80% of viewport height
+    
+    console.log('Viewer dimensions:', { viewerWidth, viewerHeight });
+    
+    if (!widthMatch || !heightMatch) {
+      console.log('No dimensions detected, using moderate default scale');
+      return 1.5;
     }
-
-    return () => {
-      document.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [isOpen, onClose]);
-
-  if (!isOpen) return null;
+    
+    const diagramWidth = parseFloat(widthMatch[1]);
+    const diagramHeight = parseFloat(heightMatch[1]);
+    
+    console.log('Diagram dimensions:', { diagramWidth, diagramHeight });
+    
+    if (!diagramWidth || !diagramHeight) {
+      console.log('Invalid dimensions, using moderate default scale');
+      return 1.5;
+    }
+    
+    // Calculate scale needed to fit within viewer bounds
+    const scaleToFitWidth = viewerWidth / diagramWidth;
+    const scaleToFitHeight = viewerHeight / diagramHeight;
+    const scaleToFit = Math.min(scaleToFitWidth, scaleToFitHeight);
+    
+    console.log('Scale calculations:', { scaleToFitWidth, scaleToFitHeight, scaleToFit });
+    
+    // Determine optimal initial scale based on diagram characteristics
+    const aspectRatio = diagramWidth / diagramHeight;
+    let targetScale;
+    
+    if (aspectRatio > 2) {
+      // Wide diagrams - can use more of the available space
+      targetScale = scaleToFit * 0.95; // Use 95% of available space
+    } else if (aspectRatio < 0.5) {
+      // Tall diagrams - be more conservative to prevent overflow
+      targetScale = scaleToFit * 0.90; // Use 90% of available space
+    } else {
+      // Square-ish diagrams - balanced approach
+      targetScale = scaleToFit * 0.92; // Use 92% of available space
+    }
+    
+    // Ensure minimum readability and maximum bounds
+    const finalScale = Math.max(0.5, Math.min(6, targetScale));
+    
+    console.log('Final scale calculation:', { 
+      aspectRatio, 
+      targetScale, 
+      finalScale,
+      diagramType: aspectRatio > 2 ? 'wide' : aspectRatio < 0.5 ? 'tall' : 'square'
+    });
+    
+    return finalScale;
+  };
+  
+  const initialScale = calculateInitialScale(svg);
+  const customStyles = {
+    overlay: {
+      backgroundColor: 'rgba(0, 0, 0, 0.8)',
+      zIndex: 1000,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    content: {
+      position: 'relative' as const,
+      top: 'auto',
+      left: 'auto',
+      right: 'auto',
+      bottom: 'auto',
+      width: '95vw',
+      height: '95vh',
+      maxWidth: '1200px',
+      maxHeight: '900px',
+      padding: '0',
+      border: 'none',
+      borderRadius: '12px',
+      overflow: 'hidden',
+      background: '#374151',
+      boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+      outline: 'none',
+    },
+  };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75 p-4">
-      <div ref={dialogRef} className="bg-white dark:bg-gray-800 rounded-lg shadow-xl max-w-[90vw] max-h-[90vh] w-full overflow-auto p-6">
-        <div className="flex justify-end mb-4">
-          <button
-            onClick={onClose}
-            className="text-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-700 p-2 rounded-md"
-            aria-label="Close"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <line x1="18" y1="6" x2="6" y2="18"></line>
-              <line x1="6" y1="6" x2="18" y2="18"></line>
-            </svg>
-          </button>
-        </div>
-        <div className="w-full h-full flex justify-center items-center">
-          {children}
-        </div>
+    <Modal
+      isOpen={isOpen}
+      onRequestClose={onClose}
+      style={customStyles}
+      contentLabel="Diagram Viewer"
+      shouldCloseOnOverlayClick={true}
+      shouldCloseOnEsc={true}
+    >
+      {/* Zoomable content area */}
+      <div className="h-full bg-gray-50 dark:bg-gray-900 relative">
+        <TransformWrapper
+          initialScale={initialScale}
+          initialPositionX={0}
+          initialPositionY={0}
+          minScale={0.2}
+          maxScale={8}
+          limitToBounds={false}
+          centerOnInit={true}
+          wheel={{
+            step: 0.15,
+          }}
+          doubleClick={{
+            disabled: false,
+            mode: 'zoomIn',
+            step: 0.7,
+          }}
+          panning={{
+            velocityDisabled: true,
+          }}
+        >
+          {() => (
+            <TransformComponent
+              wrapperStyle={{
+                width: '100%',
+                height: '100%',
+              }}
+              contentStyle={{
+                width: '100%',
+                height: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <div 
+                dangerouslySetInnerHTML={{ __html: svg }} 
+                className="select-none"
+              />
+            </TransformComponent>
+          )}
+        </TransformWrapper>
+        
+        {/* Close button - positioned after TransformWrapper to avoid event conflicts */}
+        <button
+          onClick={(e) => {
+            console.log('Close button clicked');
+            e.preventDefault();
+            e.stopPropagation();
+            onClose();
+          }}
+           className="text-white hover:text-gray-300 p-3 cursor-pointer border-none outline-none focus:outline-none transition-colors duration-200"
+           aria-label="Close"
+           style={{ 
+             position: 'absolute',
+             top: '16px',
+             right: '16px',
+             zIndex: 99999,
+             pointerEvents: 'auto',
+             border: 'none',
+             outline: 'none',
+             backgroundColor: 'transparent'
+           }}
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
       </div>
-    </div>
+    </Modal>
   );
-};
+});
 
-const Mermaid: React.FC<MermaidProps> = ({ chart, className = '' }) => {
+const Mermaid: React.FC<MermaidProps> = memo(({ chart, className = '' }) => {
   const [svg, setSvg] = useState<string>('');
+  const [originalSvg, setOriginalSvg] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const mermaidRef = useRef<HTMLDivElement>(null);
-  const idRef = useRef(`mermaid-${Math.random().toString(36).substring(2, 9)}`);
-  const isDarkModeRef = useRef(
+  
+  // Use global cache and rendering lock
+  const isRenderingRef = useRef(false);
+  
+  // Memoize the unique ID so it doesn't change on re-renders
+  const mermaidId = useMemo(() => 
+    `mermaid-${Math.random().toString(36).substring(2, 9)}`, []
+  );
+  
+  // Memoize dark mode detection
+  const isDarkMode = useMemo(() => 
     typeof window !== 'undefined' &&
     window.matchMedia &&
-    window.matchMedia('(prefers-color-scheme: dark)').matches
+    window.matchMedia('(prefers-color-scheme: dark)').matches, []
   );
+
+  // Memoize the cache key to prevent unnecessary effect runs
+  const cacheKey = useMemo(() => `${chart}-${isDarkMode}`, [chart, isDarkMode]);
+  
+  // Check cache immediately and set initial state
+  useMemo(() => {
+    if (!chart) return;
+    
+    const cached = GLOBAL_DIAGRAM_CACHE.get(cacheKey);
+    if (cached && svg !== cached.svg) {
+      setSvg(cached.svg);
+      setOriginalSvg(cached.originalSvg || cached.svg);
+      setError(cached.error);
+    }
+  }, [cacheKey, chart, svg]);
 
   useEffect(() => {
     if (!chart) return;
 
+    // Skip if already cached - this prevents useEffect from running
+    const cached = GLOBAL_DIAGRAM_CACHE.get(cacheKey);
+    if (cached) {
+      return; // Exit early, don't run any rendering logic
+    }
+
+    // Prevent multiple simultaneous renders of the same content
+    if (isRenderingRef.current) return;
+
     let isMounted = true;
+    isRenderingRef.current = true;
 
     const renderChart = async () => {
       if (!isMounted) return;
 
       try {
         setError(null);
-        setSvg('');
+        // Only show loading if we don't have any content yet
+        if (!svg) {
+          setSvg('');
+        }
 
-        const { svg: renderedSvg } = await mermaid.render(idRef.current, chart);
+        const { svg: renderedSvg } = await mermaid.render(mermaidId, chart);
 
         if (!isMounted) return;
 
-        let processedSvg = renderedSvg.replace('<svg ', '<svg style="display: block; margin: 0 auto;" ');
-        if (isDarkModeRef.current) {
+        // Store original SVG for modal display
+        let modalSvg = renderedSvg;
+        if (isDarkMode) {
+          modalSvg = modalSvg.replace('<svg ', '<svg data-theme="dark" ');
+        }
+        
+        // Process SVG for component display with size constraints
+        let processedSvg = renderedSvg.replace(
+          '<svg ', 
+          '<svg style="display: block; margin: 0 auto; width: auto; height: auto; max-width: calc(100% - 32px); max-height: 350px;" '
+        );
+        
+        if (isDarkMode) {
           processedSvg = processedSvg.replace('<svg ', '<svg data-theme="dark" ');
         }
 
+        // Cache the result with both versions
+        GLOBAL_DIAGRAM_CACHE.set(cacheKey, { svg: processedSvg, originalSvg: modalSvg, error: null });
+        
         setSvg(processedSvg);
+        setOriginalSvg(modalSvg);
+        setError(null);
 
         setTimeout(() => {
           mermaid.contentLoaded();
@@ -167,7 +362,12 @@ const Mermaid: React.FC<MermaidProps> = ({ chart, className = '' }) => {
       } catch (err) {
         console.error('Mermaid rendering error:', err);
         if (isMounted) {
-          setError(`Failed to render diagram: ${err instanceof Error ? err.message : String(err)}`);
+          const errorMsg = `Failed to render diagram: ${err instanceof Error ? err.message : String(err)}`;
+          
+          // Cache the error too
+          GLOBAL_DIAGRAM_CACHE.set(cacheKey, { svg: '', originalSvg: '', error: errorMsg });
+          
+          setError(errorMsg);
           if (mermaidRef.current) {
             mermaidRef.current.innerHTML = `
               <div class="text-red-500 dark:text-red-400 text-xs mb-1">Syntax error in diagram</div>
@@ -175,6 +375,8 @@ const Mermaid: React.FC<MermaidProps> = ({ chart, className = '' }) => {
             `;
           }
         }
+      } finally {
+        isRenderingRef.current = false;
       }
     };
 
@@ -182,14 +384,19 @@ const Mermaid: React.FC<MermaidProps> = ({ chart, className = '' }) => {
 
     return () => {
       isMounted = false;
+      isRenderingRef.current = false;
     };
-  }, [chart]);
+  }, [cacheKey, mermaidId]); // Only depend on cache key and mermaid ID
 
-  const handleDiagramClick = () => {
+  const handleDiagramClick = useCallback(() => {
     if (!error && svg) {
       setIsDialogOpen(true);
     }
-  };
+  }, [error, svg]);
+
+  const handleCloseModal = useCallback(() => {
+    setIsDialogOpen(false);
+  }, []);
 
   if (error) {
     return (
@@ -225,23 +432,30 @@ const Mermaid: React.FC<MermaidProps> = ({ chart, className = '' }) => {
 
   return (
     <>
-      <div className={`w-full min-h-[500px] p-4 flex justify-center items-center ${className}`}>
+      <div className={`w-full h-[400px] p-4 flex justify-center items-center ${className}`}>
         <div
           ref={mermaidRef}
-          className="clickable w-fit h-full overflow-auto text-center cursor-pointer hover:shadow-md transition-shadow duration-200 rounded-md"
+          className="clickable w-full overflow-visible text-center cursor-zoom-in flex justify-center items-center"
           dangerouslySetInnerHTML={{ __html: svg }}
           onClick={handleDiagramClick}
-          title="Click to open dialog"
+          title="Click to open in zoomable viewer"
+          style={{
+            cursor: 'zoom-in',
+            height: '350px',
+            padding: '0 28px 0 0px',
+            boxSizing: 'border-box',
+          }}
         />
       </div>
-      <DiagramDialog
+      <ZoomableModal
         isOpen={isDialogOpen}
-        onClose={() => setIsDialogOpen(false)}
-      >
-        <div dangerouslySetInnerHTML={{ __html: svg }} className="w-full h-full flex justify-center items-center" />
-      </DiagramDialog>
+        onClose={handleCloseModal}
+        svg={originalSvg}
+      />
     </>
   );
-};
+});
+
+Mermaid.displayName = 'Mermaid';
 
 export default Mermaid;

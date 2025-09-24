@@ -124,14 +124,10 @@ const SuggestionPanel: React.FC<SuggestionPanelProps> = ({ isOpen, onClose }) =>
         )
     }
   }
-
-
-  if (!isOpen) return null
-
   return (
-    <div className="suggestion-panel">
+    <div className={`suggestion-panel ${isOpen ? 'is-open' : ''}`} aria-hidden={!isOpen}>
       <div className="suggestion-panel-header">
-        <h3 className="suggestion-panel-title">Smart Suggestions</h3>
+        {/* Title removed per requirement; keep close button aligned to the right */}
         <button 
           className="suggestion-panel-close"
           onClick={onClose}
@@ -148,7 +144,7 @@ const SuggestionPanel: React.FC<SuggestionPanelProps> = ({ isOpen, onClose }) =>
               <path d="M9 21c0 .55.45 1 1 1h4c.55 0 1-.45 1-1v-1H9v1z"/>
               <path d="M12 2C8.14 2 5 5.14 5 9c0 2.38 1.19 4.47 3 5.74V17c0 .55.45 1 1 1h6c.55 0 1-.45 1-1v-2.26c1.81-1.27 3-3.36 3-5.74 0-3.86-3.14-7-7-7z"/>
             </svg>
-            <h4>Select text to get suggestions</h4>
+            <h4>Smart Suggestion</h4>
             <p>Highlight any text on the page to see AI-powered improvement suggestions</p>
           </div>
         ) : hasSelection ? (

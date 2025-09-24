@@ -64,10 +64,10 @@
 /* Enhanced chat panel container */
 .ai-chat-panel {
   position: fixed;
-  /* Open above the bottom-right chat button */
-  bottom: 70px;
+  /* Position to the left of the floating buttons */
+  bottom: 24px;
   top: auto;
-  right: 24px;
+  right: 80px; /* Increased from 24px to leave space for buttons */
   width: 420px;
   height: auto;
   max-height: calc(100vh - 140px);
@@ -107,9 +107,9 @@
 
 @media (max-width: 900px) {
   .ai-chat-panel {
-    right: 16px;
-    bottom: 62px;
-    width: calc(100vw - 32px);
+    right: 72px; /* Increased to leave space for buttons */
+    bottom: 24px; /* Align with button bottom spacing */
+    width: calc(100vw - 88px);
     max-width: 560px;
     max-height: calc(100vh - 120px);
   }
@@ -117,9 +117,9 @@
 
 @media (max-width: 768px) {
   .ai-chat-panel {
-    right: 12px;
-    bottom: 58px;
-    width: calc(100vw - 24px);
+    right: 68px; /* Increased to leave space for buttons */
+    bottom: 16px; /* Align with button bottom spacing */
+    width: calc(100vw - 84px);
     max-width: 480px;
     max-height: calc(100vh - 100px);
   }
@@ -138,9 +138,9 @@
 
 @media (max-width: 640px) {
   .ai-chat-panel {
-    right: 8px;
-    bottom: 54px;
-    width: calc(100vw - 16px);
+    right: 64px; /* Increased to leave space for buttons */
+    bottom: 12px; /* Align with button bottom spacing */
+    width: calc(100vw - 80px);
     max-width: 400px;
     max-height: calc(100vh - 80px);
   }

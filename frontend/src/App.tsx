@@ -8,6 +8,7 @@ import { XIcon } from './components/icons/close_icon'
 import { ArrowRightIcon } from './components/icons/arrow_icon'
 import DocumentationPage from './pages/documentation_page'
 import SignUpPage from './pages/signup_page'
+import SignInPage from './pages/signin_page'
 import TextSelectionDialog from './components/ui/text_selection_dialog'
 import { AIChatPanel } from './components/ui/ai_chat_panel'
 import { AIChatProvider } from './contexts/AIChatContext'
@@ -101,7 +102,7 @@ function HomePage() {
   }
 
   function handleSignUpClick() {
-    navigate('/signup')
+    navigate('/sign-up')
   }
 
   return (
@@ -143,11 +144,17 @@ function HomePage() {
         ) : isError ? (
           <XIcon className="home__input-icon--right text-danger" aria-label="Not found" />
         ) : (
-          <SearchIcon
-            className={`home__input-icon--right home__input-icon-button ${isLoading ? 'is-loading' : ''}`}
-            onClick={submitCheck as unknown as React.MouseEventHandler<HTMLDivElement>}
-            aria-label="Submit URL"
-          />
+          isLoading ? (
+            <div className="home__input-icon home__input-icon--right" aria-label="Loading">
+              <div className="spinner" />
+            </div>
+          ) : (
+            <SearchIcon
+              className="home__input-icon--right home__input-icon-button"
+              onClick={submitCheck as unknown as React.MouseEventHandler<HTMLDivElement>}
+              aria-label="Submit URL"
+            />
+          )
         )}
       </div>
       
@@ -212,7 +219,8 @@ function App() {
     <AIChatProvider>
       <Routes>
         <Route path="/" element={<HomePage />} />
-        <Route path="/signup" element={<SignUpPage />} />
+        <Route path="/sign-up" element={<SignUpPage />} />
+        <Route path="/sign-in" element={<SignInPage />} />
         <Route path="/docs-flow/:repo" element={<DocsFlowPage />} />
         <Route path="/:repo" element={<DocumentationPage />} />
         <Route path="/:repo/:file" element={<DocumentationPage />} />

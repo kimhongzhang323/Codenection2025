@@ -56,6 +56,7 @@ const TextSelectionDialog: React.FC = () => {
   const [showTyping, setShowTyping] = useState(false)
   const [typingComplete, setTypingComplete] = useState(false)
   const [voteStatus, setVoteStatus] = useState<'upvoted' | 'downvoted' | null>(null)
+  const [dialogWidth, setDialogWidth] = useState<number | null>(null)
 
   // Reset state when dialog closes naturally (not by user clicking close)
   useEffect(() => {
@@ -66,24 +67,52 @@ const TextSelectionDialog: React.FC = () => {
       setShowTyping(false)
       setTypingComplete(false)
       setVoteStatus(null)
+      setDialogWidth(null)
     }
   }, [isVisible, hasBeenClosed])
+
+  // Utility function to calculate expected dialog width based on content
+  const calculateDialogWidth = (content: string): number => {
+    // Create a temporary element to measure text width
+    const tempElement = document.createElement('div')
+    tempElement.style.visibility = 'hidden'
+    tempElement.style.position = 'absolute'
+    tempElement.style.width = 'auto'
+    tempElement.style.fontSize = '13px'
+    tempElement.style.lineHeight = '1.5'
+    tempElement.style.fontFamily = window.getComputedStyle(document.body).fontFamily
+    tempElement.style.padding = '24px' // Account for dialog padding
+    tempElement.style.maxWidth = '450px' // Match dialog max-width
+    tempElement.textContent = content
+    
+    document.body.appendChild(tempElement)
+    const width = Math.min(Math.max(tempElement.offsetWidth, 280), 450) // Min 280px, max 450px
+    document.body.removeChild(tempElement)
+    
+    return width
+  }
 
   // Simulate AI response when dialog appears
   useEffect(() => {
     if (isVisible && selectedText && !aiResponse && !isLoading && !hasBeenClosed) {
       setIsLoading(true)
       
+      // Pre-calculate dialog width to prevent flashing during expansion
+      
       // Simulate AI processing time
       setTimeout(() => {
         const mockResponse = generateAIResponse(selectedText)
+        
+        // Pre-calculate the expected width for the response
+        const expectedWidth = calculateDialogWidth(mockResponse.content)
+        setDialogWidth(expectedWidth)
+        
         setAiResponse(mockResponse)
         setIsLoading(false)
+        
+        // Set expanded and start typing simultaneously to prevent flash
         setIsExpanded(true)
-        // Start typing animation after a short delay
-        setTimeout(() => {
-          setShowTyping(true)
-        }, 100)
+        setShowTyping(true)
       }, 2000)
     }
   }, [isVisible, selectedText, aiResponse, isLoading, hasBeenClosed])
@@ -120,6 +149,16 @@ const TextSelectionDialog: React.FC = () => {
     setAiResponse(null)
     setShowTyping(false)
     setTypingComplete(false)
+    setDialogWidth(null)
+    
+    // Clear the text selection when closing the dialog
+    if (window.getSelection) {
+      const selection = window.getSelection()
+      if (selection) {
+        selection.removeAllRanges()
+      }
+    }
+    
     closeDialog()
   }
 
@@ -170,16 +209,46 @@ const TextSelectionDialog: React.FC = () => {
     )
   }
 
+  // Calculate the dynamic style for smooth width transition
+  const getDynamicDialogStyle = () => {
+    const baseStyle: React.CSSProperties = {
+      ...dialogStyle,
+    }
+    
+    // Apply calculated width during expansion to prevent flashing
+    if (dialogWidth && (isExpanded || showTyping)) {
+      baseStyle.width = `${dialogWidth}px`
+      baseStyle.maxWidth = `${dialogWidth}px`
+      baseStyle.minWidth = `${Math.max(dialogWidth, 280)}px`
+    }
+    
+    return baseStyle
+  }
+
   return (
     <motion.div 
       className="highlight-dialog"
-      style={dialogStyle}
+      style={getDynamicDialogStyle()}
       initial={{ opacity: 0, scale: 0.9, y: -10 }}
-      animate={{ opacity: 1, scale: 1, y: 0 }}
+      animate={{ 
+        opacity: 1, 
+        scale: 1, 
+        y: 0,
+        width: dialogWidth && (isExpanded || showTyping) ? dialogWidth : undefined
+      }}
       exit={{ opacity: 0, scale: 0.9, y: -10 }}
       transition={{ duration: 0.2, ease: "easeOut" }}
     >
-      <div className="dialog-content">
+      <motion.div 
+        className={`dialog-content ${dialogWidth && (isExpanded || showTyping) ? 'fixed-width' : ''}`}
+        style={{
+          '--dialog-calculated-width': dialogWidth ? `${dialogWidth}px` : undefined
+        } as React.CSSProperties}
+        animate={{
+          width: dialogWidth && (isExpanded || showTyping) ? dialogWidth : undefined
+        }}
+        transition={{ duration: 0.3, ease: "easeOut" }}
+      >
         <div className="dialog-header">
           <div className="dialog-status">
             {isLoading ? (
@@ -188,19 +257,19 @@ const TextSelectionDialog: React.FC = () => {
               <span className="dialog-text">Explained</span>
             )}
           </div>
-                     <button className="dialog-close" onClick={handleClose}>
-             <XIcon size={14} />
-           </button>
+          <button className="dialog-close" onClick={handleClose}>
+            <XIcon size={14} />
+          </button>
         </div>
         
         <AnimatePresence>
-          {isExpanded && aiResponse && (
+          {isExpanded && aiResponse && showTyping && (
             <motion.div 
               className={`dialog-response ${typingComplete ? 'typing-complete' : ''}`}
               initial={{ opacity: 0, height: 0 }}
               animate={{ opacity: 1, height: "auto" }}
               exit={{ opacity: 0, height: 0 }}
-              transition={{ duration: 0.3, ease: "easeOut" }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
             >
               <div className="response-content">
                 {showTyping ? (
@@ -209,9 +278,7 @@ const TextSelectionDialog: React.FC = () => {
                     speed={15} 
                     onComplete={() => setTypingComplete(true)}
                   />
-                ) : (
-                  aiResponse.content
-                )}
+                ) : null}
               </div>
               
               {typingComplete && (
@@ -252,7 +319,7 @@ const TextSelectionDialog: React.FC = () => {
             </motion.div>
           )}
         </AnimatePresence>
-      </div>
+      </motion.div>
     </motion.div>
   )
 }

@@ -59,10 +59,18 @@
   background: var(--sidebar-bg);
   border: 1px solid var(--sidebar-border);
   color: var(--sidebar-text);
-  padding: 3px 8px;
+  padding: 8px 12px; /* increased padding */
   border-radius: 8px;
   font-size: 12px;
   line-height: 1;
+  cursor: pointer; /* make it interactive */
+}
+
+.search-dialog__esc:hover,
+.search-dialog__esc:focus {
+  outline: none;
+  box-shadow: none;
+  border-color: var(--search-input-hover-border);
 }
 
 /* Hover and focus visuals */
@@ -85,5 +93,3 @@
 }
 
 .search-dialog__powered { display: none; }
-
-

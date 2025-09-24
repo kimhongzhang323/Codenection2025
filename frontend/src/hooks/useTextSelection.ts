@@ -24,6 +24,22 @@ export const useTextSelection = () => {
     }
 
     const range = selection.getRangeAt(0)
+
+    // Only allow selection that originates within the docs main content area
+    const ancestor = range.commonAncestorContainer
+    const ancestorElement = (ancestor as Node).nodeType === Node.ELEMENT_NODE
+      ? (ancestor as Element)
+      : (ancestor as Node).parentElement
+
+    const isInDocsContent = ancestorElement?.closest('.docs-main__container') !== null
+    const isInSidebar = ancestorElement?.closest('.docs-sidebar') !== null
+    const isInToc = ancestorElement?.closest('.toc-container') !== null
+
+    if (!isInDocsContent || isInSidebar || isInToc) {
+      // Ignore selections outside the documentation content area
+      setSelectionState(prev => ({ ...prev, isVisible: false }))
+      return
+    }
     const rect = range.getBoundingClientRect()
     
     // Calculate position for the dialog
