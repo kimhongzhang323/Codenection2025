@@ -1,7 +1,8 @@
-import React, { useState, useRef } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import { TldrIcon } from '../icons/tldr_icon'
 import type { TldrIconHandle } from '../icons/tldr_icon'
 import './summarize_button.css'
+import './summarize_panel.css'
 
 interface SummarizeButtonProps {
   content: string
@@ -9,8 +10,8 @@ interface SummarizeButtonProps {
 
 const SummarizeButton: React.FC<SummarizeButtonProps> = ({ content: _content }) => {
   const [isSummarizing, setIsSummarizing] = useState(false)
-  const [summary, setSummary] = useState<string | null>(null)
-  const [showSummary, setShowSummary] = useState(false)
+  const [isPanelOpen, setIsPanelOpen] = useState(false)
+  const [isFullScreen, setIsFullScreen] = useState(false)
   const iconRef = useRef<TldrIconHandle>(null)
 
   const handleMouseEnter = () => {
@@ -27,38 +28,21 @@ const SummarizeButton: React.FC<SummarizeButtonProps> = ({ content: _content }) 
 
   async function handleSummarize() {
     if (isSummarizing) return
-    
     setIsSummarizing(true)
-    try {
-      // Call the AI chat context to generate a summary
-      const { useAIChat } = await import('../../contexts/AIChatContext')
-      const { openChat } = useAIChat()
-      
-      // Open AI chat
-      openChat()
-      
-      // For now, we'll show a simple message that the summary request was sent
-      setSummary('Summary request sent to AI chat')
-      setShowSummary(true)
-      
-      // Hide the summary message after 3 seconds
-      setTimeout(() => {
-        setShowSummary(false)
-        setSummary(null)
-      }, 3000)
-      
-    } catch (error) {
-      console.error('Error generating summary:', error)
-      setSummary('Error generating summary')
-      setShowSummary(true)
-      setTimeout(() => {
-        setShowSummary(false)
-        setSummary(null)
-      }, 3000)
-    } finally {
-      setIsSummarizing(false)
-    }
+    // Slide in our TL;DR panel; actual summarization can be wired later
+    setIsPanelOpen(true)
+    // Simulate generation time; in real integration, set to false when AI completes
+    setTimeout(() => setIsSummarizing(false), 2500)
   }
+
+  // Close panel with ESC
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setIsPanelOpen(false)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [])
 
   return (
     <div style={{ position: 'relative', display: 'inline-block' }}>
@@ -84,7 +68,7 @@ const SummarizeButton: React.FC<SummarizeButtonProps> = ({ content: _content }) 
           opacity: isSummarizing ? 0.7 : 1
         }}
       >
-        <span style={{ width: 18, height: 18, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', transform: 'translateY(1.5px)' }}>
+        <span style={{ width: 18, height: 18, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', transform: isSummarizing ? 'translateY(-0.5px)' : 'translateY(1.5px)' }}>
           {isSummarizing ? (
             <div 
               style={{
@@ -103,27 +87,79 @@ const SummarizeButton: React.FC<SummarizeButtonProps> = ({ content: _content }) 
         <span>{isSummarizing ? 'Summarizing...' : 'Summarize'}</span>
       </button>
       
-      {showSummary && summary && (
-        <div 
-          style={{
-            position: 'absolute',
-            top: '100%',
-            left: 0,
-            marginTop: 8,
-            padding: '8px 12px',
-            background: 'var(--search-input-bg)',
-            border: '1px solid var(--bottom-dialog-border)',
-            borderRadius: 8,
-            fontSize: 12,
-            color: 'var(--docs-normal-text)',
-            whiteSpace: 'nowrap',
-            zIndex: 1000,
-            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)'
-          }}
-        >
-          {summary}
+      {/* Slide-in TL;DR panel */}
+      <div className={`tldr-panel ${isPanelOpen ? 'is-open' : ''} ${isFullScreen ? 'is-fullscreen' : ''}`} role="dialog" aria-modal="true">
+        {/* Top bar: controls only */}
+        <div className="tldr-panel__topbar">
+          <div className="tldr-panel__actions">
+            {/* Collapse/back (chevrons) */}
+            <button className="tldr-icon-btn" onClick={() => setIsPanelOpen(false)} aria-label="Collapse panel">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="13 7 18 12 13 17"/>
+                <polyline points="6 7 11 12 6 17"/>
+              </svg>
+            </button>
+            {/* Fullscreen/restore */}
+            <button className="tldr-icon-btn" onClick={() => setIsFullScreen(v => !v)} aria-label="Toggle full screen">
+              {isFullScreen ? (
+                // restore icon (smaller)
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="9 14 4 14 4 19"/>
+                  <polyline points="15 10 20 10 20 5"/>
+                  <polyline points="4 9 4 4 9 4"/>
+                  <polyline points="20 15 20 20 15 20"/>
+                </svg>
+              ) : (
+                // expand icon (smaller)
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="15 3 21 3 21 9"/>
+                  <polyline points="9 21 3 21 3 15"/>
+                  <line x1="21" y1="3" x2="14" y2="10"/>
+                  <line x1="3" y1="21" x2="10" y2="14"/>
+                </svg>
+              )}
+            </button>
+          </div>
         </div>
-      )}
+        {/* Title header below top bar */}
+        <div className="tldr-panel__titlebar">
+          <h2 className="tldr-panel__title">TL;DR</h2>
+        </div>
+        <div className="tldr-panel__content">
+          {isSummarizing ? (
+            <div className="tldr-skeleton">
+              <div className="tldr-skel-line" style={{ width: '85%' }} />
+              <div className="tldr-skel-line" style={{ width: '96%' }} />
+              <div className="tldr-skel-line" style={{ width: '72%' }} />
+              <div className="tldr-skel-line" style={{ width: '90%' }} />
+              <div className="tldr-skel-line" style={{ width: '64%' }} />
+              <div className="tldr-skel-line" style={{ width: '93%' }} />
+              <div className="tldr-skel-line" style={{ width: '78%' }} />
+              <div className="tldr-skel-line" style={{ width: '88%' }} />
+              <div className="tldr-skel-line" style={{ width: '70%' }} />
+              <div className="tldr-skel-line" style={{ width: '40%' }} />
+              <div className="tldr-skel-line" style={{ width: '92%' }} />
+              <div className="tldr-skel-line" style={{ width: '68%' }} />
+              <div className="tldr-skel-line" style={{ width: '82%' }} />
+              <div className="tldr-skel-line" style={{ width: '58%' }} />
+              <div className="tldr-skel-line" style={{ width: '87%' }} />
+              <div className="tldr-skel-line" style={{ width: '73%' }} />
+              <div className="tldr-skel-line" style={{ width: '85%' }} />
+              <div className="tldr-skel-line" style={{ width: '96%' }} />
+              <div className="tldr-skel-line" style={{ width: '72%' }} />
+              <div className="tldr-skel-line" style={{ width: '90%' }} />
+              <div className="tldr-skel-line" style={{ width: '64%' }} />
+              <div className="tldr-skel-line" style={{ width: '93%' }} />
+              <div className="tldr-skel-line" style={{ width: '78%' }} />
+            </div>
+          ) : (
+            <>
+              <p style={{ margin: 0, opacity: 0.9 }}>Your summary will appear here.</p>
+              <p style={{ marginTop: 8, fontSize: 12, opacity: 0.6 }}>Coming soon: AI-generated TL;DR of the selected or current section.</p>
+            </>
+          )}
+        </div>
+      </div>
       
       <style>{`
         @keyframes spin {

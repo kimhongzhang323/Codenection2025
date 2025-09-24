@@ -1,15 +1,16 @@
 /* Suggestion Panel Styles */
 .suggestion-panel {
   position: fixed;
-  bottom: 70px;
+  bottom: 24px;
   top: auto;
-  right: 24px;
+  right: 80px; /* Increased from 24px to leave space for buttons */
   width: 420px;
   height: auto;
   max-height: calc(100vh - 140px);
   background: var(--docs-bg);
   border: 1px solid var(--sidebar-border);
   border-radius: 20px;
+  /* drop shadow removed as requested */
   box-shadow: none;
   z-index: 1001;
   display: flex;
@@ -18,6 +19,16 @@
   backdrop-filter: blur(20px);
   scrollbar-width: none;
   -ms-overflow-style: none;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(12px) scale(0.98);
+  transition: opacity 0.18s ease, transform 0.18s ease, visibility 0.18s ease;
+}
+
+.suggestion-panel.is-open {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0) scale(1);
 }
 
 .suggestion-panel::-webkit-scrollbar {
@@ -27,18 +38,13 @@
 .suggestion-panel-header {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-end; /* keep close button position at top-right */
   padding: 12px 20px;
-  border-bottom: 1px solid var(--sidebar-border);
+  border-bottom: none; /* remove separator line */
   background: var(--docs-bg);
 }
 
-.suggestion-panel-title {
-  margin: 0;
-  font-size: 16px;
-  font-weight: 400;
-  color: var(--docs-text);
-}
+/* Title removed; styles kept empty intentionally */
 
 .suggestion-panel-close {
   background: none;
@@ -52,8 +58,8 @@
   padding: 0;
   margin: 0;
   position: relative;
-  top: 0;
-  right: 0;
+  top: 12px; /* moved down a bit */
+  right: 8px;
   width: auto;
   height: auto;
 }
@@ -82,29 +88,35 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 16px;
+  gap: 6px; /* tighter spacing between title and subtitle */
 }
 
 .suggestion-panel-empty svg {
   color: var(--sidebar-text);
   opacity: 0.6;
+  margin-bottom: 12px; /* keep comfortable space from icon to title */
 }
 
 .suggestion-panel-empty h4 {
   margin: 0;
-  font-size: 18px;
-  font-weight: 600;
-  color: var(--docs-text);
+  margin-bottom: 4px; /* reduce title-to-subtitle gap */
+  font-size: 18px; /* match AI Assistant title */
+  font-weight: 600; /* match AI Assistant weight */
+  color: #b0b0b0; /* requested color */
 }
 
 .suggestion-panel-empty p {
   margin: 0;
-  font-size: 14px;
+  font-size: 14px; /* match AI subtitle size */
   font-weight: 400;
-  color: var(--sidebar-text);
-  opacity: 0.8;
-  line-height: 1.4;
+  color: #797979; /* requested color */
+  opacity: 1; /* ensure exact color without dimming */
+  line-height: 1.4; /* match AI subtitle line height */
 }
+
+/* Light mode color overrides */
+html:not(.dark) .suggestion-panel-empty h4 { color: #5b5b5b; }
+html:not(.dark) .suggestion-panel-empty p { color: #afb1b4; }
 
 /* Selection Display */
 .suggestion-panel-selection {
@@ -327,9 +339,9 @@
 
 @media (max-width: 900px) {
   .suggestion-panel {
-    right: 16px;
-    bottom: 62px;
-    width: calc(100vw - 32px);
+    right: 72px; /* Increased to leave space for buttons */
+    bottom: 24px; /* Align with button bottom spacing */
+    width: calc(100vw - 88px);
     max-width: 560px;
     max-height: calc(100vh - 120px);
   }
@@ -337,9 +349,9 @@
 
 @media (max-width: 768px) {
   .suggestion-panel {
-    right: 12px;
-    bottom: 58px;
-    width: calc(100vw - 24px);
+    right: 68px; /* Increased to leave space for buttons */
+    bottom: 16px; /* Align with button bottom spacing */
+    width: calc(100vw - 84px);
     max-width: 480px;
     max-height: calc(100vh - 100px);
   }
@@ -359,9 +371,9 @@
 
 @media (max-width: 640px) {
   .suggestion-panel {
-    right: 8px;
-    bottom: 54px;
-    width: calc(100vw - 16px);
+    right: 64px; /* Increased to leave space for buttons */
+    bottom: 12px; /* Align with button bottom spacing */
+    width: calc(100vw - 80px);
     max-width: 400px;
     max-height: calc(100vh - 80px);
   }

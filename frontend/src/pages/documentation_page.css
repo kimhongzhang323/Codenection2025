@@ -374,7 +374,7 @@ html:not(.dark) .docs-sidebar__collapse-icon {
   align-items: center; 
   transform: translateY(3px); 
   margin-left: auto;
-  margin-right: 130px;
+  margin-right: 110px; /* nudge icon slightly to the right without moving toggle */
 }
 .docs-footer__gh:hover { color: var(--docs-text); }
 
@@ -797,6 +797,23 @@ html:not(.dark) .docs-sidebar__collapse-icon {
   font-weight: 300;
 }
 
+/* TOC hover effects - only change font color to white */
+.toc-item:hover {
+  color: white !important;
+  background: none !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+/* Remove any header hover effects */
+.toc-header:hover,
+.toc-header h3:hover,
+.toc-hamburger:hover {
+  background: none !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
 /* Scrollbar styling for toc-nav - DISABLED */
 /* .toc-nav::-webkit-scrollbar {
   width: 4px;
@@ -920,4 +937,3 @@ html:not(.dark) .docs-sidebar__collapse-icon {
     max-width: none;
   }
 }
-

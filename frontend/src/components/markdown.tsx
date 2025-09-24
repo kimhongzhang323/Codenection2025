@@ -9,6 +9,8 @@ import FilesRenderer from './files_renderer';
 import Callout from './ui/callout';
 import CopyMarkdownButton from './ui/copy_markdown_button';
 import SummarizeButton from './ui/summarize_button';
+import './markdown.css';
+import { CopyIcon, type CopyIconHandle } from './icons/copy_icon';
 
 const MarkdownRawContext = createContext<string>('');
 
@@ -315,6 +317,7 @@ const Markdown: React.FC<MarkdownProps> = ({ content }) => {
       [key: string]: any; // Using any here as it's required for ReactMarkdown components
     }) {
       const { inline, className, children, ...otherProps } = props;
+      const rawMarkdown = React.useContext(MarkdownRawContext);
       const match = /language-(\w+)/.exec(className || '');
       const codeContent = children ? String(children).replace(/\n$/, '') : '';
 
@@ -347,24 +350,101 @@ const Markdown: React.FC<MarkdownProps> = ({ content }) => {
         // Use different themes for dark/light mode
         const theme = isDarkMode ? tomorrow : prism;
           
+        const iconRef = React.useRef<CopyIconHandle | null>(null);
         return (
-          <div className="my-6 rounded-lg overflow-hidden shadow-sm">
+          <div className="my-6 codeblock codeblock-container" style={{ overflow: 'visible' }}>
+            <div className="codeblock__header">
+              <div className="codeblock__title">
+                {(() => {
+                  const node: any = (otherProps as any)?.node;
+                  const candidates: Array<string | undefined> = [
+                    node?.meta,
+                    node?.data?.meta,
+                    node?.data?.hProperties?.title,
+                    (otherProps as any)?.meta,
+                    (otherProps as any)?.["data-meta"],
+                  ];
+                  for (const raw of candidates) {
+                    if (typeof raw !== 'string') continue;
+                    const rawMeta = raw.trim();
+                    // title="..." or title='...' or title=bare
+                    const mQuoted = rawMeta.match(/title\s*=\s*"([^"]+)"/)
+                      || rawMeta.match(/title\s*=\s*'([^']+)'/);
+                    if (mQuoted && mQuoted[1]) return mQuoted[1];
+                    const mBare = rawMeta.match(/title\s*=\s*([^\s]+)/);
+                    if (mBare && mBare[1]) return mBare[1];
+                    // If meta is just a filename without a key, use it directly
+                    if (rawMeta.length > 0 && !rawMeta.includes('=')) return rawMeta;
+                  }
+                  // Fallback: scan the raw markdown to find the fence that contains this code
+                  try {
+                    if (typeof rawMarkdown === 'string' && codeContent) {
+                      const normalized = codeContent.trim();
+                      const blockIndex = rawMarkdown.indexOf(normalized);
+                      if (blockIndex !== -1) {
+                        const before = rawMarkdown.lastIndexOf('```', blockIndex);
+                        if (before !== -1) {
+                          const lineStart = rawMarkdown.lastIndexOf('\n', before) + 1;
+                          const lineEnd = rawMarkdown.indexOf('\n', before);
+                          const fenceLine = rawMarkdown.slice(lineStart, lineEnd === -1 ? rawMarkdown.length : lineEnd);
+                          // fenceLine example: ```tsx title="components/rate.tsx"
+                          const metaPart = fenceLine.replace(/^```\s*[^\s]*\s*/, '');
+                          const mQuoted = metaPart.match(/title\s*=\s*"([^"]+)"/)
+                            || metaPart.match(/title\s*=\s*'([^']+)'/);
+                          if (mQuoted && mQuoted[1]) return mQuoted[1];
+                          const mBare = metaPart.match(/title\s*=\s*([^\s]+)/);
+                          if (mBare && mBare[1]) return mBare[1];
+                          if (metaPart && !metaPart.includes('=') && metaPart.trim().length > 0) return metaPart.trim();
+                        }
+                      }
+                    }
+                  } catch {}
+                  return 'Code';
+                })()}
+              </div>
+              <div
+                className="codeblock__copyicon"
+                role="button"
+                aria-label="Copy code"
+                title="Copy code"
+                onClick={() => {
+                  navigator.clipboard.writeText(codeContent);
+                  try {
+                    iconRef.current?.startAnimation();
+                    window.setTimeout(() => iconRef.current?.stopAnimation(), 600);
+                  } catch {}
+                }}
+              >
+                <CopyIcon ref={iconRef} size={16} />
+              </div>
+            </div>
             <SyntaxHighlighter
               language={match[1]}
               style={theme}
               customStyle={{
                 margin: 0,
-                borderRadius: '0.5rem',
-                padding: '1rem',
-                marginBottom: '0.5rem',
+                borderRadius: '0 0 12px 12px',
+                padding: '0.75rem 1rem 0.75rem 0.5rem',
+                marginBottom: 0,
                 backgroundColor: codeBlockBg,
                 color: textColor,
                 fontSize: '0.85rem',
                 lineHeight: 1.6,
+                maxHeight: 'calc(35 * 1.6em)',
+                overflow: 'auto',
+                whiteSpace: 'pre',
               }}
               showLineNumbers={true}
-              wrapLines={true}
-              wrapLongLines={true}
+              wrapLines={false}
+              wrapLongLines={false}
+              lineNumberStyle={{
+                minWidth: '2rem',
+                padding: '0 0.5rem 0 0.25rem',
+                marginRight: '0.25rem',
+                textAlign: 'right',
+                userSelect: 'none',
+                opacity: 0.6,
+              }}
               {...otherProps}
             >
               {codeContent}

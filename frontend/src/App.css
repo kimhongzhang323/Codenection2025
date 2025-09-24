@@ -177,6 +177,17 @@
 }
 
 .is-loading > svg {
+  /* deprecated: rotating search icon */
+  animation: none;
+}
+
+/* Standard minimal spinner to use in place of rotating search icon */
+.spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid #9aa0a6;
+  border-top-color: transparent;
+  border-radius: 50%;
   animation: spin 1s linear infinite;
 }
 

@@ -50,7 +50,14 @@ export function SearchDialog({ isOpen, onClose }: SearchDialogProps) {
               placeholder="Search"
               aria-label="Search input"
             />
-            <kbd className="search-dialog__esc">ESC</kbd>
+            <button
+              type="button"
+              className="search-dialog__esc"
+              onClick={onClose}
+              aria-label="Close search (Esc)"
+            >
+              ESC
+            </button>
           </div>
         </div>
       </div>

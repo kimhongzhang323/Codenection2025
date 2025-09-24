@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Magnet from '../components/magnet';
 import './signup_page.css';
 
-const SignUp: React.FC = () => {
+const SignIn: React.FC = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -53,8 +53,8 @@ const SignUp: React.FC = () => {
     navigate('/');
   };
 
-  const handleSignInClick = () => {
-    navigate('/sign-in');
+  const handleSignUpClick = () => {
+    navigate('/sign-up');
   };
 
   return (
@@ -69,8 +69,8 @@ const SignUp: React.FC = () => {
       <div className="signin-section">
         <div className="signin-header">
           <div className="signin-content">
-            <h1 className="signin-title">Get Started</h1>
-            <p className="signin-subtitle">Create a new account</p>
+            <h1 className="signin-title">Welcome back</h1>
+            <p className="signin-subtitle">Sign in to your account</p>
           </div>
         </div>
 
@@ -92,7 +92,6 @@ const SignUp: React.FC = () => {
               </>
             )}
           </button>
-
 
           {/* Divider */}
           <div className="divider">
@@ -137,12 +136,12 @@ const SignUp: React.FC = () => {
               disabled={isLoading}
               className="signin-button"
             >
-              {isLoading ? <div className="loading-spinner"></div> : 'Sign Up'}
+              {isLoading ? <div className="loading-spinner"></div> : 'Sign In'}
             </button>
           </form>
 
           <div className="signup-link">
-            Already have an account? <button type="button" className="link-button" onClick={handleSignInClick}>Sign In Now</button>
+            Don&apos;t have an account? <button type="button" className="link-button" onClick={handleSignUpClick}>Sign Up Now</button>
           </div>
         </div>
 
@@ -156,7 +155,7 @@ const SignUp: React.FC = () => {
         <div className="quote-container">
           <Magnet 
             padding={80} 
-            magnetStrength={4} 
+            magnetStrength={2.5} 
             activeTransition="transform 0.2s ease-out"
             inactiveTransition="transform 0.4s ease-in-out"
           >
@@ -164,12 +163,12 @@ const SignUp: React.FC = () => {
           </Magnet>
           <Magnet 
             padding={100} 
-            magnetStrength={3.5} 
+            magnetStrength={2.5} 
             activeTransition="transform 0.25s ease-out"
             inactiveTransition="transform 0.45s ease-in-out"
           >
             <p className="quote-text">
-              Back to building smarter. With AutoDocX, your documentation isn&apos;t just a static file — it&apos;s a living system that keeps up with your code, your team, and your vision.
+              Every line of code deserves to be understood. AutoDocX helps you generate clear, structured, and maintainable documentation — so your projects can scale, your teammates can onboard quickly, and your future self will thank you.
             </p>
           </Magnet>
         </div>
@@ -178,4 +177,4 @@ const SignUp: React.FC = () => {
   );
 };
 
-export default SignUp;
+export default SignIn;

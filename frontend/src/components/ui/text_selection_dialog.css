@@ -1,5 +1,6 @@
 .highlight-dialog {
   animation: fadeIn 0.2s ease-in-out;
+  transition: width 0.3s ease-out, min-width 0.3s ease-out, max-width 0.3s ease-out;
 }
 
 .dialog-content {
@@ -18,6 +19,7 @@
   overflow: hidden;
   backdrop-filter: blur(10px);
   position: relative;
+  transition: width 0.3s ease-out, min-width 0.3s ease-out, max-width 0.3s ease-out;
 }
 
 .dialog-header {
@@ -83,8 +85,6 @@
   pointer-events: none;
 }
 
-/* Ensure the close button is clearly visible and clickable */
-
 .dialog-response {
   padding: 12px;
   background: var(--docs-bg);
@@ -122,6 +122,15 @@
   word-wrap: break-word;
   white-space: pre-wrap;
   margin-bottom: 12px;
+  overflow-wrap: break-word;
+  hyphens: auto;
+}
+
+/* Ensure consistent width during typing animation */
+.dialog-content.fixed-width {
+  width: var(--dialog-calculated-width);
+  min-width: var(--dialog-calculated-width);
+  max-width: var(--dialog-calculated-width);
 }
 
 .dialog-actions {
@@ -176,8 +185,6 @@
 .downvote-btn.voted {
   border-color: #ef4444;
 }
-
-/* Removed disabled styles since buttons are now toggleable */
 
 .ask-in-chat-btn {
   display: flex;
@@ -251,8 +258,6 @@
 .ask-in-chat-btn svg {
   flex-shrink: 0;
 }
-
-
 
 /* Shining text styles for loading state */
 .dialog-text .shining-text {

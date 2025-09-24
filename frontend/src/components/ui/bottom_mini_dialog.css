@@ -39,9 +39,9 @@
   transform: translateX(-50%);
   z-index: 1000;
   background: var(--bottom-dialog-bg);
-  border: 1px solid var(--bottom-dialog-border);
+  border: 1px solid transparent; /* avoid white stroke on refresh */
   border-radius: 12px;
-  box-shadow: var(--bottom-dialog-shadow);
+  box-shadow: none; /* prevent flash during updates */
   backdrop-filter: blur(8px);
   transition: all 0.2s ease;
   animation: slideUpFadeIn 0.3s ease;
@@ -58,9 +58,7 @@
   }
 }
 
-.bottom-mini-dialog:hover {
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
-}
+.bottom-mini-dialog:hover { box-shadow: none; }
 
 /* Dialog Content */
 .bottom-mini-dialog__content {
@@ -124,6 +122,19 @@
 .bottom-mini-dialog__mode-button:hover {
   background: transparent;
   border-color: transparent;
+  color: #000000 !important;
+}
+
+.bottom-mini-dialog__mode-button:hover svg {
+  color: #000000 !important;
+}
+
+:root.dark .bottom-mini-dialog__mode-button:hover {
+  color: #ffffff !important;
+}
+
+:root.dark .bottom-mini-dialog__mode-button:hover svg {
+  color: #ffffff !important;
 }
 
 .bottom-mini-dialog__mode-button:focus {

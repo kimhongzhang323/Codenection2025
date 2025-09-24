@@ -68,7 +68,6 @@ const TableOfContents: React.FC<TableOfContentsProps> = ({ content, className = 
             key={item.id}
             onClick={() => handleTocClick(item.id)}
             className={`toc-item toc-level-${item.level}`}
-            title={item.text}
             style={{
               paddingLeft: `${(item.level - 2) * 12 + 16}px`
             }}

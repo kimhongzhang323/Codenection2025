@@ -11,6 +11,8 @@ import { LightbulbIcon } from '../components/icons/lightbulb_icon'
 import { useAIChat } from '../contexts/AIChatContext'
 import SearchDialog from '../components/ui/search_dialog'
 import SuggestionPanel from '../components/ui/suggestion_panel'
+import ContextMenu from '../components/ui/context_menu'
+import FolderContextMenu from '../components/ui/folder_context_menu'
 
 type DocItem =
   | { type: 'separator'; label: string }
@@ -20,7 +22,7 @@ type DocItem =
 // Load all markdown files under docs once; reuse for routing and content loading
 const MD_MODULES = import.meta.glob('./docs/*.md', { as: 'raw' }) as Record<string, () => Promise<string>>
 
-function Collapsible({ label, children, defaultOpen = false, storageKey }: { label: string; children: React.ReactNode; defaultOpen?: boolean; storageKey: string }) {
+function Collapsible({ label, children, defaultOpen = false, storageKey, onRightClick }: { label: string; children: React.ReactNode; defaultOpen?: boolean; storageKey: string; onRightClick?: (e: React.MouseEvent) => void }) {
   const initialOpen = (() => {
     try {
       const saved = localStorage.getItem(`docsSidebarFolder:${storageKey}`)
@@ -75,7 +77,12 @@ function Collapsible({ label, children, defaultOpen = false, storageKey }: { lab
 
   return (
     <div className="docs-folder">
-      <button className={`docs-folder__button ${open ? 'is-open' : ''}`} aria-expanded={open} onClick={() => setOpen((v) => !v)}>
+      <button 
+        className={`docs-folder__button ${open ? 'is-open' : ''}`} 
+        aria-expanded={open} 
+        onClick={() => setOpen((v) => !v)}
+        onContextMenu={onRightClick}
+      >
         <span>{label}</span>
         <span className="docs-folder__chevron" aria-hidden>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -149,7 +156,7 @@ function normalizeKey(s: string) {
   return s.toLowerCase().replace(/[^a-z0-9]/g, '')
 }
 
-function renderItem(item: DocItem, idx: number, onFileClick: (label: string) => void, activeLabel: string | null, parentPath: string[] = []) {
+function renderItem(item: DocItem, idx: number, onFileClick: (label: string) => void, activeLabel: string | null, parentPath: string[] = [], onFolderItemRightClick?: (e: React.MouseEvent, itemType: 'file' | 'folder') => void) {
   if (item.type === 'separator') {
     return (
       <div key={`sep-${idx}`} className="docs-separator">
@@ -165,6 +172,7 @@ function renderItem(item: DocItem, idx: number, onFileClick: (label: string) => 
         className={`docs-file ${isActive ? 'is-active' : ''}`}
         type="button"
         onClick={() => onFileClick(item.label)}
+        onContextMenu={(e) => onFolderItemRightClick?.(e, 'file')}
       >
         {item.label}
       </button>
@@ -174,9 +182,15 @@ function renderItem(item: DocItem, idx: number, onFileClick: (label: string) => 
   const folderPath = [...parentPath, item.label]
   const storageKey = folderPath.map((s) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-')).join('/')
   return (
-    <Collapsible key={`folder-${idx}`} label={item.label} defaultOpen={item.label === 'Installation'} storageKey={storageKey}>
+    <Collapsible 
+      key={`folder-${idx}`} 
+      label={item.label} 
+      defaultOpen={item.label === 'Installation'} 
+      storageKey={storageKey}
+      onRightClick={(e) => onFolderItemRightClick?.(e, 'folder')}
+    >
       {item.children.map((child, i) => (
-        <div key={`child-${idx}-${i}`}>{renderItem(child, i, onFileClick, activeLabel, folderPath)}</div>
+        <div key={`child-${idx}-${i}`}>{renderItem(child, i, onFileClick, activeLabel, folderPath, onFolderItemRightClick)}</div>
       ))}
     </Collapsible>
   )
@@ -218,6 +232,18 @@ function DocumentationPage() {
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [isSuggestionPanelOpen, setIsSuggestionPanelOpen] = useState(false)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const [contextMenu, setContextMenu] = useState<{ isVisible: boolean; x: number; y: number }>({
+    isVisible: false,
+    x: 0,
+    y: 0
+  })
+  const [folderContextMenu, setFolderContextMenu] = useState<{ isVisible: boolean; x: number; y: number; itemType: 'file' | 'folder' | null }>({
+    isVisible: false,
+    x: 0,
+    y: 0,
+    itemType: null
+  })
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Determine encoded repo slug for routing back to repo root
   const repoSlug = (() => {
@@ -370,6 +396,79 @@ function DocumentationPage() {
     localStorage.setItem('sidebarCollapsed', JSON.stringify(newState))
   }
 
+  const handleLogoRightClick = (e: React.MouseEvent) => {
+    e.preventDefault()
+    setContextMenu({
+      isVisible: true,
+      x: e.clientX,
+      y: e.clientY
+    })
+  }
+
+  const handleContextMenuClose = () => {
+    setContextMenu({ isVisible: false, x: 0, y: 0 })
+  }
+
+  const handleUploadClick = () => {
+    fileInputRef.current?.click()
+    handleContextMenuClose()
+  }
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (file) {
+      // Check if file is an image
+      if (file.type.startsWith('image/')) {
+        const reader = new FileReader()
+        reader.onload = (event) => {
+          const imageUrl = event.target?.result as string
+          // Replace the logo source with the uploaded image
+          const logoElement = document.querySelector('.docs-sidebar__logo') as HTMLImageElement
+          if (logoElement) {
+            logoElement.src = imageUrl
+          }
+        }
+        reader.readAsDataURL(file)
+      } else {
+        console.log('Please select an image file (JPG, PNG)')
+      }
+    }
+  }
+
+  const handleFolderItemRightClick = (e: React.MouseEvent, itemType: 'file' | 'folder') => {
+    e.preventDefault()
+    setFolderContextMenu({
+      isVisible: true,
+      x: e.clientX,
+      y: e.clientY,
+      itemType
+    })
+  }
+
+  const handleFolderContextMenuClose = () => {
+    setFolderContextMenu({ isVisible: false, x: 0, y: 0, itemType: null })
+  }
+
+  const handleNewNote = () => {
+    console.log('Create new note')
+    handleFolderContextMenuClose()
+  }
+
+  const handleNewFolder = () => {
+    console.log('Create new folder')
+    handleFolderContextMenuClose()
+  }
+
+  const handleRename = () => {
+    console.log('Rename item')
+    handleFolderContextMenuClose()
+  }
+
+  const handleDelete = () => {
+    console.log('Delete item')
+    handleFolderContextMenuClose()
+  }
+
   // Open search dialog on Ctrl+K
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -426,7 +525,7 @@ function DocumentationPage() {
       <div className="docs-lightbulb-button-container">
         <button 
           className="docs-lightbulb-button"
-          onClick={() => setIsSuggestionPanelOpen(true)}
+          onClick={() => setIsSuggestionPanelOpen(prev => !prev)}
           aria-label="Open suggestions"
         >
           <LightbulbIcon size={18} />
@@ -449,7 +548,12 @@ function DocumentationPage() {
           <div className="docs-sidebar__header">
             <div className="docs-sidebar__title">
               <div className="docs-sidebar__title-left">
-                <img src="/logo.png" alt="Logo" className="docs-sidebar__logo" />
+                <img 
+                  src="/logo.png" 
+                  alt="Logo" 
+                  className="docs-sidebar__logo" 
+                  onContextMenu={handleLogoRightClick}
+                />
                 <span>{sidebarTitle}</span>
               </div>
               <img 
@@ -480,7 +584,7 @@ function DocumentationPage() {
             aria-label="Documentation navigation"
           >
             <div className="docs-tree__content">
-              {MOCK_TREE.map((it, i) => renderItem(it, i, handleFileClick, activeLabel))}
+              {MOCK_TREE.map((it, i) => renderItem(it, i, handleFileClick, activeLabel, [], handleFolderItemRightClick))}
             </div>
           </nav>
           <div className="docs-sidebar__footer">
@@ -548,6 +652,36 @@ function DocumentationPage() {
       <SuggestionPanel 
         isOpen={isSuggestionPanelOpen} 
         onClose={() => setIsSuggestionPanelOpen(false)} 
+      />
+
+      {/* Context Menu */}
+      <ContextMenu
+        isVisible={contextMenu.isVisible}
+        x={contextMenu.x}
+        y={contextMenu.y}
+        onClose={handleContextMenuClose}
+        onUpload={handleUploadClick}
+      />
+
+      {/* Folder Context Menu */}
+      <FolderContextMenu
+        isVisible={folderContextMenu.isVisible}
+        x={folderContextMenu.x}
+        y={folderContextMenu.y}
+        onClose={handleFolderContextMenuClose}
+        onNewNote={handleNewNote}
+        onNewFolder={handleNewFolder}
+        onRename={handleRename}
+        onDelete={handleDelete}
+      />
+
+      {/* Hidden File Input */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        style={{ display: 'none' }}
+        onChange={handleFileUpload}
+        accept="image/jpeg,image/jpg,image/png"
       />
 
     </div>

@@ -745,7 +745,8 @@
   }
   
   .toc-item:hover {
-    background: #2a2a2a;
+    color: white !important;
+    background: none !important;
   }
   
   .toc-level-1 {

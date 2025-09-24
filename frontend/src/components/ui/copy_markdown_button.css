@@ -1,5 +1,5 @@
 .copy-markdown-button__icon {
-  filter: brightness(0) saturate(100%) invert(47%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(0.47);
+  filter: invert(46%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(1) contrast(1);
 }
 
 :root.dark .copy-markdown-button__icon {
