@@ -6,7 +6,6 @@ import com.example.AutoDocX.model.repo.ToolCallData;
 import com.example.AutoDocX.model.repo.Model;
 import com.example.AutoDocX.model.repo.SendMessageResult;
 import com.example.AutoDocX.parser.model.Graph;
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.genai.types.*;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -31,7 +30,7 @@ public class Agent {
     private static final int STRUCTURE_HISTORY_FOR_PROMPT = 15;
 
     private final RepoHandler repoHandler;
-    private final McpToolbox mcpToolbox;
+    private final McpToolUtils mcpToolUtils;
     private final SessionManager sessionManager;
     private final Model model;
     private final ObjectMapper objectMapper; // For formatting model params
@@ -41,14 +40,14 @@ public class Agent {
 
     public Agent(
             RepoHandler repoHandler,
-            McpToolbox mcpToolbox,
+            McpToolUtils mcpToolUtils,
             SessionManager sessionManager,
             @Qualifier("geminiCentral") Model model,
             SummaryAgent summaryAgent,
             McpToolKit mcpToolKit
     ) {
         this.repoHandler = repoHandler;
-        this.mcpToolbox = mcpToolbox;
+        this.mcpToolUtils = mcpToolUtils;
         this.sessionManager = sessionManager;
         this.model = model;
         this.summaryAgent = summaryAgent;
@@ -88,12 +87,9 @@ public class Agent {
         while (iterations++ < MAX_ITERATIONS) {
             List<Content> contents = buildContent(session.getMemory(), userPrompt);
 
-            System.out.println("DEBUG: Sending to Gemini");
-            System.out.println(formatContents(contents));
 
             // ✅ new structured response
             SendMessageResult result = model.sendMessageNew(contents, agentTools);
-            System.out.println("DEBUG: Model Response\n" + result);
 
             // ✅ execute all tool calls if present
             if (!result.getToolCalls().isEmpty()) {
@@ -256,42 +252,42 @@ public class Agent {
     }
 
     // ---- Formatting helpers ----
-    private String formatModelResponseMap(Map<String, Object> responseMap) {
-        StringBuilder sb = new StringBuilder();
-        if (responseMap.containsKey("final_answer")) {
-            sb.append("  Final Answer: ").append(responseMap.get("final_answer")).append("\n");
-        }
-        if (responseMap.containsKey("tool") && responseMap.containsKey("param")) {
-            String toolName = Optional.ofNullable(responseMap.get("tool")).map(Object::toString).orElse("UNKNOWN_TOOL");
-            Object toolParamsRaw = responseMap.get("param");
-            Object toolParams = toolParamsRaw instanceof Optional ? ((Optional<?>) toolParamsRaw).orElse(null) : toolParamsRaw;
-
-            sb.append("  Tool Call:\n");
-            sb.append("    Tool: ").append(toolName).append("\n");
-            try {
-                sb.append("    Parameters: ").append(objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(toolParams)).append("\n");
-            } catch (JsonProcessingException e) {
-                sb.append("    Parameters: (Error formatting JSON) ").append(toolParams).append("\n");
-            }
-        }
-        if (!responseMap.containsKey("final_answer") && !(responseMap.containsKey("tool") && responseMap.containsKey("param"))) {
-            sb.append("  Unrecognized Response: ").append(responseMap).append("\n");
-        }
-        return sb.toString();
-    }
-
-    private String formatContents(List<Content> contents) {
-        StringBuilder sb = new StringBuilder();
-        for (Content content : contents) {
-            content.parts().ifPresent(parts -> {
-                for (Part part : parts) {
-                    part.text().ifPresent(text -> sb.append("- Text: ").append(text).append("\n"));
-                    part.functionCall().ifPresent(fc -> sb.append("- Function Call: ").append(fc.name()).append("(").append(fc.args()).append(")\n"));
-                }
-            });
-        }
-        return sb.toString();
-    }
+//    private String formatModelResponseMap(Map<String, Object> responseMap) {
+//        StringBuilder sb = new StringBuilder();
+//        if (responseMap.containsKey("final_answer")) {
+//            sb.append("  Final Answer: ").append(responseMap.get("final_answer")).append("\n");
+//        }
+//        if (responseMap.containsKey("tool") && responseMap.containsKey("param")) {
+//            String toolName = Optional.ofNullable(responseMap.get("tool")).map(Object::toString).orElse("UNKNOWN_TOOL");
+//            Object toolParamsRaw = responseMap.get("param");
+//            Object toolParams = toolParamsRaw instanceof Optional ? ((Optional<?>) toolParamsRaw).orElse(null) : toolParamsRaw;
+//
+//            sb.append("  Tool Call:\n");
+//            sb.append("    Tool: ").append(toolName).append("\n");
+//            try {
+//                sb.append("    Parameters: ").append(objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(toolParams)).append("\n");
+//            } catch (JsonProcessingException e) {
+//                sb.append("    Parameters: (Error formatting JSON) ").append(toolParams).append("\n");
+//            }
+//        }
+//        if (!responseMap.containsKey("final_answer") && !(responseMap.containsKey("tool") && responseMap.containsKey("param"))) {
+//            sb.append("  Unrecognized Response: ").append(responseMap).append("\n");
+//        }
+//        return sb.toString();
+//    }
+//
+//    private String formatContents(List<Content> contents) {
+//        StringBuilder sb = new StringBuilder();
+//        for (Content content : contents) {
+//            content.parts().ifPresent(parts -> {
+//                for (Part part : parts) {
+//                    part.text().ifPresent(text -> sb.append("- Text: ").append(text).append("\n"));
+//                    part.functionCall().ifPresent(fc -> sb.append("- Function Call: ").append(fc.name()).append("(").append(fc.args()).append(")\n"));
+//                }
+//            });
+//        }
+//        return sb.toString();
+//    }
 
 //    private String formatTools(List<Tool> tools) {
 //        StringBuilder sb = new StringBuilder();

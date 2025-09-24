@@ -17,13 +17,13 @@ import java.util.stream.Collectors;
 @Service
 public class McpToolKit {
 
-    private final McpToolbox mcpToolbox;
+    private final McpToolUtils mcpToolUtils;
     private final List<FunctionDeclaration> allTools;
     private final ObjectMapper objectMapper;
     
 
-    public McpToolKit(McpToolbox mcpToolbox, ObjectMapper objectMapper) {
-        this.mcpToolbox = mcpToolbox;
+    public McpToolKit(McpToolUtils mcpToolUtils, ObjectMapper objectMapper) {
+        this.mcpToolUtils = mcpToolUtils;
         this.allTools = initializeAllTools();
         this.objectMapper = objectMapper;
     }
@@ -139,25 +139,28 @@ public class McpToolKit {
         .build());
 
     declarations.add(FunctionDeclaration.builder()
-        .name("update_plan")
-        .description("Replace the current documentation plan. Plan is an array of sections with {section_name, focus, nodes[]}.")
+        .name("add_plan")
+        .description("Adds an item to the overall plan. " +
+                "Each item will be executed in parallel by sub-workers with access to the relevant code nodes. " +
+                "Use the `focus` parameter to control the style or perspective (e.g., detailed, concise, architecture-focused, usage-focused).")
         .parameters(Schema.builder()
             .type(Type.Known.OBJECT)
             .properties(Map.of(
-                "plan", Schema.builder()
-                    .type(Type.Known.ARRAY)
-                    .description("Array of sections to document.")
-                    .items(Schema.builder()
-                        .type(Type.Known.OBJECT)
-                        .properties(Map.of(
-                            "section_name", Schema.builder().type(Type.Known.STRING).build(),
-                            "focus", Schema.builder().type(Type.Known.STRING).build(),
-                            "nodes", Schema.builder().type(Type.Known.ARRAY).items(Schema.builder().type(Type.Known.STRING).build()).build()
-                        ))
-                        .build())
-                    .build()
+                "name", Schema.builder()
+                        .type(Type.Known.STRING)
+                        .description("The name or title of this plan item.")
+                        .build(),
+                "focus", Schema.builder()
+                        .type(Type.Known.STRING)
+                        .description("The focus or style for generating this item (e.g., detailed, concise, architecture, usage).")
+                        .build(),
+                "nodes", Schema.builder()
+                        .type(Type.Known.ARRAY)
+                        .items(Schema.builder().type(Type.Known.STRING).build())
+                        .description("The list of node IDs that this item should consider.")
+                        .build()
             ))
-            .required(List.of("plan"))
+            .required(List.of("name", "focus", "nodes"))
             .build())
         .build());
 
@@ -183,13 +186,13 @@ public class McpToolKit {
     }
 
     public List<Tool> getExplorationTools() {
-        List<String> names = List.of("get_code", "find_central_nodes", "find_neighbour_nodes", "summarise_code", "update_understanding");
+        List<String> names = List.of("get_code", "find_neighbour_nodes", "update_understanding");
         return buildTools(names);
     }
 
     // KISS: unified agent tools
     public List<Tool> getDocumentationAgentTools() {
-        List<String> names = List.of("get_summary", "update_plan", "execute_plan", "update_documentation");
+        List<String> names = List.of("get_summary", "add_plan", "execute_plan");
         return buildTools(names);
     }
 
@@ -230,7 +233,10 @@ public class McpToolKit {
                     context.getSession().getMemory().getCode().removeEntry(extractNameFromParams(params));
                     break;
                 case "summarize_nodes_bulk":
-                    // handled internally (bulk async); nothing to store synchronously here
+                case "add_plan":
+                case "execute_plan":
+                case "update_documentation":
+                    // handled internally; nothing to store synchronously here
                     break;
                 case "update_understanding":
                     context.getSession().getMemory().getSummary().replaceEntry("understanding", result);
@@ -252,41 +258,39 @@ public class McpToolKit {
         switch (toolName) {
             case "get_code": {
                 String nodeId = (String) paramsMap.get("node_id");
-                return mcpToolbox.getCode(context.getRepo(), nodeId);
+                return mcpToolUtils.getCode(context.getRepo(), nodeId);
             }
             case "find_central_nodes": {
                 int n = ((Number) paramsMap.getOrDefault("n", 10)).intValue();
-                return mcpToolbox.findCentralNodesByPageRank(context.getGraph(), n);
+                return mcpToolUtils.findCentralNodesByPageRank(context.getGraph(), n);
             }
             case "find_neighbour_nodes": {
                 String nodeId = (String) paramsMap.get("node_id");
                 int depth = ((Number) paramsMap.getOrDefault("depth_limit", 2)).intValue();
-                return mcpToolbox.getNeighbourSubgraph(context.getGraph(), nodeId, depth);
+                return mcpToolUtils.getNeighbourSubgraph(context.getGraph(), nodeId, depth);
             }
             case "summarise_code": {
                 String nodeId = (String) paramsMap.get("node_id");
                 String description = (String) paramsMap.get("description");
-                return mcpToolbox.compactNode(context.getGraph(), nodeId, description);
+                return mcpToolUtils.compactNode(context.getGraph(), nodeId, description);
             }
             case "summarize_nodes_bulk": {
                 List<String> nodeIds = (List<String>) paramsMap.get("node_ids");
-                return mcpToolbox.summarizeNodesBulk(context.getGraph(), nodeIds, context.getSession());
+                return mcpToolUtils.summarizeNodesBulk(context.getGraph(), nodeIds, context.getSession());
             }
             case "update_understanding": {
                 String text = (String) paramsMap.get("text");
-                return mcpToolbox.updateUnderstanding(context.getSession(), text);
+                return mcpToolUtils.updateUnderstanding(context.getSession(), text);
             }
-            // 'get_summary' tool is declared but executed by DocumentationAgent to avoid cyclic dependency
-            case "update_plan": {
-                Object planObj = paramsMap.get("plan");
-                return mcpToolbox.writeDocPlan(context.getSession(), planObj);
-            }
-            case "execute_plan": {
-                return mcpToolbox.executePlan(context.getSession(), context.getRepo(), context.getGraph());
+            case "add_plan": {
+                String sectionName = (String) paramsMap.get("name");
+                String focus = (String) paramsMap.get("focus");
+                List<String> nodes = (List<String>) paramsMap.get("nodes");
+                return mcpToolUtils.addSectionPlan(context.getSession(), sectionName, focus, nodes);
             }
             case "update_documentation": {
                 String content = String.valueOf(paramsMap.getOrDefault("content", ""));
-                return mcpToolbox.updateDocumentation(context.getSession(), content);
+                return mcpToolUtils.updateDocumentation(context.getSession(), content);
             }
             default:
                 throw new IllegalArgumentException("Unknown tool: " + toolName);

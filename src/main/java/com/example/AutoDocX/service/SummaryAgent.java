@@ -13,6 +13,8 @@ import com.google.genai.types.Tool;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.*;
@@ -20,6 +22,7 @@ import java.util.stream.Collectors;
 
 @Service
 public class SummaryAgent {
+    private static final Logger logger = LoggerFactory.getLogger(SummaryAgent.class);
 
     private static final int DEFAULT_MAX_ITERATIONS = 5;
 
@@ -82,25 +85,33 @@ public class SummaryAgent {
             mcpToolKit.executeTool("find_central_nodes", Map.of("n", 10), toolExecutionContext);
             session.setInitialStructureLogged(true);
         }
-
+    String runId = java.util.UUID.randomUUID().toString();
     int iterations = 0;
     int maxIterations = (iterationLimit == null || iterationLimit <= 0) ? DEFAULT_MAX_ITERATIONS : iterationLimit;
     while (iterations++ < maxIterations) {
             List<Tool> summaryTools = mcpToolKit.getExplorationTools();
             String basePrompt = "Explore the codebase breadth-first. Use tools in batches. After finishing tool calls, call update_understanding with a concise plan: current understanding + next actions.";
             String loopPrompt = (focusPrompt != null && !focusPrompt.isBlank())
-                    ? basePrompt + "\nFOCUS (but do NOT ignore other parts): " + focusPrompt
+                    ? basePrompt + "\nFOCUS: " + focusPrompt
                     : basePrompt;
             List<Content> contents = buildLoopContent(session.getMemory(), loopPrompt);
 
-            System.out.println("DEBUG (SummaryAgent): Sending to Gemini");
-            System.out.println(formatContents(contents));
+            // Request/response logging centralized in GeminiModel
 
-            SendMessageResult result = model.sendMessageNew(contents, summaryTools);
-            System.out.println("DEBUG (SummaryAgent): Model Response\n" + result);
+            SendMessageResult result;
+            try {
+                result = model.sendMessageNew(contents, summaryTools);
+            } catch (Exception e) {
+                String msg = "Model invocation error: " + e.getMessage();
+                logger.warn("SUM[{}] {}", runId, msg);
+                session.getMemory().getEpisodic().addEntry("error:model_call", msg);
+                break;
+            }
+            // Response summary logged centrally in GeminiModel
 
             if (!result.getToolCalls().isEmpty()) {
                 for (ToolCallData fc : result.getToolCalls()) {
+                    logger.info("SUM[{}] Executing tool: {} with args: {}", runId, fc.getName(), fc.getArgs());
                     mcpToolKit.executeTool(fc.getName(), fc.getArgs(), toolExecutionContext);
                 }
                 // continue loop to let the model process tool results; understanding update is required by prompt
@@ -115,7 +126,7 @@ public class SummaryAgent {
     // Final summary generation step
     String defaultFinalPrompt = "Now produce the final project-level summary. Use your recorded understanding and memory. Provide: intro, architecture overview, and complete inventory of nodes (mark summarised vs inferred).";
     String finalPrompt = (focusPrompt != null && !focusPrompt.isBlank())
-        ? defaultFinalPrompt + "\nFOCUS (but do NOT ignore other parts): " + focusPrompt
+        ? defaultFinalPrompt + "\nFOCUS: " + focusPrompt
         : defaultFinalPrompt;
     return generateFinalSummary(session, finalPrompt);
     }
@@ -127,15 +138,19 @@ public class SummaryAgent {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
-        System.out.println("DEBUG (SummaryAgent): Sending to Gemini");
-        System.out.println(formatContents(contents));
-        SendMessageResult result = model.sendMessageNew(contents, List.of());
-        System.out.println("DEBUG (SummaryAgent): Model Response\n" + result);
+    // Final request logging centralized in GeminiModel
+        SendMessageResult result;
+        try {
+            result = model.sendMessageNew(contents, List.of());
+        } catch (Exception e) {
+            String msg = "Final summary generation failed: " + e.getMessage();
+            logger.warn("SUM-FINAL {}", msg);
+            return msg;
+        }
+    // Final response summary logged centrally in GeminiModel
 
         if (result.getText().isPresent()) {
-            String finalSummary = result.getText().get();
-            session.getMemory().getSummary().replaceEntry("project_summary", finalSummary);
-            return finalSummary;
+            return result.getText().get();
         }
         return "No summary generated.";
     }
@@ -156,13 +171,11 @@ RULES
 1. Actively expand the graph to make sure all major modules, layers, and utilities are mapped.
 2. IMPORTANT: When exploration requires multiple queries, ALWAYS issue MULTIPLE TOOL CALLS in THE SAME response instead of one by one.
     - Example: If you need info from 15 nodes, call get_code() on all 15 nodes in one step.
-    - Example: Call a mixture of summarise_code, find_neighbour_nodes, get_code, and update_understanding all in the same step.
-    - Example: you should call 20+ tools in one go to speed up exploration
-3. You MUST always use the summarise_code tool to build context (memory disappears gradually):
-    - When code memory is available, use `summarise_code`
-    - Without code but obvious usage → use `summarise_code` with summary starting with "(inferred) ..."
-4. CRITICAL: You MUST always call update_understanding in each response, capturing:
+    - Example: Call find_neighbour_nodes, get_code, and update_understanding all in the same step if you need to.
+    - Example: you should call 20+ tools in the same turn for maximum exploration speed
+3. CRITICAL: You MUST always call update_understanding in each response, capturing:
     - Current understanding of the project (what you know so far, including previous understandings)
+    - A summary section of comprehensive summary of each seen nodes including their purpose, architecture, and dependencies (you should update old understandings if there are new findings)
     - What to do next (concrete next steps and target nodes)
 
 IMPORTANT:
@@ -250,38 +263,25 @@ Deliver:
 
         String understanding = Optional.ofNullable(memory.getSummary().getEntry("understanding")).orElse("");
         if (!understanding.isBlank()) {
-            contents.add(Content.builder().role("user").parts(Part.builder().text("CURRENT UNDERSTANDING:\n" + understanding).build()).build());
+            contents.add(Content.builder().role("user").parts(Part.builder().text("CURRENT UNDERSTANDING:\n" + understanding + "\n\n").build()).build());
         }
 
         String summary = memory.getSummary().toString();
         if (!summary.isBlank()) {
-            contents.add(Content.builder().role("user").parts(Part.builder().text("EXISTING CODE SUMMARY:\n" + summary).build()).build());
+            contents.add(Content.builder().role("user").parts(Part.builder().text("EXISTING CODE SUMMARY:\n" + summary + "\n\n").build()).build());
         }
-
-        String codeSummary = memory.getCode().toString(20);
-        if (!codeSummary.isBlank()) {
-            contents.add(Content.builder().role("user").parts(Part.builder().text("CODE MEMORY:\n" + codeSummary).build()).build());
-        }
+//
+//        String codeSummary = memory.getCode().toString(20);
+//        if (!codeSummary.isBlank()) {
+//            contents.add(Content.builder().role("user").parts(Part.builder().text("CODE MEMORY:\n" + codeSummary + "\n\n").build()).build());
+//        }
 
         String projectStructure = graph.getNodes().stream().filter(node -> node.getType() == GraphNode.NodeType.CLASS).map(node -> node.getId()).collect(Collectors.joining("\n"));
         if (!projectStructure.isBlank()) {
-            contents.add(Content.builder().role("user").parts(Part.builder().text("ALL NODES:\n" + projectStructure).build()).build());
+            contents.add(Content.builder().role("user").parts(Part.builder().text("ALL NODES:\n" + projectStructure + "\n\n").build()).build());
         }
 
         contents.add(Content.builder().role("user").parts(Part.builder().text(userPrompt).build()).build());
         return contents;
-    }
-
-    private String formatContents(List<Content> contents) {
-        StringBuilder sb = new StringBuilder();
-        for (Content content : contents) {
-            content.parts().ifPresent(parts -> {
-                for (Part part : parts) {
-                    part.text().ifPresent(text -> sb.append("- Text: ").append(text).append("\n"));
-                    part.functionCall().ifPresent(fc -> sb.append("- Function Call: ").append(fc.name()).append("(").append(fc.args()).append(")\n"));
-                }
-            });
-        }
-        return sb.toString();
     }
 }

@@ -163,6 +163,14 @@ public class RepoHandler {
         return getGraph(getRepo(session.getGitUrl(), session.getBranch()));
     }
 
+    public Optional<String> getCodeChunkSafe(ClonedRepo clonedRepo, String nodeId) {
+        try {
+            return Optional.of(getCodeChunk(clonedRepo, nodeId));
+        } catch (IOException | NodeNotFoundException e) {
+            return Optional.empty();
+        }
+    }
+
     public String getCodeChunk(ClonedRepo clonedRepo, String nodeId) throws IOException, NodeNotFoundException {
         Graph graph = getGraph(clonedRepo);
         Optional<GraphNode> nodeOpt = graph.getNode(nodeId);

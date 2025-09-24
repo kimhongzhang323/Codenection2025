@@ -39,10 +39,14 @@ public class GeminiModel implements Model {
 
     // New version
     public SendMessageResult sendMessageNew(List<Content> contents, List<Tool> tools) {
+        String rid = UUID.randomUUID().toString();
         try {
             var config = com.google.genai.types.GenerateContentConfig.builder()
                     .tools(tools)
                     .build();
+
+            // Pretty log request
+            logRequest(rid, modelName, contents, tools);
 
             GenerateContentResponse response = genaiClient.models.generateContent(
                     modelName,
@@ -63,7 +67,13 @@ public class GeminiModel implements Model {
             var candidate = response.candidates().get().get(0);
             ModelFinishReason mappedFinish = mapFinishReason(candidate);
             ParsedCandidate parsed = parseCandidate(candidate);
-            int totalTokens = response.usageMetadata().map(GenerateContentResponseUsageMetadata::totalTokenCount).map(Optional::get).orElse(0);
+            int totalTokens = response.usageMetadata()
+                    .map(GenerateContentResponseUsageMetadata::totalTokenCount)
+                    .map(Optional::get)
+                    .orElse(0);
+
+            // Pretty log response
+            logResponse(rid, mappedFinish, totalTokens, parsed);
 
             return new SendMessageResult(
                     mappedFinish,
@@ -74,6 +84,7 @@ public class GeminiModel implements Model {
             );
 
         } catch (IllegalArgumentException iae) {
+            logError(rid, "Input error: " + iae.getMessage());
             return new SendMessageResult(
                     ModelFinishReason.INPUT_ERROR,
                     Optional.empty(),
@@ -82,6 +93,7 @@ public class GeminiModel implements Model {
                     0
             );
         } catch (Exception e) {
+            logError(rid, "Exception when calling Gemini: " + e.getMessage());
             return new SendMessageResult(
                     ModelFinishReason.OUTPUT_ERROR,
                     Optional.empty(),
@@ -93,10 +105,18 @@ public class GeminiModel implements Model {
     }
 
     private ModelFinishReason mapFinishReason(com.google.genai.types.Candidate candidate) {
-        if (candidate.finishReason().isEmpty())
+        if (candidate.finishReason().isEmpty()) {
+            System.out.println("[mapFinishReason] finishReason is EMPTY → returning OUTPUT_ERROR");
             return ModelFinishReason.OUTPUT_ERROR;
+        }
 
-        switch (candidate.finishReason().get().knownEnum()) {
+        var finishReason = candidate.finishReason().get();
+        var knownEnum = finishReason.knownEnum();
+
+        System.out.println("[mapFinishReason] raw finishReason: " + finishReason);
+        System.out.println("[mapFinishReason] mapped enum: " + knownEnum);
+
+        switch (knownEnum) {
             case STOP:
                 return ModelFinishReason.FINAL;
             case MAX_TOKENS:
@@ -118,6 +138,7 @@ public class GeminiModel implements Model {
                 return ModelFinishReason.UNKNOWN;
         }
     }
+
 
     private ParsedCandidate parseCandidate(com.google.genai.types.Candidate candidate) {
         Optional<com.google.genai.types.Content> contentOpt = candidate.content();
@@ -192,6 +213,69 @@ public class GeminiModel implements Model {
         return sendMessageBulk(requests).stream()
                 .map(SendMessageResult::toMap)
                 .toList();
+    }
+
+    // --- Logging helpers (JSON-style pretty print) ---
+    private void logRequest(String rid, String modelName, List<Content> contents, List<Tool> tools) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("{\n");
+        sb.append("  requestId: \"").append(rid).append("\",\n");
+        sb.append("  model: \"").append(modelName).append("\",\n");
+        sb.append("  text: \"").append(extractText(contents)).append("\",\n");
+        sb.append("  tools: [\n");
+
+        for (Tool t : tools) {
+            t.functionDeclarations().ifPresent(decls -> decls.forEach(fd -> {
+                sb.append("    ")
+                        .append(fd.name().orElse("UNKNOWN_TOOL"))
+                        .append("()\n");
+            }));
+        }
+
+        sb.append("  ]\n");
+        sb.append("}\n");
+        System.out.println(sb);
+    }
+
+    private void logResponse(String rid, ModelFinishReason finish, int tokens, ParsedCandidate parsed) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("{\n");
+        sb.append("  requestId: \"").append(rid).append("\",\n");
+        sb.append("  finishReason: \"").append(finish).append("\",\n");
+        sb.append("  tokens: ").append(tokens).append(",\n");
+
+        if (parsed.assistantText != null && !parsed.assistantText.isEmpty()) {
+            sb.append("  text: ").append(parsed.assistantText).append(",\n");
+        }
+
+        sb.append("  toolCalls: [\n");
+        for (ToolCallData fc : parsed.functionCalls) {
+            sb.append("    ")
+                    .append(fc.getName())
+                    .append(fc.getArgs())
+                    .append("\n");
+        }
+        sb.append("  ]\n");
+        sb.append("}\n");
+
+        System.out.println(sb);
+    }
+
+    private void logError(String rid, String message) {
+        System.out.println("{ error: \"" + message + "\", requestId: \"" + rid + "\" }");
+    }
+
+    // --- Helper to extract text ---
+    private String extractText(List<Content> contents) {
+        StringBuilder sb = new StringBuilder();
+        for (Content content : contents) {
+            content.parts().ifPresent(parts -> {
+                for (Part part : parts) {
+                    part.text().ifPresent(sb::append);
+                }
+            });
+        }
+        return sb.toString();
     }
 }
 

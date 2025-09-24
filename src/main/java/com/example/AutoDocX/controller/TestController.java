@@ -4,14 +4,12 @@ import com.example.AutoDocX.parser.model.Graph;
 import com.example.AutoDocX.parser.model.GraphNode;
 import com.example.AutoDocX.service.JavaGraphConverter;
 import com.example.AutoDocX.service.JavaTreeConverter;
-import com.example.AutoDocX.parser.model.GraphAlgo;
-import com.example.AutoDocX.service.McpToolbox;
+import com.example.AutoDocX.service.McpToolUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
 import java.nio.file.Path;
-import java.util.List;
 
 @RestController
 @RequestMapping("api/graph")
@@ -24,7 +22,7 @@ public class TestController {
     private JavaGraphConverter javaGraphConverter;
 
     @Autowired
-    private McpToolbox mcpToolbox;
+    private McpToolUtils mcpToolUtils;
 
     /**
      * Build a graph of THIS project (src/main/java)
@@ -47,13 +45,13 @@ public class TestController {
     @GetMapping("/central-classes")
     public String getCentralClasses(@RequestParam(defaultValue = "5") int n) throws IOException {
         Graph graph = buildGraphInternal();
-        return mcpToolbox.findCentralNodes(graph, n);
+        return mcpToolUtils.findCentralNodes(graph, n);
     }
 
     @GetMapping("/central-classes-pagerank")
     public String getCentralClassesByPageRank(@RequestParam(defaultValue = "5") int n) throws IOException {
         Graph graph = buildGraphInternal();
-        return mcpToolbox.findCentralNodesByPageRank(graph, n);
+        return mcpToolUtils.findCentralNodesByPageRank(graph, n);
     }
 
     @GetMapping("/neighbours")
@@ -62,7 +60,7 @@ public class TestController {
             @RequestParam(defaultValue = "2") int depth
     ) throws IOException {
         Graph graph = buildGraphInternal();
-        return mcpToolbox.getNeighbourSubgraph(graph, startNodeId, depth);
+        return mcpToolUtils.getNeighbourSubgraph(graph, startNodeId, depth);
     }
 
     /**

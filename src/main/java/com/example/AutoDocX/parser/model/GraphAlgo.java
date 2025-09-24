@@ -223,7 +223,7 @@ public class GraphAlgo {
         }
 
         // recursive DFS
-        dfsHelper(graph, startNodeOpt.get().getId(), depthLimit, visited, foundLinks);
+        dfsToStringHelper(graph, startNodeOpt.get().getId(), depthLimit, visited, foundLinks);
 
         result.append("DFS from ").append(startNodeOpt.get().getLabel()).append(" (depth = ").append(depthLimit).append(")\n");
         result.append("========================\n");
@@ -241,7 +241,7 @@ public class GraphAlgo {
         return result.toString();
     }
 
-    private static void dfsHelper(Graph graph, String currentId, int depth, Set<String> visited, List<GraphLink> foundLinks) {
+    private static void dfsToStringHelper(Graph graph, String currentId, int depth, Set<String> visited, List<GraphLink> foundLinks) {
         if (depth < 0 || visited.contains(currentId)) return;
 
         visited.add(currentId);
@@ -250,8 +250,37 @@ public class GraphAlgo {
 
         for (GraphLink link : graph.getOutgoingLinks(currentId)) {
             foundLinks.add(link);
-            dfsHelper(graph, link.getTargetID(), depth - 1, visited, foundLinks);
+            dfsToStringHelper(graph, link.getTargetID(), depth - 1, visited, foundLinks);
         }
     }
 
+    public static List<GraphNode> dfsTraversal(Graph graph, GraphNode startNode, int depthLimit) {
+        Set<GraphNode> visited = new HashSet<>();
+        List<GraphNode> resultNodes = new ArrayList<>();
+
+        dfsHelper(graph, startNode, depthLimit, visited, resultNodes);
+
+        return resultNodes;
+    }
+
+    private static void dfsHelper(
+            Graph graph,
+            GraphNode node,
+            int depthLimit,
+            Set<GraphNode> visited,
+            List<GraphNode> resultNodes
+    ) {
+        if (depthLimit < 0 || visited.contains(node)) {
+            return;
+        }
+
+        visited.add(node);
+        resultNodes.add(node);
+
+        for (GraphLink link : node.getOutgoingLinks()) {
+            graph.getNode(link.getTargetID()).ifPresent(target ->
+                    dfsHelper(graph, target, depthLimit - 1, visited, resultNodes)
+            );
+        }
+    }
 }

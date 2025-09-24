@@ -84,7 +84,7 @@ public class Memory {
                     valueStr = value.toString();
                 }
             }
-            entries.add(new MemoryEntry(key, valueStr));
+            entries.add(new MemoryEntry(key, valueStr, value));
         }
 
         public synchronized void removeEntry(String key) {
@@ -99,6 +99,14 @@ public class Memory {
                     .orElse(null);
         }
 
+        public synchronized Object getRawEntry(String key) {
+            return entries.stream()
+                    .filter(entry -> entry.getQuery().equals(key))
+                    .findFirst()
+                    .map(entry -> entry.getRawResult())
+                    .orElse(null);
+        }
+
         public synchronized void replaceEntry(String key, Object value) {
             removeEntry(key);
             addEntry(key, value);
@@ -109,6 +117,10 @@ public class Memory {
          */
         public synchronized List<MemoryEntry> getEntries() {
             return Collections.unmodifiableList(new ArrayList<>(entries));
+        }
+
+        public synchronized void clear() {
+            entries.clear();
         }
 
         /**
@@ -134,26 +146,32 @@ public class Memory {
         public synchronized String toString() {
             return toString(entries.size());
         }
+
+        public String getName() {
+            return name;
+        }
     }
 
     /**
      * A simple pair representing a memory entry.
      */
+    @Getter
     public static class MemoryEntry {
         private final String query;
         private final String result;
+        private final Object rawResult;
 
         public MemoryEntry(String query, String result) {
             this.query = query;
             this.result = result;
+            this.rawResult = result;
         }
 
-        public String getQuery() {
-            return query;
+        public MemoryEntry(String query, String result, Object rawResult) {
+            this.query = query;
+            this.result = result;
+            this.rawResult = rawResult;
         }
 
-        public String getResult() {
-            return result;
-        }
     }
 }
