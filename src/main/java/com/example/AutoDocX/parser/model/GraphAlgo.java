@@ -6,30 +6,21 @@ import java.util.stream.Collectors;
 public class GraphAlgo {
 
     public static List<GraphNode> findCentralClassNodes(Graph graph, int n) {
-        return graph.getNodes().stream()
-                .filter(node -> node.getType() == GraphNode.NodeType.CLASS)
-                .sorted((a, b) -> {
-                    int degreeA = graph.getOutgoingLinks(a.getId()).size();
-                    int degreeB = graph.getOutgoingLinks(b.getId()).size();
-                    return Integer.compare(degreeB, degreeA); // descending
-                })
-                .limit(n)
-                .collect(Collectors.toList());
+        return graph.getNodes().stream().filter(node -> node.getType() == GraphNode.NodeType.CLASS).sorted((a, b) -> {
+            int degreeA = graph.getOutgoingLinks(a.getId()).size();
+            int degreeB = graph.getOutgoingLinks(b.getId()).size();
+            return Integer.compare(degreeB, degreeA); // descending
+        }).limit(n).collect(Collectors.toList());
     }
 
     public static List<GraphLink> getAllLinksForClass(Graph graph, GraphNode classNode) {
         String classId = classNode.getId();
 
         // Any link from/to this class itself
-        List<GraphLink> classLinks = graph.getLinks().stream()
-                .filter(link -> link.getSourceID().equals(classId) || link.getTargetID().equals(classId))
-                .toList();
+        List<GraphLink> classLinks = graph.getLinks().stream().filter(link -> link.getSourceID().equals(classId) || link.getTargetID().equals(classId)).toList();
 
         // Any link from/to a method node belonging to this class
-        List<GraphLink> methodLinks = graph.getLinks().stream()
-                .filter(link -> link.getSourceID().startsWith("method_" + classNode.getLabel()) ||
-                        link.getTargetID().startsWith("method_" + classNode.getLabel()))
-                .toList();
+        List<GraphLink> methodLinks = graph.getLinks().stream().filter(link -> link.getSourceID().startsWith("method_" + classNode.getLabel()) || link.getTargetID().startsWith("method_" + classNode.getLabel())).toList();
 
         List<GraphLink> all = new ArrayList<>();
         all.addAll(classLinks);
@@ -38,104 +29,89 @@ public class GraphAlgo {
     }
 
     public static List<GraphNode> findCentralNodesByPageRank(Graph graph, int n) {
-        Map<String, Double> pageRankScores = calculatePageRank(graph, 0.85, 20);
+        Map<String, Double> pageRankScores = calculateOutgoingPageRank(graph, 0.85, 30);
 
-        return graph.getNodes().stream()
-                .filter(node -> node.getType() == GraphNode.NodeType.CLASS)
-                .sorted((a, b) -> {
-                    double scoreA = pageRankScores.getOrDefault(a.getId(), 0.0);
-                    double scoreB = pageRankScores.getOrDefault(b.getId(), 0.0);
-                    return Double.compare(scoreB, scoreA); // descending
-                })
-                .limit(n)
-                .collect(Collectors.toList());
+        return graph.getNodes().stream().filter(node -> node.getType() == GraphNode.NodeType.CLASS).sorted((a, b) -> Double.compare(pageRankScores.getOrDefault(b.getId(), 0.0), pageRankScores.getOrDefault(a.getId(), 0.0))).limit(n).collect(Collectors.toList());
     }
 
-    private static Map<String, Double> calculatePageRank(Graph graph, double dampingFactor, int iterations) {
+    private static Map<String, Double> calculateOutgoingPageRank(Graph graph, double dampingFactor, int iterations) {
         Map<String, Double> pageRankScores = new HashMap<>();
         List<GraphNode> nodes = graph.getNodes();
         int numNodes = nodes.size();
         if (numNodes == 0) return pageRankScores;
 
-        // Initialize scores
+        // Precompute weights (normalize so they don't explode values)
+        Map<String, Double> nodeWeights = new HashMap<>();
+        double maxWeight = nodes.stream().mapToDouble(n -> Math.max(1, n.getEndLine() - n.getStartLine())).max().orElse(1);
+        for (GraphNode node : nodes) {
+            nodeWeights.put(node.getId(), Math.max(1, node.getEndLine() - node.getStartLine()) / maxWeight);
+        }
+
+        // Initialize scores equally
         for (GraphNode node : nodes) {
             pageRankScores.put(node.getId(), 1.0 / numNodes);
         }
 
-        List<String> utilityPackages = Arrays.asList("/util/", "/utils/", "/helper/", "/helpers/", "/config/", "/common/");
-
         for (int i = 0; i < iterations; i++) {
-            Map<String, Double> newPageRankScores = new HashMap<>();
+            Map<String, Double> newScores = new HashMap<>();
             double danglingSum = 0.0;
 
-            // Distribute rank from dangling nodes (nodes with no outgoing links)
+            // Collect rank from nodes with no outgoing links
             for (GraphNode node : nodes) {
                 if (graph.getOutgoingLinks(node.getId()).isEmpty()) {
                     danglingSum += pageRankScores.get(node.getId());
                 }
             }
 
-            // Calculate new ranks for each node
             for (GraphNode node : nodes) {
-                double newRank = (1.0 - dampingFactor) / numNodes; // Base probability
-                double incomingRankSum = 0;
+                double newRank = (1.0 - dampingFactor) / numNodes;
+                double outgoingRankSum = 0;
 
-                for (GraphLink incomingLink : graph.getIncomingLinks(node.getId())) {
-                    GraphNode sourceNode = graph.getNode(incomingLink.getSourceID()).orElse(null);
-                    if (sourceNode != null) {
-                        int outgoingLinksCount = graph.getOutgoingLinks(sourceNode.getId()).size();
-                        if (outgoingLinksCount > 0) {
-                            double sourceRank = pageRankScores.get(sourceNode.getId());
-                            double packageWeight = 1.0;
+                // Iterate over outgoing dependencies
+                for (GraphLink outgoing : graph.getOutgoingLinks(node.getId())) {
+                    GraphNode target = graph.getNode(outgoing.getTargetID()).orElse(null);
+                    if (target == null) continue;
 
-                            // Apply penalty for utility packages
-                            String sourcePath = sourceNode.getFilePath().replace('\\', '/');
-                            if (utilityPackages.stream().anyMatch(sourcePath::contains)) {
-                                packageWeight = 0.2; // Penalize utility code
-                            }
+                    int inDegree = graph.getIncomingLinks(target.getId()).size();
+                    if (inDegree == 0) continue;
 
-                            incomingRankSum += (sourceRank / outgoingLinksCount) * packageWeight;
-                        }
-                    }
+                    double targetRank = pageRankScores.get(target.getId());
+                    double targetWeight = nodeWeights.getOrDefault(target.getId(), 1.0);
+
+                    // Weighted contribution: target’s rank adjusted by its code size
+                    outgoingRankSum += ((targetRank * targetWeight) / inDegree);
                 }
-                
-                // Add rank from dangling nodes
-                incomingRankSum += danglingSum / numNodes;
 
-                newPageRankScores.put(node.getId(), newRank + (dampingFactor * incomingRankSum));
+                // Add dangling redistribution
+                newRank += dampingFactor * (outgoingRankSum + (danglingSum / numNodes));
+                newScores.put(node.getId(), newRank);
             }
-            pageRankScores = newPageRankScores;
+
+            // Normalize scores
+            double norm = newScores.values().stream().mapToDouble(Double::doubleValue).sum();
+            newScores.replaceAll((k, v) -> newScores.get(k) / norm);
+
+            pageRankScores = newScores;
         }
+
         return pageRankScores;
     }
 
 
     private static int countOutgoingCalls(Graph graph, GraphNode node) {
-        return (int) node.getOutgoingLinks().stream()
-                .filter(link -> link.getType() == GraphLink.LinkType.CALLS)
-                .count();
+        return (int) node.getOutgoingLinks().stream().filter(link -> link.getType() == GraphLink.LinkType.CALLS).count();
     }
 
     public static int calculateNodeOutgoingLinkCount(Graph graph, String nodeId) {
-        return graph.getNode(nodeId)
-                .map(node -> (int) node.getOutgoingLinks().stream()
-                        .filter(link -> link.getType() == GraphLink.LinkType.CALLS
-                                || link.getType() == GraphLink.LinkType.COMPOSES)
-                        .count())
-                .orElse(0);
+        return graph.getNode(nodeId).map(node -> (int) node.getOutgoingLinks().stream().filter(link -> link.getType() == GraphLink.LinkType.CALLS || link.getType() == GraphLink.LinkType.COMPOSES).count()).orElse(0);
     }
 
 
     public static Optional<GraphNode> findStartingNode(Graph graph) {
-        return graph.getNodes().stream()
-                .filter(node -> graph.getIncomingLinks(node.getId()).isEmpty()) // must have no incoming
+        return graph.getNodes().stream().filter(node -> graph.getIncomingLinks(node.getId()).isEmpty()) // must have no incoming
                 .max(Comparator.comparingInt(node -> {
                     int directOut = graph.getOutgoingLinks(node.getId()).size();
-                    int childOut = graph.getOutgoingLinks(node.getId()).stream()
-                            .map(link -> graph.getNode(link.getTargetID()).orElse(null))
-                            .filter(Objects::nonNull)
-                            .mapToInt(child -> graph.getOutgoingLinks(child.getId()).size())
-                            .sum();
+                    int childOut = graph.getOutgoingLinks(node.getId()).stream().map(link -> graph.getNode(link.getTargetID()).orElse(null)).filter(Objects::nonNull).mapToInt(child -> graph.getOutgoingLinks(child.getId()).size()).sum();
                     return directOut + childOut;
                 }));
     }
@@ -247,10 +223,9 @@ public class GraphAlgo {
         }
 
         // recursive DFS
-        dfsHelper(graph, startNodeOpt.get().getId(), depthLimit, visited, foundLinks);
+        dfsToStringHelper(graph, startNodeOpt.get().getId(), depthLimit, visited, foundLinks);
 
-        result.append("DFS from ").append(startNodeOpt.get().getLabel())
-                .append(" (depth = ").append(depthLimit).append(")\n");
+        result.append("DFS from ").append(startNodeOpt.get().getLabel()).append(" (depth = ").append(depthLimit).append(")\n");
         result.append("========================\n");
 //
 //        result.append("Visited Nodes (Total: ").append(visited.size()).append("):\n");
@@ -260,18 +235,13 @@ public class GraphAlgo {
 //        ));
 
         result.append("\nLinks (Total: ").append(foundLinks.size()).append("):\n");
-        foundLinks.forEach(link -> result.append("  - ")
-                .append(link.getSourceID())
-                .append(" --(").append(link.getType()).append(")--> ")
-                .append(link.getTargetID())
-                .append("\n"));
+        foundLinks.forEach(link -> result.append("  - ").append(link.getSourceID()).append(" --(").append(link.getType()).append(")--> ").append(link.getTargetID()).append("\n"));
 
         result.append("========================\n");
         return result.toString();
     }
 
-    private static void dfsHelper(Graph graph, String currentId, int depth,
-                                  Set<String> visited, List<GraphLink> foundLinks) {
+    private static void dfsToStringHelper(Graph graph, String currentId, int depth, Set<String> visited, List<GraphLink> foundLinks) {
         if (depth < 0 || visited.contains(currentId)) return;
 
         visited.add(currentId);
@@ -280,8 +250,37 @@ public class GraphAlgo {
 
         for (GraphLink link : graph.getOutgoingLinks(currentId)) {
             foundLinks.add(link);
-            dfsHelper(graph, link.getTargetID(), depth - 1, visited, foundLinks);
+            dfsToStringHelper(graph, link.getTargetID(), depth - 1, visited, foundLinks);
         }
     }
 
+    public static List<GraphNode> dfsTraversal(Graph graph, GraphNode startNode, int depthLimit) {
+        Set<GraphNode> visited = new HashSet<>();
+        List<GraphNode> resultNodes = new ArrayList<>();
+
+        dfsHelper(graph, startNode, depthLimit, visited, resultNodes);
+
+        return resultNodes;
+    }
+
+    private static void dfsHelper(
+            Graph graph,
+            GraphNode node,
+            int depthLimit,
+            Set<GraphNode> visited,
+            List<GraphNode> resultNodes
+    ) {
+        if (depthLimit < 0 || visited.contains(node)) {
+            return;
+        }
+
+        visited.add(node);
+        resultNodes.add(node);
+
+        for (GraphLink link : node.getOutgoingLinks()) {
+            graph.getNode(link.getTargetID()).ifPresent(target ->
+                    dfsHelper(graph, target, depthLimit - 1, visited, resultNodes)
+            );
+        }
+    }
 }

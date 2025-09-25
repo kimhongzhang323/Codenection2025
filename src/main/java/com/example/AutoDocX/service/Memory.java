@@ -3,6 +3,7 @@ package com.example.AutoDocX.service;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
+import lombok.Getter;
 
 import java.util.*;
 
@@ -14,6 +15,7 @@ import java.util.*;
  *
  * Each MemoryStore supports pretty-printing of the latest N entries and stores entries as (key, valueString).
  */
+@Getter
 public class Memory {
 
     // Tunable truncation to avoid huge noisy entries in code/structure stores
@@ -23,10 +25,8 @@ public class Memory {
     private final MemoryStore episodic = new MemoryStore("Episodic");
     private final MemoryStore code = new MemoryStore("Code");
     private final MemoryStore structure = new MemoryStore("Structure");
-
-    public MemoryStore episodic() { return episodic; }
-    public MemoryStore code() { return code; }
-    public MemoryStore structure() { return structure; }
+    private final MemoryStore summary = new MemoryStore("Summary");
+    private final MemoryStore plan = new MemoryStore("Plan");
 
     /**
      * Pretty-print all stores, each limited to latestN entries.
@@ -35,7 +35,9 @@ public class Memory {
         StringBuilder sb = new StringBuilder();
         sb.append("=== Episodic Memory ===\n").append(episodic.toString(latestN)).append("\n\n");
         sb.append("=== Code Memory ===\n").append(code.toString(latestN)).append("\n\n");
-        sb.append("=== Structure Memory ===\n").append(structure.toString(latestN)).append("\n");
+        sb.append("=== Structure Memory ===\n").append(structure.toString(latestN)).append("\n\n");
+        sb.append("=== Summary Memory ===\n").append(summary.toString(latestN)).append("\n\n");
+        sb.append("=== Plan Memory ===\n").append(plan.toString(latestN)).append("\n");
         return sb.toString();
     }
 
@@ -77,13 +79,37 @@ public class Memory {
                 valueStr = "null";
             } else {
                 try {
-                    // Try to pretty-print JSON for structured objects
                     valueStr = mapper.writeValueAsString(value);
                 } catch (JsonProcessingException e) {
                     valueStr = value.toString();
                 }
             }
-            entries.add(new MemoryEntry(key, valueStr));
+            entries.add(new MemoryEntry(key, valueStr, value));
+        }
+
+        public synchronized void removeEntry(String key) {
+            entries.removeIf(e -> e.getQuery().equals(key));
+        }
+
+        public synchronized String getEntry(String key) {
+            return entries.stream()
+                    .filter(entry -> entry.getQuery().equals(key))
+                    .findFirst()
+                    .map(entry -> entry.getResult())
+                    .orElse(null);
+        }
+
+        public synchronized Object getRawEntry(String key) {
+            return entries.stream()
+                    .filter(entry -> entry.getQuery().equals(key))
+                    .findFirst()
+                    .map(entry -> entry.getRawResult())
+                    .orElse(null);
+        }
+
+        public synchronized void replaceEntry(String key, Object value) {
+            removeEntry(key);
+            addEntry(key, value);
         }
 
         /**
@@ -91,6 +117,10 @@ public class Memory {
          */
         public synchronized List<MemoryEntry> getEntries() {
             return Collections.unmodifiableList(new ArrayList<>(entries));
+        }
+
+        public synchronized void clear() {
+            entries.clear();
         }
 
         /**
@@ -105,82 +135,47 @@ public class Memory {
                 slice = new ArrayList<>(entries);
             }
 
-            // Represent as list of maps for nicer JSON output
-            List<Map<String, String>> asList = new ArrayList<>();
+            StringBuilder sb = new StringBuilder();
             for (MemoryEntry e : slice) {
-                Map<String, String> m = new LinkedHashMap<>();
-                m.put("key", e.getQuery());
-                m.put("value", e.getResult());
-                asList.add(m);
+                sb.append(e.getQuery()).append(": ").append(e.getResult()).append("\n");
             }
-
-            try {
-                return mapper.writerWithDefaultPrettyPrinter().writeValueAsString(asList);
-            } catch (JsonProcessingException ex) {
-                // fallback
-                StringBuilder sb = new StringBuilder();
-                for (MemoryEntry e : slice) {
-                    sb.append(e.getQuery()).append(": ").append(e.getResult()).append("\n");
-                }
-                return sb.toString();
-            }
+            return sb.toString();
         }
 
         @Override
         public synchronized String toString() {
             return toString(entries.size());
         }
+
+        public String getName() {
+            return name;
+        }
+
+        public boolean isEmpty() {
+            return entries.isEmpty();
+        }
     }
 
     /**
      * A simple pair representing a memory entry.
      */
+    @Getter
     public static class MemoryEntry {
         private final String query;
         private final String result;
+        private final Object rawResult;
 
         public MemoryEntry(String query, String result) {
             this.query = query;
             this.result = result;
+            this.rawResult = result;
         }
 
-        public String getQuery() {
-            return query;
+        public MemoryEntry(String query, String result, Object rawResult) {
+            this.query = query;
+            this.result = result;
+            this.rawResult = rawResult;
         }
 
-        public String getResult() {
-            return result;
-        }
-    }
-
-    // ---------- Helpers for safe storing from Agent ----------
-
-    /**
-     * Store code-like content but truncate if too large.
-     * Use when you want to persist code readouts into code memory without noise explosion.
-     */
-    public void addCodeEntry(String key, String content) {
-        if (content == null) content = "null";
-        String toStore = content;
-        if (content.length() > MAX_STORE_CHARS) {
-            toStore = content.substring(0, MAX_STORE_CHARS) + TRUNCATION_NOTICE;
-        }
-        this.code.addEntry(key, toStore);
-        // Always also log full result in episodic for audit
-        this.episodic.addEntry("code_store_log:" + key, content.length() > MAX_STORE_CHARS ? (content.substring(0, MAX_STORE_CHARS) + TRUNCATION_NOTICE) : content);
-    }
-
-    /**
-     * Store structure-like content but truncate if too large.
-     */
-    public void addStructureEntry(String key, String content) {
-        if (content == null) content = "null";
-        String toStore = content;
-        if (content.length() > MAX_STORE_CHARS) {
-            toStore = content.substring(0, MAX_STORE_CHARS) + TRUNCATION_NOTICE;
-        }
-        this.structure.addEntry(key, toStore);
-        // Log to episodic as well (audit)
-        this.episodic.addEntry(key, content.length() > MAX_STORE_CHARS ? (content.substring(0, MAX_STORE_CHARS) + TRUNCATION_NOTICE) : content);
     }
 }

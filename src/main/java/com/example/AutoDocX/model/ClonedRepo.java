@@ -12,7 +12,13 @@ import com.example.AutoDocX.parser.model.Graph;
 @AllArgsConstructor
 public class ClonedRepo {
     private String repoLink;
+    private String branch; // Added branch
     private Path clonedPath;
     private String commitHash;
     private Graph graph;
+
+    // Overloaded constructor for backward compatibility
+    public ClonedRepo(String repoLink, Path clonedPath, String commitHash, Graph graph) {
+        this(repoLink, "default", clonedPath, commitHash, graph); // Assuming 'default' for main/master
+    }
 }

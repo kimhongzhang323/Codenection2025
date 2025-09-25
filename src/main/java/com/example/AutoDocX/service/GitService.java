@@ -1,8 +1,18 @@
 package com.example.AutoDocX.service;
 
+import org.eclipse.jgit.api.CloneCommand;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.springframework.stereotype.Service;
+import org.eclipse.jgit.revwalk.RevCommit;
+import org.eclipse.jgit.lib.Repository;
+import org.eclipse.jgit.lib.ObjectId;
+import org.eclipse.jgit.treewalk.TreeWalk;
+import org.eclipse.jgit.treewalk.CanonicalTreeParser;
+import org.eclipse.jgit.diff.DiffEntry;
+import org.eclipse.jgit.diff.DiffFormatter;
+import org.eclipse.jgit.util.io.DisabledOutputStream;
+
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -24,13 +34,79 @@ public class GitService {
      * @throws GitAPIException if cloning fails
      */
     public String cloneRepo(String repoUrl, Path targetDir) throws GitAPIException {
-        try (Git git = Git.cloneRepository()
+        return cloneRepo(repoUrl, null, targetDir);
+    }
+
+    public String cloneRepo(String repoUrl, String branch, Path targetDir) throws GitAPIException {
+        CloneCommand cloneCommand = Git.cloneRepository()
                 .setURI(repoUrl)
-                .setDirectory(targetDir.toFile())
-                .call()) {
+                .setDirectory(targetDir.toFile());
+
+        if (branch != null && !branch.isEmpty()) {
+            cloneCommand.setBranch(branch);
+        }
+
+        try (Git git = cloneCommand.call()) {
             return git.getRepository().findRef("HEAD").getObjectId().getName();
         } catch (IOException e) {
             throw new RuntimeException(e);
+        }
+    }
+
+    public String getCommitDetails(Path repoPath, String commitHash) throws IOException, GitAPIException {
+        try (Git git = Git.open(repoPath.toFile())) {
+            Repository repository = git.getRepository();
+            ObjectId commitId = repository.resolve(commitHash);
+            if (commitId == null) {
+                return "Commit not found: " + commitHash;
+            }
+            RevCommit commit = repository.parseCommit(commitId);
+            return "Commit: " + commit.getName() + "\n" +
+                   "Author: " + commit.getAuthorIdent().getName() + "\n" +
+                   "Date: " + commit.getAuthorIdent().getWhen() + "\n" +
+                   "Message: " + commit.getFullMessage();
+        }
+    }
+
+    public String getCommitHistory(Path repoPath) throws IOException, GitAPIException {
+        StringBuilder history = new StringBuilder();
+        try (Git git = Git.open(repoPath.toFile())) {
+            Iterable<RevCommit> logs = git.log().all().call();
+            for (RevCommit rev : logs) {
+                history.append("Commit: ").append(rev.getName()).append("\n");
+                history.append("Author: ").append(rev.getAuthorIdent().getName()).append("\n");
+                history.append("Date: ").append(rev.getAuthorIdent().getWhen()).append("\n");
+                history.append("Message: ").append(rev.getShortMessage()).append("\n\n");
+            }
+        }
+        return history.toString();
+    }
+
+    public List<String> getModifiedFilesInCommit(Path repoPath, String commitHash) throws IOException, GitAPIException {
+        try (Git git = Git.open(repoPath.toFile())) {
+            Repository repository = git.getRepository();
+            ObjectId commitId = repository.resolve(commitHash);
+            if (commitId == null) {
+                throw new IOException("Commit not found: " + commitHash);
+            }
+            RevCommit commit = repository.parseCommit(commitId);
+            RevCommit parent = commit.getParentCount() > 0 ? repository.parseCommit(commit.getParent(0).getId()) : null;
+
+            DiffFormatter diffFormatter = new DiffFormatter(DisabledOutputStream.INSTANCE);
+            diffFormatter.setRepository(repository);
+            diffFormatter.setContext(0);
+
+            List<DiffEntry> diffs;
+            if (parent == null) {
+                // This is the initial commit, compare against an empty tree
+                diffs = diffFormatter.scan(null, new CanonicalTreeParser(null, repository.newObjectReader(), commit.getTree()));
+            } else {
+                diffs = diffFormatter.scan(parent.getTree(), commit.getTree());
+            }
+
+            return diffs.stream()
+                    .map(diff -> diff.getChangeType() + ": " + (diff.getChangeType() == DiffEntry.ChangeType.DELETE ? diff.getOldPath() : diff.getNewPath()))
+                    .collect(Collectors.toList());
         }
     }
 
