@@ -15,15 +15,27 @@ mermaid.initialize({
   flowchart: {
     htmlLabels: true,
     curve: 'basis',
-    nodeSpacing: 60,
-    rankSpacing: 60,
-    padding: 20,
+    nodeSpacing: 80,
+    rankSpacing: 80,
+    padding: 30,
+    useMaxWidth: true,
   },
   themeCSS: `
     .node rect, .node circle, .node ellipse, .node polygon, .node path {
       fill: #ffffff;
       stroke: none;
       stroke-width: 0;
+    }
+    .nodeLabel {
+      color: #333333;
+      font-size: 14px;
+      font-weight: 400;
+      text-align: center;
+      white-space: normal;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+      max-width: none;
+      padding: 8px;
     }
     .edgePath .path {
       stroke: #9b7cb9;
@@ -32,9 +44,16 @@ mermaid.initialize({
     .edgeLabel {
       background-color: transparent;
       color: #333333;
+      font-size: 12px;
+      white-space: normal;
+      word-wrap: break-word;
     }
     .label {
       color: #333333;
+      font-size: 14px;
+      white-space: normal;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
     }
     .cluster rect {
       fill: #ffffff;
@@ -52,11 +71,29 @@ mermaid.initialize({
     [data-theme="dark"] .edgePath .path {
       stroke: #9370db;
     }
+    [data-theme="dark"] .nodeLabel {
+      color: #f0f0f0;
+      font-size: 14px;
+      font-weight: 400;
+      text-align: center;
+      white-space: normal;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+      max-width: none;
+      padding: 8px;
+    }
     [data-theme="dark"] .edgeLabel {
       color: #f0f0f0;
+      font-size: 12px;
+      white-space: normal;
+      word-wrap: break-word;
     }
     [data-theme="dark"] .label {
       color: #f0f0f0;
+      font-size: 14px;
+      white-space: normal;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
     }
     [data-theme="dark"] .cluster rect {
       fill: #ffffff;
@@ -69,9 +106,24 @@ mermaid.initialize({
       transform: scale(1.03);
       cursor: pointer;
     }
+    svg {
+      max-width: 100%;
+      height: auto;
+    }
+    .mermaid {
+      max-width: 100%;
+      overflow: visible;
+    }
+    .node {
+      overflow: visible;
+    }
+    .nodeLabel {
+      overflow: visible;
+      text-overflow: unset;
+    }
   `,
   fontFamily: 'var(--font-geist-sans), var(--font-serif-jp), sans-serif',
-  fontSize: 12,
+  fontSize: 14,
 });
 
 interface MermaidProps {
@@ -105,8 +157,8 @@ const ZoomableModal: React.FC<{
     console.log('Viewer dimensions:', { viewerWidth, viewerHeight });
     
     if (!widthMatch || !heightMatch) {
-      console.log('No dimensions detected, using moderate default scale');
-      return 1.5;
+      console.log('No dimensions detected, using conservative default scale');
+      return 2.0; // Conservative default scale to ensure fit
     }
     
     const diagramWidth = parseFloat(widthMatch[1]);
@@ -115,8 +167,8 @@ const ZoomableModal: React.FC<{
     console.log('Diagram dimensions:', { diagramWidth, diagramHeight });
     
     if (!diagramWidth || !diagramHeight) {
-      console.log('Invalid dimensions, using moderate default scale');
-      return 1.5;
+      console.log('Invalid dimensions, using conservative default scale');
+      return 2.0; // Conservative default scale to ensure fit
     }
     
     // Calculate scale needed to fit within viewer bounds
@@ -124,25 +176,38 @@ const ZoomableModal: React.FC<{
     const scaleToFitHeight = viewerHeight / diagramHeight;
     const scaleToFit = Math.min(scaleToFitWidth, scaleToFitHeight);
     
+    // Additional safety check for extremely large or small diagrams
+    if (scaleToFit > 10) {
+      console.log('Very small diagram detected, using conservative scale');
+      return 2.0; // Very small diagrams get conservative scaling
+    }
+    
+    if (scaleToFit < 0.1) {
+      console.log('Very large diagram detected, using minimal scale');
+      return 0.5; // Very large diagrams get minimal scaling
+    }
+    
     console.log('Scale calculations:', { scaleToFitWidth, scaleToFitHeight, scaleToFit });
     
     // Determine optimal initial scale based on diagram characteristics
     const aspectRatio = diagramWidth / diagramHeight;
     let targetScale;
     
+    // More conservative scaling factors to ensure all diagrams fit
     if (aspectRatio > 2) {
-      // Wide diagrams - can use more of the available space
-      targetScale = scaleToFit * 0.95; // Use 95% of available space
+      // Wide diagrams - use most of the available space with safety margin
+      targetScale = scaleToFit * 0.85; // Conservative scaling to ensure fit
     } else if (aspectRatio < 0.5) {
-      // Tall diagrams - be more conservative to prevent overflow
-      targetScale = scaleToFit * 0.90; // Use 90% of available space
+      // Tall diagrams - use most of the available space with safety margin
+      targetScale = scaleToFit * 0.80; // Conservative scaling to ensure fit
     } else {
-      // Square-ish diagrams - balanced approach
-      targetScale = scaleToFit * 0.92; // Use 92% of available space
+      // Square-ish diagrams - use most of the available space with safety margin
+      targetScale = scaleToFit * 0.82; // Conservative scaling to ensure fit
     }
     
-    // Ensure minimum readability and maximum bounds
-    const finalScale = Math.max(0.5, Math.min(6, targetScale));
+    // Ensure minimum readability and maximum bounds with stricter limits
+    // Use more conservative bounds to guarantee all diagrams fit
+    const finalScale = Math.max(0.8, Math.min(4, targetScale)); // Lower max (4) to ensure fit, reasonable min (0.8)
     
     console.log('Final scale calculation:', { 
       aspectRatio, 

@@ -147,11 +147,15 @@
   overflow: hidden;
   transition: transform 0.3s ease;
   z-index: 100;
+  /* Ensure sidebar doesn't block content on smaller screens */
+  left: 0;
+  top: 0;
 }
 
 .docs-sidebar.is-collapsed {
   transform: translateX(-100%);
 }
+
 
 .docs-sidebar__header {
   display: flex;
@@ -397,6 +401,9 @@ html:not(.dark) .docs-sidebar__collapse-icon {
   height: 100vh;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+  /* On large screens, content stays centered */
+  margin-left: 0;
+  transition: margin-left 0.3s ease;
 }
 
 .docs-main__container {
@@ -405,6 +412,7 @@ html:not(.dark) .docs-sidebar__collapse-icon {
   padding: 40px 1.5rem 80px 1.5rem;
   position: relative;
 }
+
 
 
 /* Responsive */
@@ -434,6 +442,13 @@ html:not(.dark) .docs-sidebar__collapse-icon {
   .docs-main__container { 
     padding: 28px 0.75rem 80px 0.75rem; 
   }
+  /* Adjust content margin for smaller sidebar */
+  .docs-main {
+    margin-left: 240px;
+  }
+  .docs-layout.is-collapsed .docs-main {
+    margin-left: 0;
+  }
 }
 
 @media (max-width: 768px) {
@@ -460,6 +475,14 @@ html:not(.dark) .docs-sidebar__collapse-icon {
   .docs-sidebar__footer {
     width: 90%;
   }
+  
+  /* Adjust content margin for smaller sidebar */
+  .docs-main {
+    margin-left: 220px;
+  }
+  .docs-layout.is-collapsed .docs-main {
+    margin-left: 0;
+  }
 }
 
 @media (max-width: 640px) {
@@ -484,6 +507,14 @@ html:not(.dark) .docs-sidebar__collapse-icon {
   
   .docs-separator {
     font-size: 13px;
+  }
+  
+  /* Adjust content margin for smaller sidebar */
+  .docs-main {
+    margin-left: 200px;
+  }
+  .docs-layout.is-collapsed .docs-main {
+    margin-left: 0;
   }
 }
 
@@ -522,7 +553,80 @@ html:not(.dark) .docs-sidebar__collapse-icon {
   .docs-sidebar__footer {
     width: 85%;
   }
+  
+  /* Adjust content margin for smaller sidebar */
+  .docs-main {
+    margin-left: 180px;
+  }
+  .docs-layout.is-collapsed .docs-main {
+    margin-left: 0;
+  }
 }
+
+/* Hide TOC when there's insufficient space - be very sensitive to available space */
+/* TOC needs: sidebar(260px) + content(720px) + toc(200px) + gaps(60px) = ~1240px minimum */
+@media (max-width: 1500px) {
+  .toc-container {
+    display: none;
+  }
+}
+
+/* Hide TOC when sidebar becomes responsive (medium screens) */
+@media (max-width: 1200px) {
+  .toc-container {
+    display: none;
+  }
+}
+
+/* Hide TOC on any screen where content has margin-left (responsive to sidebar) */
+@media (max-width: 900px) {
+  .toc-container {
+    display: none;
+  }
+}
+
+/* Hide TOC when sidebar slides in/out (small screens) */
+@media (max-width: 1024px) {
+  .toc-container {
+    display: none;
+  }
+}
+
+/* Medium screens: Make content responsive to sidebar width */
+@media (max-width: 1200px) and (min-width: 1025px) {
+  .docs-main {
+    margin-left: 260px;
+  }
+  
+  .docs-layout.is-collapsed .docs-main {
+    margin-left: 0;
+  }
+}
+
+/* On smaller screens, make sidebar slide in/out to avoid blocking content */
+@media (max-width: 1024px) {
+  .docs-sidebar {
+    transform: translateX(-100%);
+  }
+  
+  .docs-layout:not(.is-collapsed) .docs-sidebar {
+    transform: translateX(0);
+  }
+  
+  /* Add overlay when sidebar is open */
+  .docs-layout:not(.is-collapsed)::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 99;
+    pointer-events: auto;
+  }
+}
+
 
 /* Lightbulb Button - Above AI Chat Button */
 .docs-lightbulb-button-container {
@@ -594,6 +698,57 @@ html:not(.dark) .docs-sidebar__collapse-icon {
   box-shadow: none;
 }
 
+/* Share Button - Top Right Corner */
+.docs-share-button-container {
+  position: fixed;
+  top: 20px;
+  right: 24px; /* align with suggestion panel button */
+  z-index: 1000;
+}
+
+.docs-share-button {
+  display: inline-flex;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 12px;
+  border: 1.58px solid #52525b; /* stroke */
+  outline: 1px solid rgba(255,255,255,0.06); /* subtle outer outline */
+  outline-offset: 0; 
+  background: #0a0a0a;
+  padding: 12px 16px; /* compact */
+  font-weight: 500;
+  color: #e2e8f0;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  transition: all 0.3s ease;
+  font-size: 13px; /* slightly smaller */
+  font-family: inherit;
+  border: none;
+}
+
+.docs-share-button:hover {
+  transform: none; /* do not move up on hover */
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  background: #1a1a1a;
+  border-color: #71717a;
+}
+
+.docs-share-button:active {
+  transform: none; /* no movement on click */
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+.docs-share-button:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1); /* restore original blue focus ring */
+}
+
+.docs-share-button span {
+  color: #cbd5e1;
+  opacity: 0.85;
+}
+
 /* Responsive adjustments */
 @media (max-width: 768px) {
   .docs-lightbulb-button-container {
@@ -614,6 +769,17 @@ html:not(.dark) .docs-sidebar__collapse-icon {
   .docs-ai-chat-button {
     width: 36px;
     height: 36px;
+  }
+
+  .docs-share-button-container {
+    top: 16px;
+    right: 16px;
+  }
+
+  .docs-share-button {
+    padding: 8px 12px; /* compact tablet */
+    font-size: 12px;
+    gap: 6px;
   }
 }
 
@@ -637,6 +803,17 @@ html:not(.dark) .docs-sidebar__collapse-icon {
     width: 32px;
     height: 32px;
   }
+
+  .docs-share-button-container {
+    top: 12px;
+    right: 12px;
+  }
+
+  .docs-share-button {
+    padding: 6px 10px; /* compact mobile */
+    font-size: 11.5px;
+    gap: 5px;
+  }
 }
 
 @media (max-width: 480px) {
@@ -659,6 +836,17 @@ html:not(.dark) .docs-sidebar__collapse-icon {
     width: 30px;
     height: 30px;
   }
+
+  .docs-share-button-container {
+    top: 8px;
+    right: 8px;
+  }
+
+  .docs-share-button {
+    padding: 5px 8px; /* compact small mobile */
+    font-size: 11px;
+    gap: 4px;
+  }
 }
 
 /* Table of Contents Styles */
@@ -670,6 +858,11 @@ html:not(.dark) .docs-sidebar__collapse-icon {
   width: 200px;
   max-height: calc(100vh - 140px);
   z-index: 100;
+  /* Hide TOC on smaller screens where there's not enough space */
+  display: block;
+  /* Ensure TOC never exceeds its placeholder */
+  max-width: 200px;
+  overflow: hidden;
 }
 
 /* Ensure headings have proper scroll margin for smooth scrolling */
