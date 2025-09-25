@@ -1,15 +1,19 @@
 package com.example.AutoDocX.service;
 
 import com.example.AutoDocX.model.Documentation;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.util.HashMap;
 import java.util.Map;
 
+@Getter
 public class Session {
     private final String gitUrl;
     private final String branch;
     private final Memory memory;
     private final DocumentationHandler documentationHandler;
+    @Setter
     private boolean initialStructureLogged = false;
 
     public Session(String gitUrl, String branch, DocumentationHandler documentationHandler) {
@@ -23,18 +27,6 @@ public class Session {
         this(gitUrl, null, documentationHandler);
     }
 
-    public String getGitUrl() {
-        return gitUrl;
-    }
-
-    public String getBranch() {
-        return branch;
-    }
-
-    public Memory getMemory() {
-        return memory;
-    }
-
     public Map<String, Documentation> getDocumentation() {
         return documentationHandler.getAll();
     }
@@ -43,15 +35,4 @@ public class Session {
         documentation.forEach(documentationHandler::save);
     }
 
-    public DocumentationHandler getDocumentationHandler() {
-        return documentationHandler;
-    }
-
-    public boolean isInitialStructureLogged() {
-        return initialStructureLogged;
-    }
-
-    public void setInitialStructureLogged(boolean initialStructureLogged) {
-        this.initialStructureLogged = initialStructureLogged;
-    }
 }
