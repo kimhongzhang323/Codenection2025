@@ -2,6 +2,7 @@ package com.example.AutoDocX.service;
 
 import org.eclipse.jgit.api.CloneCommand;
 import org.eclipse.jgit.api.Git;
+import org.eclipse.jgit.api.PullResult;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.springframework.stereotype.Service;
 import org.eclipse.jgit.revwalk.RevCommit;
@@ -50,6 +51,16 @@ public class GitService {
             return git.getRepository().findRef("HEAD").getObjectId().getName();
         } catch (IOException e) {
             throw new RuntimeException(e);
+        }
+    }
+
+    public String pullRepo(Path repoPath) throws GitAPIException, IOException {
+        try (Git git = Git.open(repoPath.toFile())) {
+            PullResult result = git.pull().call();
+            if (!result.isSuccessful()) {
+                // Handle unsuccessful pull, maybe log it
+            }
+            return git.getRepository().findRef("HEAD").getObjectId().getName();
         }
     }
 
