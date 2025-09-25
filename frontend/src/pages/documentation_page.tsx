@@ -13,6 +13,7 @@ import SearchDialog from '../components/ui/search_dialog'
 import SuggestionPanel from '../components/ui/suggestion_panel'
 import ContextMenu from '../components/ui/context_menu'
 import FolderContextMenu from '../components/ui/folder_context_menu'
+import { GlobeIcon } from '../components/icons/globe_icon'
 
 type DocItem =
   | { type: 'separator'; label: string }
@@ -223,7 +224,27 @@ function DocumentationPage() {
   const [viewMode, setViewMode] = useState<'reading' | 'edit'>('reading')
   const [isScrolling, setIsScrolling] = useState(false)
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
+    if (typeof window === 'undefined') return false
+    
+    // Mobile device detection
+    const isMobileDevice = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+                          window.innerWidth <= 768 ||
+                          ('ontouchstart' in window)
+    
+    const isVerySmall = window.innerWidth <= 1024
     const saved = localStorage.getItem('sidebarCollapsed')
+    
+    // On mobile devices, always start collapsed
+    if (isMobileDevice) {
+      return true
+    }
+    
+    // On very small screens, default to collapsed unless explicitly saved as open
+    if (isVerySmall) {
+      return saved ? JSON.parse(saved) : true
+    }
+    
+    // On larger screens, use saved preference or default to open
     return saved ? JSON.parse(saved) : false
   })
   const { toggleChat } = useAIChat()
@@ -231,6 +252,7 @@ function DocumentationPage() {
   const treeRef = useRef<HTMLElement>(null)
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [isSuggestionPanelOpen, setIsSuggestionPanelOpen] = useState(false)
+  const [showTOC, setShowTOC] = useState(true)
   const textareaRef = useRef<HTMLTextAreaElement>(null)
   const [contextMenu, setContextMenu] = useState<{ isVisible: boolean; x: number; y: number }>({
     isVisible: false,
@@ -396,6 +418,15 @@ function DocumentationPage() {
     localStorage.setItem('sidebarCollapsed', JSON.stringify(newState))
   }
 
+  // Handle clicking on overlay to close sidebar on smaller screens
+  const handleOverlayClick = () => {
+    if (typeof window !== 'undefined' && window.innerWidth <= 1024) {
+      setIsSidebarCollapsed(true)
+      localStorage.setItem('sidebarCollapsed', JSON.stringify(true))
+    }
+  }
+
+
   const handleLogoRightClick = (e: React.MouseEvent) => {
     e.preventDefault()
     setContextMenu({
@@ -489,6 +520,35 @@ function DocumentationPage() {
     localStorage.setItem('theme', isDark ? 'dark' : 'light')
   }
 
+  // Handle share functionality
+  const handleShare = async () => {
+    const shareData = {
+      title: 'AutoDocX Documentation',
+      text: 'Check out this amazing documentation!',
+      url: window.location.href,
+    }
+
+    try {
+      if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
+        await navigator.share(shareData)
+      } else {
+        // Fallback: copy to clipboard
+        await navigator.clipboard.writeText(window.location.href)
+        // You could show a toast notification here
+        console.log('Link copied to clipboard!')
+      }
+    } catch (error) {
+      console.error('Error sharing:', error)
+      // Fallback: copy to clipboard
+      try {
+        await navigator.clipboard.writeText(window.location.href)
+        console.log('Link copied to clipboard!')
+      } catch (clipboardError) {
+        console.error('Failed to copy to clipboard:', clipboardError)
+      }
+    }
+  }
+
   // Sync document class with theme state
   useEffect(() => {
     if (isDarkSelected) {
@@ -497,6 +557,42 @@ function DocumentationPage() {
       document.documentElement.classList.remove('dark')
     }
   }, [isDarkSelected])
+
+  // Dynamic TOC visibility and sidebar auto-collapse based on available space
+  useEffect(() => {
+    const isMobileDevice = () => {
+      return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+             window.innerWidth <= 768 ||
+             ('ontouchstart' in window)
+    }
+
+    const handleResize = () => {
+      const windowWidth = window.innerWidth
+      const isMobile = windowWidth <= 768 || isMobileDevice()
+      const isVerySmall = windowWidth <= 1024
+      
+      // Auto-collapse sidebar on mobile and very small screens
+      if ((isMobile || isVerySmall) && !isSidebarCollapsed) {
+        setIsSidebarCollapsed(true)
+        localStorage.setItem('sidebarCollapsed', JSON.stringify(true))
+      }
+      
+      // Calculate TOC space
+      const sidebarWidth = isSidebarCollapsed ? 0 : 260
+      const contentWidth = 720
+      const tocWidth = 200
+      const gaps = 60
+      const minSpaceNeeded = sidebarWidth + contentWidth + tocWidth + gaps
+      
+      // Hide TOC if there's not enough space
+      setShowTOC(windowWidth >= minSpaceNeeded && windowWidth > 1500)
+    }
+
+    handleResize()
+    window.addEventListener('resize', handleResize)
+    return () => window.removeEventListener('resize', handleResize)
+  }, [isSidebarCollapsed])
+
 
   return (
     <div className="documentation-page">
@@ -543,8 +639,26 @@ function DocumentationPage() {
         </button>
       </div>
 
-      <div className={`docs-layout ${isSidebarCollapsed ? 'is-collapsed' : ''}`}>
-        <aside className={`docs-sidebar ${isSidebarCollapsed ? 'is-collapsed' : ''}`}>
+      {/* Share Button - Top Right Corner */}
+      <div className="docs-share-button-container">
+        <button
+          className="docs-share-button"
+          onClick={handleShare}
+          aria-label="Share this page"
+        >
+          <GlobeIcon size={16} />
+          <span>Share</span>
+        </button>
+      </div>
+
+      <div 
+        className={`docs-layout ${isSidebarCollapsed ? 'is-collapsed' : ''}`}
+        onClick={handleOverlayClick}
+      >
+        <aside 
+          className={`docs-sidebar ${isSidebarCollapsed ? 'is-collapsed' : ''}`}
+          onClick={(e) => e.stopPropagation()}
+        >
           <div className="docs-sidebar__header">
             <div className="docs-sidebar__title">
               <div className="docs-sidebar__title-left">
@@ -631,7 +745,7 @@ function DocumentationPage() {
             ) : (
               <>
                 <Markdown content={draftContent || markdownContent} />
-                <TableOfContents content={draftContent || markdownContent} />
+                {showTOC && <TableOfContents content={draftContent || markdownContent} />}
               </>
             )}
           </div>
