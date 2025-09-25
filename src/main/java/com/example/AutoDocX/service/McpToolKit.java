@@ -240,7 +240,8 @@ public class McpToolKit {
                     break;
                 case "update_understanding":
                     context.getSession().getMemory().getSummary().replaceEntry("understanding", result);
-                    break;
+                    context.getSession().getMemory().getEpisodic().addEntry("model:tool_call:" + toolName + "(" + "..." + ")", "Success");
+                    return result;
                 default:
                     System.out.println("WARNING: unknown tool: " + toolName + " (" + paramForMemory + ")");
                     break;
