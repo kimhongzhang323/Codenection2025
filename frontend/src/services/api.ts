@@ -1,7 +1,7 @@
 import { authService } from './auth';
 
 // API Configuration
-const API_BASE_URL = 'http://localhost:8081/api'
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8081/api'
 
 // Helper function to get authenticated headers
 const getAuthHeaders = (): Record<string, string> => {
@@ -188,10 +188,106 @@ export const agentApi = {
   },
 }
 
+// GitHub Repository Interface
+export interface GitHubRepository {
+  id: number
+  name: string
+  full_name: string
+  description: string | null
+  html_url: string
+  private: boolean
+  stargazers_count: number
+  language: string | null
+  updated_at: string
+}
+
+// GitHub API Service
+export const githubApi = {
+  // Get user's repositories
+  async getUserRepositories(): Promise<GitHubRepository[]> {
+    const accessToken = localStorage.getItem('github_access_token')
+    if (!accessToken) {
+      throw new Error('No GitHub access token available')
+    }
+
+    const response = await fetch('https://api.github.com/user/repos?sort=updated&per_page=100', {
+      headers: {
+        'Authorization': `token ${accessToken}`,
+        'Accept': 'application/vnd.github.v3+json',
+      },
+    })
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch repositories: ${response.statusText}`)
+    }
+
+    return response.json()
+  },
+
+  // Search user's repositories
+  async searchUserRepositories(query: string): Promise<GitHubRepository[]> {
+    const accessToken = localStorage.getItem('github_access_token')
+    if (!accessToken) {
+      throw new Error('No GitHub access token available')
+    }
+
+    const response = await fetch(`https://api.github.com/search/repositories?q=${encodeURIComponent(query)}+user:@me&sort=updated`, {
+      headers: {
+        'Authorization': `token ${accessToken}`,
+        'Accept': 'application/vnd.github.v3+json',
+      },
+    })
+
+    if (!response.ok) {
+      throw new Error(`Failed to search repositories: ${response.statusText}`)
+    }
+
+    const data = await response.json()
+    return data.items || []
+  },
+}
+
+// User interface
+export interface UserData {
+  id: number
+  githubId: string
+  email: string
+  name: string
+  username: string
+  avatarUrl: string
+  accessToken?: string
+}
+
+// User API Service  
+export const userApi = {
+  // Get current user info including repositories
+  async getCurrentUser(): Promise<{ user: UserData; repositories: GitHubRepository[] }> {
+    const response = await fetch(`${API_BASE_URL}/auth/user`, {
+      headers: getAuthHeaders(),
+    })
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch user: ${response.statusText}`)
+    }
+
+    const userData = await response.json()
+    
+    // Store GitHub access token if available
+    if (userData.user?.accessToken) {
+      localStorage.setItem('github_access_token', userData.user.accessToken)
+    }
+
+    return {
+      user: userData.user,
+      repositories: [] // Don't fetch repositories here to avoid circular dependency
+    }
+  },
+}
+
 // Utility function to parse GitHub URL
 export function parseGitUrl(gitUrl: string): { owner: string; name: string } {
-  const httpsMatch = gitUrl.match(/https:\/\/github\.com\/([^\/]+)\/([^\/]+?)(?:\.git)?(?:\/)?$/)
-  const sshMatch = gitUrl.match(/git@github\.com:([^\/]+)\/([^\/]+?)(?:\.git)?$/)
+  const httpsMatch = gitUrl.match(/https:\/\/github\.com\/([^/]+)\/([^/]+?)(?:\.git)?(?:\/)?$/)
+  const sshMatch = gitUrl.match(/git@github\.com:([^/]+)\/([^/]+?)(?:\.git)?$/)
   
   let owner: string, name: string
   

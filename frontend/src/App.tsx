@@ -16,6 +16,8 @@ import TextSelectionDialog from './components/ui/text_selection_dialog'
 import { AIChatPanel } from './components/ui/ai_chat_panel'
 import { AIChatProvider } from './contexts/AIChatContext'
 import DocumentationSystem from './components/docs_flow'
+import RepositoryAutocomplete from './components/repository_autocomplete'
+import { type GitHubRepository } from './services/api'
 import './App.css'
 
 function HomePage() {
@@ -119,10 +121,7 @@ function HomePage() {
     }
   }, [isError])
 
-  async function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
-    if (e.key !== 'Enter') return
-    await submitCheck()
-  }
+
 
   async function submitCheck() {
     if (!repoUrl) return
@@ -163,6 +162,30 @@ function HomePage() {
     navigate('/sign-up')
   }
 
+  function handleRepositorySelect(repository: GitHubRepository) {
+    // When a repository is selected from autocomplete, automatically fetch its details
+    setIsSuccess(false)
+    setIsError(false)
+    setIsLoading(true)
+    
+    const repoUrl = repository.html_url
+    setRepoUrl(repoUrl)
+    
+    // Set repository data immediately from the GitHub API response
+    const repoData: GithubRepoDetails = {
+      name: repository.name,
+      fullName: repository.full_name,
+      description: repository.description || '',
+      stars: repository.stargazers_count.toString(),
+      language: repository.language || '',
+      lastUpdated: repository.updated_at
+    }
+    setRepoData(repoData)
+    setIsSuccess(true)
+    setIsLoading(false)
+    setShowRepoDetails(true)
+  }
+
   return (
     <main className="home">
       <div className="home__signup-container">
@@ -177,22 +200,18 @@ function HomePage() {
       <h1 className="home__title">AutoDocX</h1>
       <p className="home__subtitle">Enter your GitHub repository URL to get started</p>
       <div className="home__input-wrapper">
-        <input
-          className="home__input"
-          type="url"
-          inputMode="url"
-          placeholder="https://github.com/owner/repo"
-          aria-label="GitHub repository URL"
+        <RepositoryAutocomplete
           value={repoUrl}
-          onChange={(e) => {
-            const v = e.target.value
-            setRepoUrl(v)
+          onChange={(value) => {
+            setRepoUrl(value)
             // Any change resets visual state back to search
             setIsSuccess(false)
             setIsLoading(false)
             setIsError(false)
           }}
-          onKeyDown={handleKeyDown}
+          onSelect={handleRepositorySelect}
+          placeholder="Search repositories or paste GitHub URL"
+          className="home__input"
         />
         <LinkIcon className="home__input-icon--left" size={16} />
         {isSuccess ? (

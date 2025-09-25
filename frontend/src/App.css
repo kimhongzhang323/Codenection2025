@@ -105,11 +105,11 @@
 }
 
 .home__input {
-  width: min(560px, 90vw);
+  width: 100%;
   padding: 12px 14px;
   border-radius: 8px;
-  border: 1px solid #2a2a2a;
-  background: #1b1b1b;
+  border: none;
+  background: transparent;
   color: #ffffff;
   transition: border-color 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
   box-sizing: border-box;
@@ -119,38 +119,59 @@
   color: #8a8a8a;
 }
 
-/* Hover and focus states with no white outline */
-.home__input:hover {
+/* Hover and focus states for wrapper */
+.home__input-wrapper:hover {
   border-color: #343434;
 }
 
+.home__input-wrapper:focus-within {
+  border-color: #09334e; /* subtle bluish accent */
+}
+
+/* Input focus states */
 .home__input:focus,
 .home__input:focus-visible {
   outline: none;
-  border-color: #09334e; /* subtle bluish accent */
+}
   box-shadow: 0 0 0 3px rgba(59, 59, 255, 0.18);
   background: #191919;
 }
 
 /* Wrap input to position the icon at the right edge */
 .home__input-wrapper {
-  position: relative;
-  display: inline-block;
+  position: relative !important;
+  display: block;
+  width: min(420px, 90vw);
+  border-radius: 8px;
+  border: 1px solid #2a2a2a;
+  background: #1b1b1b;
+  transition: border-color 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
+  margin: 0 auto;
+  /* Ensure it creates a containing block for absolute positioning */
+  isolation: isolate;
+}
+
+/* Repository autocomplete specific styling */
+.home__input-wrapper .repo-autocomplete {
+  width: 100%;
 }
 
 /* Generic icon styles inside input */
-.home__input-icon {
-  position: absolute;
+.home__input-wrapper .home__input-icon {
+  position: absolute !important;
   top: 0;
   bottom: 0;
   display: flex;
   align-items: center;
-  color: #9aa0a6;
+  color: #8a8a8a;
+  z-index: 10;
+  pointer-events: none;
 }
 
 /* Right alignment and spacing */
-.home__input-icon--right {
-  right: 16px;
+.home__input-wrapper .home__input-icon--right {
+  right: 16px !important;
+  z-index: 10;
 }
 
 /* Make right icon clickable like a button */
@@ -161,12 +182,14 @@
 }
 
 /* Left alignment and spacing */
-.home__input-icon--left {
-  left: 12px;
+.home__input-wrapper .home__input-icon--left {
+  left: 12px !important;
+  z-index: 10;
 }
 
 /* Add right padding so text doesn't overlap the icon */
-.home__input-wrapper .home__input {
+.home__input-wrapper .home__input,
+.home__input-wrapper .repo-autocomplete__input {
   padding-right: 40px;
   padding-left: 40px;
 }

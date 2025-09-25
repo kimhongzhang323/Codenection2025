@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, useCallback } from 'react'
 import './documentation_page.css'
 import { GithubIcon } from '../components/icons/github_icon'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
@@ -15,14 +15,14 @@ import ContextMenu from '../components/ui/context_menu'
 import FolderContextMenu from '../components/ui/folder_context_menu'
 import { GlobeIcon } from '../components/icons/globe_icon'
 import ShareDialog from '../components/ui/share_dialog'
+import { documentationApi, type Documentation } from '../services/api'
 
 type DocItem =
   | { type: 'separator'; label: string }
   | { type: 'file'; label: string; href?: string }
   | { type: 'folder'; label: string; children: DocItem[] }
 
-// Load all markdown files under docs once; reuse for routing and content loading
-const MD_MODULES = import.meta.glob('./docs/*.md', { as: 'raw' }) as Record<string, () => Promise<string>>
+// API-based documentation loading
 
 function Collapsible({ label, children, defaultOpen = false, storageKey, onRightClick }: { label: string; children: React.ReactNode; defaultOpen?: boolean; storageKey: string; onRightClick?: (e: React.MouseEvent) => void }) {
   const initialOpen = (() => {
@@ -71,7 +71,7 @@ function Collapsible({ label, children, defaultOpen = false, storageKey, onRight
         requestAnimationFrame(() => setMaxHeight('0px'))
       })
     }
-  }, [open])
+  }, [open, allowTransitions])
 
   useEffect(() => {
     try {
@@ -108,54 +108,8 @@ function Collapsible({ label, children, defaultOpen = false, storageKey, onRight
   )
 }
 
-const MOCK_TREE: DocItem[] = [
-  { type: 'separator', label: 'Introduction' },
-  { type: 'file', label: 'Overview' },
-  { type: 'file', label: 'Quick Start' },
-  { type: 'separator', label: 'Setup' },
-  {
-    type: 'folder',
-    label: 'Installation',
-    children: [
-      { type: 'file', label: 'Requirements' },
-      { type: 'file', label: 'Using Vite' },
-      { type: 'file', label: 'Using Next.js' },
-    ],
-  },
-  {
-    type: 'folder',
-    label: 'Configuration',
-    children: [
-      { type: 'file', label: 'Project Structure' },
-      { type: 'file', label: 'Environments' },
-    ],
-  },
-  { type: 'separator', label: 'Writing' },
-  {
-    type: 'folder',
-    label: 'Content',
-    children: [
-      { type: 'file', label: 'Markdown' },
-      { type: 'file', label: 'Components' },
-      { type: 'file', label: 'Navigation' },
-    ],
-  },
-  { type: 'separator', label: 'Reference' },
-  { type: 'file', label: 'API' },
-  { type: 'file', label: 'CLI' },
-  { type: 'file', label: 'Multiagent' },
-  { type: 'file', label: 'Class' },
-  { type: 'file', label: 'Versioning' },
-  { type: 'file', label: 'UI Layout' },
-]
-
 function slugify(label: string) {
   return label.trim().toLowerCase().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-')
-}
-
-function basenameFromPath(path: string) {
-  const m = path.match(/\/docs\/([^/]+)\.md$/)
-  return m ? m[1] : null
 }
 
 function normalizeKey(s: string) {
@@ -227,6 +181,100 @@ function DocumentationPage() {
   const [markdownContent, setMarkdownContent] = useState<string>('')
   const [draftContent, setDraftContent] = useState<string>('')
   const [viewMode, setViewMode] = useState<'reading' | 'edit'>('reading')
+  
+  // API-based documentation state
+  const [documentationTree, setDocumentationTree] = useState<DocItem[]>([])
+  const [documentationData, setDocumentationData] = useState<Record<string, Documentation>>({})
+  const [isLoadingDocs, setIsLoadingDocs] = useState(false)
+  const [docsError, setDocsError] = useState<string | null>(null)
+
+  // Format file/folder labels for display
+  const formatFileLabel = useCallback((key: string): string => {
+    return key
+      .replace(/\.(md|txt)$/i, '') // Remove file extensions
+      .split(/[-_]/)
+      .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+      .join(' ')
+  }, [])
+
+  // Load documentation on component mount and when repo changes
+  useEffect(() => {
+    if (!githubHref || githubHref === '#') return
+
+    setIsLoadingDocs(true)
+    setDocsError(null)
+    
+
+    
+    // Convert API documentation data to tree structure
+    const buildDocumentationTree = (docs: Record<string, Documentation>): DocItem[] => {
+      const keys = Object.keys(docs)
+      if (keys.length === 0) {
+        return [
+          { type: 'separator', label: 'Getting Started' },
+          { type: 'file', label: 'Welcome' }
+        ]
+      }
+
+      // Group keys by their path structure
+      const tree: DocItem[] = []
+      const folders: Record<string, DocItem[]> = {}
+      
+      keys.forEach(key => {
+        const parts = key.split('/')
+        if (parts.length === 1) {
+          // Root level file
+          tree.push({ type: 'file', label: formatFileLabel(key) })
+        } else {
+          // Nested file
+          const folderName = parts[0]
+          const fileName = parts.slice(1).join('/')
+          if (!folders[folderName]) {
+            folders[folderName] = []
+          }
+          folders[folderName].push({ type: 'file', label: formatFileLabel(fileName) })
+        }
+      })
+
+      // Add folders to tree
+      Object.entries(folders).forEach(([folderName, children]) => {
+        tree.push({
+          type: 'folder',
+          label: formatFileLabel(folderName),
+          children
+        })
+      })
+
+      return tree
+    }
+    
+    const loadDocs = async () => {
+      try {
+        const docs = await documentationApi.getAll(githubHref)
+        setDocumentationData(docs)
+        setDocumentationTree(buildDocumentationTree(docs))
+        
+        // Set default active label if none is set
+        const keys = Object.keys(docs)
+        if (keys.length > 0 && !activeLabel) {
+          const firstKey = keys[0]
+          setActiveLabel(formatFileLabel(firstKey))
+        }
+      } catch (error) {
+        console.error('Failed to load documentation:', error)
+        setDocsError(error instanceof Error ? error.message : 'Failed to load documentation')
+        // Fallback to empty state
+        setDocumentationTree([
+          { type: 'separator', label: 'Error' },
+          { type: 'file', label: 'Failed to Load' }
+        ])
+      } finally {
+        setIsLoadingDocs(false)
+      }
+    }
+
+    loadDocs()
+  }, [githubHref, activeLabel, formatFileLabel])
   const [isScrolling, setIsScrolling] = useState(false)
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
     if (typeof window === 'undefined') return false
@@ -306,12 +354,19 @@ function DocumentationPage() {
   function handleFileClick(label: string) {
     setActiveLabel(label)
     const isOverview = label.trim().toLowerCase() === 'overview'
-    // Prefer matching actual filenames over slug to support quickstart.md vs "Quick Start"
+    // Find matching documentation key from API data
     let next = isOverview ? 'overview' : slugify(label)
-    const basenames = Object.keys(MD_MODULES).map(basenameFromPath).filter(Boolean) as string[]
+    
+    const docKeys = Object.keys(documentationData)
     const normalizedLabel = normalizeKey(label)
-    const matched = basenames.find((b) => normalizeKey(b) === normalizedLabel)
-    if (matched) next = matched
+    const matched = docKeys.find((key) => {
+      const formattedKey = formatFileLabel(key)
+      return normalizeKey(formattedKey) === normalizedLabel
+    })
+    if (matched) {
+      next = slugify(formatFileLabel(matched))
+    }
+    
     const path = `/${repoSlug}/${next}`
     navigate(path, { state: location.state })
   }
@@ -335,7 +390,7 @@ function DocumentationPage() {
     if (filePart) {
       const targetSlug = filePart.toLowerCase()
       const normTarget = normalizeKey(targetSlug)
-      // find matching label in tree (robust to hyphens/spaces)
+      // find matching label in documentation tree (robust to hyphens/spaces)
       const collectLabels = (items: DocItem[], acc: string[] = []): string[] => {
         for (const it of items) {
           if (it.type === 'file') acc.push(it.label)
@@ -343,7 +398,7 @@ function DocumentationPage() {
         }
         return acc
       }
-      const allLabels = collectLabels(MOCK_TREE)
+      const allLabels = collectLabels(documentationTree)
       const matched = allLabels.find((l) => {
         const slug = slugify(l)
         return slug === targetSlug || normalizeKey(slug) === normTarget || normalizeKey(l) === normTarget
@@ -353,33 +408,34 @@ function DocumentationPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [repoSlug])
 
-  // Load markdown file content for current slug; UI can render later
+  // Load markdown file content for current active label from API
   useEffect(() => {
-    const pathname = window.location.pathname.replace(/\/+$/, '')
-    const parts = pathname.split('/').filter(Boolean)
-    const filePart = parts[1] || 'overview'
-    const basenames = Object.keys(MD_MODULES).map(basenameFromPath).filter(Boolean) as string[]
-    // Try exact, then normalized (to handle quick-start vs quickstart)
-    let targetBase = filePart
-    if (!basenames.includes(targetBase)) {
-      const normalized = normalizeKey(filePart)
-      const alt = basenames.find((b) => normalizeKey(b) === normalized)
-      if (alt) targetBase = alt
-    }
-    const key = Object.keys(MD_MODULES).find((k) => k.endsWith(`/docs/${targetBase}.md`))
-    if (key) {
-      MD_MODULES[key]().then((raw) => {
-        setMarkdownContent(raw)
-        setDraftContent(raw)
-      }).catch(() => {
-        setMarkdownContent('')
-        setDraftContent('')
-      })
-    } else {
+    if (!activeLabel || Object.keys(documentationData).length === 0) {
       setMarkdownContent('')
       setDraftContent('')
+      return
     }
-  }, [activeLabel])
+
+    // Find the documentation key that matches the active label
+    const docKeys = Object.keys(documentationData)
+    const normalizedActiveLabel = normalizeKey(activeLabel)
+    
+    const matchedKey = docKeys.find((key) => {
+      const formattedKey = formatFileLabel(key)
+      return normalizeKey(formattedKey) === normalizedActiveLabel
+    })
+
+    if (matchedKey && documentationData[matchedKey]) {
+      const content = documentationData[matchedKey].content
+      setMarkdownContent(content)
+      setDraftContent(content)
+    } else {
+      // If no match found, show a placeholder
+      const placeholderContent = `# ${activeLabel}\n\nDocumentation content for "${activeLabel}" is not available.`
+      setMarkdownContent(placeholderContent)
+      setDraftContent(placeholderContent)
+    }
+  }, [activeLabel, documentationData, formatFileLabel])
 
   // Handle scroll events
   const handleScroll = () => {
@@ -682,7 +738,22 @@ function DocumentationPage() {
             aria-label="Documentation navigation"
           >
             <div className="docs-tree__content">
-              {MOCK_TREE.map((it, i) => renderItem(it, i, handleFileClick, activeLabel, [], handleFolderItemRightClick))}
+              {isLoadingDocs ? (
+                <div style={{ padding: '20px', textAlign: 'center', color: 'var(--docs-subtle-text)' }}>
+                  Loading documentation...
+                </div>
+              ) : docsError ? (
+                <div style={{ padding: '20px', color: 'var(--docs-error-text)' }}>
+                  <div style={{ marginBottom: '8px' }}>Failed to load documentation</div>
+                  <div style={{ fontSize: '12px', opacity: 0.7 }}>{docsError}</div>
+                </div>
+              ) : documentationTree.length === 0 ? (
+                <div style={{ padding: '20px', textAlign: 'center', color: 'var(--docs-subtle-text)' }}>
+                  No documentation available
+                </div>
+              ) : (
+                documentationTree.map((it, i) => renderItem(it, i, handleFileClick, activeLabel, [], handleFolderItemRightClick))
+              )}
             </div>
           </nav>
           <div className="docs-sidebar__footer">

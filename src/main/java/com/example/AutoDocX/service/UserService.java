@@ -20,6 +20,10 @@ public class UserService {
         String name = oauth2User.getAttribute("name");
         String username = oauth2User.getAttribute("login");
         String avatarUrl = oauth2User.getAttribute("avatar_url");
+        
+        // Note: The OAuth2User doesn't directly contain the access token
+        // We would need to modify the OAuth2 flow to capture it separately
+        // For now, we'll set it as null and handle token storage in the frontend
 
         Optional<User> existingUser = userRepository.findByGithubId(githubId);
         
@@ -30,6 +34,7 @@ public class UserService {
             user.setName(name);
             user.setUsername(username);
             user.setAvatarUrl(avatarUrl);
+            // Keep existing access token if available
             return userRepository.save(user);
         } else {
             // Create new user
@@ -39,6 +44,7 @@ public class UserService {
             newUser.setName(name);
             newUser.setUsername(username);
             newUser.setAvatarUrl(avatarUrl);
+            // Access token will be set separately
             return userRepository.save(newUser);
         }
     }
