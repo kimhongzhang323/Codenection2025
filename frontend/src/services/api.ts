@@ -1,5 +1,15 @@
+import { authService } from './auth';
+
 // API Configuration
 const API_BASE_URL = 'http://localhost:8081/api'
+
+// Helper function to get authenticated headers
+const getAuthHeaders = (): Record<string, string> => {
+  return {
+    'Content-Type': 'application/json',
+    ...authService.getAuthHeaders(),
+  };
+};
 
 // Types matching your backend models
 export interface Documentation {
@@ -33,7 +43,9 @@ export const documentationApi = {
     const params = new URLSearchParams({ gitUrl })
     if (branch) params.append('branch', branch)
     
-    const response = await fetch(`${API_BASE_URL}/documentation?${params}`)
+    const response = await fetch(`${API_BASE_URL}/documentation?${params}`, {
+      headers: getAuthHeaders(),
+    })
     if (!response.ok) {
       throw new Error(`Failed to fetch documentation: ${response.statusText}`)
     }

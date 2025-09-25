@@ -30,7 +30,9 @@ function Collapsible({ label, children, defaultOpen = false, storageKey, onRight
       const saved = localStorage.getItem(`docsSidebarFolder:${storageKey}`)
       if (saved === 'open') return true
       if (saved === 'closed') return false
-    } catch {}
+    } catch {
+      console.log('localStorage error')
+    }
     return defaultOpen
   })()
   const [open, setOpen] = useState(initialOpen)
@@ -74,7 +76,9 @@ function Collapsible({ label, children, defaultOpen = false, storageKey, onRight
   useEffect(() => {
     try {
       localStorage.setItem(`docsSidebarFolder:${storageKey}`, open ? 'open' : 'closed')
-    } catch {}
+    } catch {
+      console.log('localStorage error')
+    }
   }, [open, storageKey])
 
   return (
@@ -279,7 +283,9 @@ function DocumentationPage() {
         const url = new URL(repoUrl)
         const path = url.pathname.replace(/^\//, '')
         return encodeURIComponent(path.toLowerCase())
-      } catch {}
+      } catch {
+        console.log('Invalid repo URL')
+      }
     }
     return ''
   })()
