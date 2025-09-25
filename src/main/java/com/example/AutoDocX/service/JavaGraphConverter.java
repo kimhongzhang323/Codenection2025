@@ -46,7 +46,7 @@ public class JavaGraphConverter {
                 String classId = generateNodeId(javaClass);
                 GraphNode classNode = new GraphNode(
                         classId,
-                        "class_" + javaClass.getName(),
+                        classId,// "class_" + javaClass.getName(),
                         GraphNode.NodeType.CLASS,
                         javaClass.getFilePath(),
                         javaClass.getStartLine(),
@@ -63,7 +63,7 @@ public class JavaGraphConverter {
                 String classId = generateNodeId(javaClass);
                 GraphNode classNode = new GraphNode(
                         classId,
-                        "class_" + javaClass.getName(),
+                        classId,//"class_" + javaClass.getName(),
                         GraphNode.NodeType.CLASS,
                         javaClass.getFilePath(),
                         javaClass.getStartLine(),
@@ -84,7 +84,7 @@ public class JavaGraphConverter {
                     String methodId = generateNodeId(javaClass, method);
                     GraphNode methodNode = new GraphNode(
                             methodId,
-                            "method_" + javaClass.getName() + "." + method.getName(),
+                            methodId,//"method_" + javaClass.getName() + "." + method.getName(),
                             GraphNode.NodeType.METHOD,
                             method.getFilePath(),
                             method.getStartLine(),

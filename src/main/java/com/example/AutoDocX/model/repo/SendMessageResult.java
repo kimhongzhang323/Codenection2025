@@ -12,17 +12,20 @@ public class SendMessageResult {
     private final Optional<String> text;  // any natural language text the model output
     private final List<ToolCallData> toolCalls;    // zero or more tool calls
     private final Optional<String> errorMessage;   // if any error
+    private final int totalTokens;
 
     public SendMessageResult(
             ModelFinishReason modelFinishReason,
             Optional<String> text,
             List<ToolCallData> toolCalls,
-            Optional<String> errorMessage
+            Optional<String> errorMessage,
+            int totalTokens
     ) {
         this.modelFinishReason = modelFinishReason;
         this.text = text;
         this.toolCalls = toolCalls;
         this.errorMessage = errorMessage;
+        this.totalTokens = totalTokens;
     }
 
     // For backwards compatibility: toMap()

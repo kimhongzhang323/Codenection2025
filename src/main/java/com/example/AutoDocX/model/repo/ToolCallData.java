@@ -2,14 +2,15 @@ package com.example.AutoDocX.model.repo;
 
 import lombok.Getter;
 
+import java.util.Map;
 import java.util.Objects;
 
 @Getter
 public class ToolCallData {
     private final String name;
-    private final Object args;  // you can use Map<String,Object> if args are JSON-like
+    private final Map<String, Object> args;  // you can use Map<String,Object> if args are JSON-like
 
-    public ToolCallData(String name, Object args) {
+    public ToolCallData(String name, Map<String, Object> args) {
         this.name = name;
         this.args = args;
     }

@@ -1,47 +1,82 @@
 package com.example.AutoDocX.controller;
 
 import com.example.AutoDocX.service.ApiResponse;
-import com.example.AutoDocX.service.GlobalExceptionHandler;
 import com.example.AutoDocX.service.Agent;
+import com.example.AutoDocX.service.SummaryAgent;
+import com.example.AutoDocX.service.DocumentationAgent;
+import com.example.AutoDocX.service.dto.DocParams;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.slf4j.Logger; // Added import
-import org.slf4j.LoggerFactory; // Added import
 
 @RestController
 @RequestMapping("/api/agent")
+@AllArgsConstructor
 public class AgentController {
-
-    private static final Logger logger = LoggerFactory.getLogger(AgentController.class); // Added logger
-
     private final Agent agent;
+    private final SummaryAgent summaryAgent;
+    private final DocumentationAgent documentationAgent;
 
-    @Autowired
-    public AgentController(Agent agent) {
-        this.agent = agent;
-    }
-
-    @Data
-    @NoArgsConstructor
-    @AllArgsConstructor
-    public static class AgentRequest {
-        private String gitUrl;
-        private String userPrompt;
-    }
-
-    @PostMapping("/run-tool")
-    public ResponseEntity<ApiResponse<?>> runTool(@RequestBody AgentRequest request) {
+    @PostMapping("/get-response")
+    public ResponseEntity<ApiResponse<String>> getResponse(@RequestBody AgentRequest request) {
         try {
-            String response = agent.handlePrompt(request.getGitUrl(), request.getUserPrompt());
-            return new ResponseEntity<>(new ApiResponse<>("SUCCESS", "Agent processed prompt successfully.", response), HttpStatus.OK);
+            String response = agent.handlePrompt(request.getGitUrl(), request.getUserPrompt(), request.getBranch());
+            return ResponseEntity.ok(new ApiResponse<>("SUCCESS", "Agent returned a response.", response));
         } catch (Exception e) {
-            logger.error("Error processing agent prompt: {}", e.getMessage(), e); // Log the exception
-            return GlobalExceptionHandler.errorResponseEntity("Error processing agent prompt: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ApiResponse<>("ERROR", e.getMessage(), null));
         }
     }
+
+    @PostMapping("/run-summary")
+    public ResponseEntity<ApiResponse<String>> runSummary(@RequestBody AgentRequest request) {
+        try {
+            String summary = summaryAgent.run(request.getGitUrl(), request.getBranch());
+            return ResponseEntity.ok(new ApiResponse<>("SUCCESS", "Summary agent finished.", summary));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ApiResponse<>("ERROR", e.getMessage(), null));
+        }
+    }
+
+    @PostMapping("/run-doc")
+    public ResponseEntity<ApiResponse<String>> runDocumentation(@RequestBody DocAgentRequest request) {
+        try {
+            DocParams params = new DocParams();
+            if (request.getAudience() != null) params.setAudience(request.getAudience());
+            if (request.getTone() != null) params.setTone(request.getTone());
+            if (request.getFormat() != null) params.setFormat(request.getFormat());
+
+            String doc = documentationAgent.run(request.getGitUrl(), request.getBranch(), request.getUserPrompt(), params);
+            return ResponseEntity.ok(new ApiResponse<>("SUCCESS", "Documentation agent finished.", doc));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ApiResponse<>("ERROR", e.getMessage(), null));
+        }
+    }
+}
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+class AgentRequest {
+    private String gitUrl;
+    private String userPrompt;
+    private String branch;
+}
+
+@Data
+@NoArgsConstructor
+@AllArgsConstructor
+class DocAgentRequest {
+    private String gitUrl;
+    private String userPrompt;
+    private String branch;
+    private String audience; // optional
+    private String tone;     // optional
+    private String format;   // optional
+    private java.util.List<String> sections; // optional preferred sections
 }
