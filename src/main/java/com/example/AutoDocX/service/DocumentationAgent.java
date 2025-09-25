@@ -172,7 +172,7 @@ RULES
 2. Keep responses factual and concise.
 3. ALWAYS use the provided tools to gather information or perform actions; do not make up information.
 4. Unless specified, you must always aim for full coverage of important nodes
-5. Only if needed, retrieve source code using get_summary and plans (be detail and explicit of what you want!)
+5. Only if needed, retrieve source code using get_summary (The prompt must be in full sentence)
 
 STEPS:
 1. Use `get_summary(query)` to get context/summaries from the summary agent (very expensive, use with caution).

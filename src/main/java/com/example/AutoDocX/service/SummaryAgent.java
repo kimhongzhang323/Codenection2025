@@ -226,14 +226,14 @@ You are an expert software architect.
         if (!summary.isBlank()) {
             contents.add(Content.builder().role("user").parts(Part.builder().text("EXISTING CODE SUMMARY:\n" + summary + "\n\n").build()).build());
         }
-
-        String projectStructure = graph.getNodes().stream()
-                .filter(node -> node.getType() == GraphNode.NodeType.CLASS)
-                .map(GraphNode::getId)
-                .collect(Collectors.joining("\n"));
-        if (!projectStructure.isBlank()) {
-            contents.add(Content.builder().role("user").parts(Part.builder().text("ALL NODES:\n" + projectStructure + "\n\n").build()).build());
-        }
+//
+//        String projectStructure = graph.getNodes().stream()
+//                .filter(node -> node.getType() == GraphNode.NodeType.CLASS)
+//                .map(GraphNode::getId)
+//                .collect(Collectors.joining("\n"));
+//        if (!projectStructure.isBlank()) {
+//            contents.add(Content.builder().role("user").parts(Part.builder().text("ALL NODES:\n" + projectStructure + "\n\n").build()).build());
+//        }
 
         contents.add(Content.builder().role("user").parts(Part.builder().text(userPrompt).build()).build());
         return contents;
