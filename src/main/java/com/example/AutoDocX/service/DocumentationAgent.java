@@ -59,6 +59,14 @@ public class DocumentationAgent {
         Session session = sessionManager.getSession(gitUrl, branch);
         ClonedRepo repo = repoHandler.getRepo(gitUrl, branch);
         if (repo == null) return "Repository unavailable.";
+
+        session.getDocumentationHandler().decrementAllExpandedCounters();
+
+        if (!session.isDocumentationLoaded()) {
+            session.getDocumentationHandler().loadFromDirectory(repo.getClonedPath());
+            session.setDocumentationLoaded(true);
+        }
+
         Graph graph;
         try { graph = repoHandler.getGraph(repo); } catch (Exception e) { return "Graph load failed: " + e.getMessage(); }
 
@@ -111,16 +119,20 @@ public class DocumentationAgent {
                                 break;
                             }
                             case "execute_plan": {
+                                String key = (String) args.get("key");
+                                if (key == null || key.isBlank()) {
+                                    throw new IllegalArgumentException("Parameter 'key' is required for execute_plan.");
+                                }
                                 String planResult = executePlanInternal(session, repo, graph);
                                 Documentation doc = new Documentation(planResult);
-                                session.getDocumentationHandler().save("main_documentation", doc);
-                                System.out.println("Plan execution finished. Result stored in 'main_documentation'.");
+                                session.getDocumentationHandler().save(key, doc);
+                                System.out.println("Plan execution finished. Result stored in '" + key + "'.");
 
                                 // Safely log the tool call, handling null args and empty results
                                 String toolLogKey = "model:tool_call:" + name + (args != null ? args.toString() : "{}");
                                 String toolLogValue = "Execution finished.";
                                 if (planResult != null && !planResult.isEmpty()) {
-                                    toolLogValue += " Result: " + planResult.substring(0, Math.min(200, planResult.length())) + "... (stored in 'documentation')";
+                                    toolLogValue += " Result: " + planResult.substring(0, Math.min(200, planResult.length())) + "... (stored in " + key + ")";
                                 }
                                 session.getMemory().getEpisodic().addEntry(toolLogKey, toolLogValue);
                                 break;
@@ -185,7 +197,8 @@ STEPS:
         b) formatting & focus on eg. (usage, architecture, dependencies, purpose)
         c) long & detailed vs short & concise
 3. Use `execute_plan` AFTER all sections have been completed. to run all those subtasks using dedicated agents.
-4. Respond to user's input, describing what you did (the documentation is visible to user)
+    - Tips: Use different keys to cleverly organise the docs system (avoid replacing original docs unless requested).
+4. Respond to user's input, describing what you did in detail (the documentation is visible to user)
 """;
 
         contents.add(Content.builder().role("user").parts(List.of(Part.fromText(systemInstruction))).build());
@@ -205,10 +218,29 @@ STEPS:
         if (currentDocs != null && !currentDocs.isEmpty()) {
             context.append("CURRENT_DOCUMENTATION:\n");
             for (Map.Entry<String, Documentation> entry : currentDocs.entrySet()) {
-                context.append("--- START DOC: ").append(entry.getKey()).append(" ---\n");
-                context.append(entry.getValue().toString());
-                context.append("\n--- END DOC: ").append(entry.getKey()).append(" ---\n\n");
+                if (entry.getValue().isExpanded()) {
+                    context.append("--- START DOC: ").append(entry.getKey()).append(" ---\n");
+                    context.append(entry.getValue().toString());
+                    context.append("\n--- END DOC: ").append(entry.getKey()).append(" ---\n\n");
+                } else {
+                    String key = entry.getKey();
+                    Documentation doc = entry.getValue();
+                    long lineCount = doc.getContent() != null ? doc.getContent().lines().count() : 0;
+                    List<String> sections = session.getDocumentationHandler().listSections(key);
+                    List<String> sectionPreview = sections.stream().limit(5).collect(Collectors.toList());
+
+                    context.append("- ").append(key).append(" ");
+                    context.append("(hidden, ").append(lineCount).append(" Lines), ");
+                    context.append("Preview[:5]: ");
+                    if (sectionPreview.isEmpty()) {
+                        context.append("No sections found");
+                    } else {
+                        context.append(String.join(" | ", sectionPreview));
+                    }
+                    context.append("\n");
+                }
             }
+            context.append("\n");
         }
 
         if (memory.getSummary() != null && !memory.getSummary().isEmpty()) {
@@ -252,6 +284,8 @@ STEPS:
             return "Plan parse failed: " + e.getMessage();
         }
 
+        String generalSummary = session.getMemory().getSummary().getEntry("general_summary");
+
         List<AbstractMap.SimpleEntry<List<Content>, List<Tool>>> requests = new ArrayList<>();
         for (Map.Entry<String, Map<String, Object>> entry : plan.entrySet()) {
             String sectionName = entry.getKey();
@@ -282,6 +316,7 @@ STEPS:
 
             String system = "You are a senior technical writer. Produce the documentation content for the given section. Accuracy is top priority.\n\n";
             String user = "This is a subtask and its related codes\n\n" +
+                    (generalSummary != null && !generalSummary.isBlank() ? "PROJECT SUMMARY:\n" + generalSummary + "\n\n" : "") +
                     "NAME: " + sectionName + "\n\n" +
                     "FOCUS: " + focus + "\n\n" +
                     "RELATED CODE CHUNKS: \n" + contextCodes + "\n\n" +
@@ -289,6 +324,7 @@ STEPS:
 
             List<Content> contents = new ArrayList<>();
             contents.add(Content.builder().role("user").parts(List.of(Part.fromText(system))).build());
+
             contents.add(Content.builder().role("user").parts(List.of(Part.fromText(user))).build());
 
             requests.add(GeminiModel.createArgs(contents, List.of()));
@@ -297,7 +333,7 @@ STEPS:
         List<SendMessageResult> results = model.sendMessageBulk(requests);
         String resultStr = results.stream()
                 .flatMap(result -> result.getText().stream())
-                .filter(s -> s != null && !s.isBlank())
+                .filter(s -> !s.isBlank())
                 .collect(Collectors.joining("\n\n"));
 
         if (resultStr.isBlank()) {

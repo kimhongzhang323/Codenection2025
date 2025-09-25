@@ -40,6 +40,23 @@ public class Graph {
                 .collect(Collectors.toList());
     }
 
+    public String listClassNodesToString() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("Graph Representation:\n");
+
+        sb.append("Nodes (Total: ").append(nodes.size()).append("):\n");
+        nodes.forEach(node -> {
+            if (node.getType() != GraphNode.NodeType.CLASS)
+                return ;
+            sb.append("  - ").append(node.getId())
+                    .append(" (Type: ").append(node.getType())
+//                    .append(", Label: ").append(node.getLabel())
+                    .append(")\n");
+        });
+
+        return sb.toString();
+    }
+
     @Override
     public String toString() {
         StringBuilder sb = new StringBuilder();
@@ -50,7 +67,7 @@ public class Graph {
         nodes.forEach(node -> {
             sb.append("  - ").append(node.getId())
                     .append(" (Type: ").append(node.getType())
-                    .append(", Label: ").append(node.getLabel())
+//                    .append(", Label: ").append(node.getLabel())
                     .append(")\n");
         });
 

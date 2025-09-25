@@ -10,6 +10,7 @@ import java.util.Date;
 public class Documentation {
     private String content;
     private Date lastUpdated;
+    private int expandedCounter = 0;
 
     public Documentation() {
         this.lastUpdated = new Date();
@@ -23,6 +24,16 @@ public class Documentation {
     public void setContent(String content) {
         this.content = content;
         this.lastUpdated = new Date();
+    }
+
+    public boolean isExpanded() {
+        return expandedCounter > 0;
+    }
+
+    public void decrementExpandedCounter() {
+        if (expandedCounter > 0) {
+            expandedCounter--;
+        }
     }
 
     @Override

@@ -1,6 +1,7 @@
 package com.example.AutoDocX.service;
 
 import com.example.AutoDocX.model.ClonedRepo;
+import com.example.AutoDocX.model.Documentation;
 import com.example.AutoDocX.model.repo.GeminiModel;
 import com.example.AutoDocX.model.repo.SendMessageResult;
 import com.example.AutoDocX.parser.model.Graph;
@@ -316,5 +317,44 @@ public class McpToolUtils {
     public String updateDocumentation(Session session, String content) {
         session.getMemory().getSummary().replaceEntry("documentation", content);
         return "OK: documentation updated (" + content.length() + " chars)";
+    }
+
+    public String replaceStringInDoc(Session session, String docKey, String oldString, String newString) {
+        DocumentationHandler docHandler = session.getDocumentationHandler();
+        String content = docHandler.get(docKey).getContent();
+        if (content == null) {
+            return "Error: Document with key '" + docKey + "' not found.";
+        }
+        String newContent = content.replace(oldString, newString);
+        docHandler.save(docKey, new Documentation(newContent));
+        return "OK: Replaced string in document '" + docKey + "'.";
+    }
+
+    public String insertIntoDoc(Session session, String docKey, String contentToInsert, String afterString) {
+        DocumentationHandler docHandler = session.getDocumentationHandler();
+        String content = docHandler.get(docKey).getContent();
+        if (content == null) {
+            return "Error: Document with key '" + docKey + "' not found.";
+        }
+
+        String newContent;
+        if (afterString == null || afterString.isEmpty()) {
+            newContent = contentToInsert + content;
+        } else {
+            int index = content.indexOf(afterString);
+            if (index == -1) {
+                return "Error: The 'after_string' was not found in the document '" + docKey + "'.";
+            }
+            int insertPosition = index + afterString.length();
+            newContent = content.substring(0, insertPosition) + contentToInsert + content.substring(insertPosition);
+        }
+        docHandler.save(docKey, new Documentation(newContent));
+        return "OK: Inserted content into document '" + docKey + "'.";
+    }
+
+    public String readDoc(Session session, String key, int countdown) {
+        DocumentationHandler docHandler = session.getDocumentationHandler();
+        docHandler.setExpandedCounter(key, countdown);
+        return "OK: Document '" + key + "' will be expanded for the next " + countdown + " turns.";
     }
 }

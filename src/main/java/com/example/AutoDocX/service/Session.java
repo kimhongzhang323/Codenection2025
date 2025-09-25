@@ -15,16 +15,14 @@ public class Session {
     private final DocumentationHandler documentationHandler;
     @Setter
     private boolean initialStructureLogged = false;
+    @Setter
+    private boolean documentationLoaded = false;
 
-    public Session(String gitUrl, String branch, DocumentationHandler documentationHandler) {
+    public Session(String gitUrl, String branch) {
         this.gitUrl = gitUrl;
         this.branch = branch;
         this.memory = new Memory();
-        this.documentationHandler = documentationHandler;
-    }
-
-    public Session(String gitUrl, DocumentationHandler documentationHandler) {
-        this(gitUrl, null, documentationHandler);
+        this.documentationHandler = new DocumentationHandler();
     }
 
     public Map<String, Documentation> getDocumentation() {

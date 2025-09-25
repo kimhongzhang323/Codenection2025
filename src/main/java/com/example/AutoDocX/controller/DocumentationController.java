@@ -15,12 +15,10 @@ import java.util.Map;
 public class DocumentationController {
 
     private final SessionManager sessionManager;
-    private final DocumentationHandler documentationHandler;
 
     @Autowired
-    public DocumentationController(SessionManager sessionManager, DocumentationHandler documentationHandler) {
+    public DocumentationController(SessionManager sessionManager) {
         this.sessionManager = sessionManager;
-        this.documentationHandler = documentationHandler;
     }
 
     @GetMapping
@@ -31,6 +29,37 @@ public class DocumentationController {
         Session session = sessionManager.getSession(gitUrl, branch);
         if (session != null && session.getDocumentation() != null) {
             return ResponseEntity.ok(session.getDocumentation());
+        }
+        return ResponseEntity.notFound().build();
+    }
+
+    @GetMapping("/sections")
+    public ResponseEntity<java.util.List<String>> listSections(
+            @RequestParam String gitUrl,
+            @RequestParam(required = false) String branch,
+            @RequestParam String key
+    ) {
+        Session session = sessionManager.getSession(gitUrl, branch);
+        if (session != null && session.getDocumentationHandler() != null) {
+            java.util.List<String> sections = session.getDocumentationHandler().listSections(key);
+            return ResponseEntity.ok(sections);
+        }
+        return ResponseEntity.notFound().build();
+    }
+
+    @GetMapping("/section")
+    public ResponseEntity<String> getSection(
+            @RequestParam String gitUrl,
+            @RequestParam(required = false) String branch,
+            @RequestParam String key,
+            @RequestParam String sectionPath
+    ) {
+        Session session = sessionManager.getSession(gitUrl, branch);
+        if (session != null && session.getDocumentationHandler() != null) {
+            String sectionContent = session.getDocumentationHandler().getSection(key, sectionPath);
+            if (sectionContent != null) {
+                return ResponseEntity.ok(sectionContent);
+            }
         }
         return ResponseEntity.notFound().build();
     }

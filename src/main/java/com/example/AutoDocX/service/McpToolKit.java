@@ -165,7 +165,16 @@ public class McpToolKit {
     declarations.add(FunctionDeclaration.builder()
         .name("execute_plan")
         .description("Execute the current plan: generate all section docs in parallel and compose the final documentation. Stores final_documentation in memory and returns it.")
-        .parameters(Schema.builder().type(Type.Known.OBJECT).build())
+            .parameters(Schema.builder()
+                .type(Type.Known.OBJECT)
+                .properties(Map.of(
+                    "key", Schema.builder()
+                        .type(Type.Known.STRING)
+                        .description("The key under which the final documentation will be saved.")
+                        .build()
+                ))
+                .required(List.of("key"))
+                .build())
         .build());
 
     declarations.add(FunctionDeclaration.builder()
