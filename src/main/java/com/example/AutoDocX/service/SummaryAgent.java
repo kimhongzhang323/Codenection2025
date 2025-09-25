@@ -270,7 +270,7 @@ Deliver:
         if (!summary.isBlank()) {
             contents.add(Content.builder().role("user").parts(Part.builder().text("EXISTING CODE SUMMARY:\n" + summary + "\n\n").build()).build());
         }
-//
+
 //        String codeSummary = memory.getCode().toString(20);
 //        if (!codeSummary.isBlank()) {
 //            contents.add(Content.builder().role("user").parts(Part.builder().text("CODE MEMORY:\n" + codeSummary + "\n\n").build()).build());

@@ -1,12 +1,20 @@
 package com.example.AutoDocX.service;
 
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.Map;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 @Service
 public class SessionManager {
     private final Map<String, Session> sessions = new ConcurrentHashMap<>();
+    private final DocumentationHandler documentationHandler;
+
+    @Autowired
+    public SessionManager(DocumentationHandler documentationHandler) {
+        this.documentationHandler = documentationHandler;
+    }
 
     public Session getSession(String gitUrl) {
         return getSession(gitUrl, null);
@@ -14,6 +22,6 @@ public class SessionManager {
 
     public Session getSession(String gitUrl, String branch) {
         String sessionKey = gitUrl + (branch == null ? "" : "#" + branch);
-        return sessions.computeIfAbsent(sessionKey, k -> new Session(gitUrl, branch));
+        return sessions.computeIfAbsent(sessionKey, k -> new Session(gitUrl, branch, documentationHandler));
     }
 }

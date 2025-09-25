@@ -150,6 +150,10 @@ public class Memory {
         public String getName() {
             return name;
         }
+
+        public boolean isEmpty() {
+            return entries.isEmpty();
+        }
     }
 
     /**

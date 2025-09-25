@@ -1,6 +1,7 @@
 package com.example.AutoDocX.service;
 
 import com.example.AutoDocX.model.ClonedRepo;
+import com.example.AutoDocX.model.Documentation;
 import com.example.AutoDocX.model.repo.Model;
 import com.example.AutoDocX.model.repo.GeminiCentral;
 import com.example.AutoDocX.model.repo.GeminiModel;
@@ -67,7 +68,7 @@ public class DocumentationAgent {
         int maxIterations = (iterationLimit == null || iterationLimit <= 0) ? DEFAULT_MAX_ITERATIONS : iterationLimit;
         while (iterations++ < maxIterations) {
             List<Tool> tools = mcpToolKit.getDocumentationAgentTools();
-            List<Content> contents = buildLoopContent(session.getMemory(), userPrompt, params);
+            List<Content> contents = buildLoopContent(session, userPrompt, params);
 
             SendMessageResult result;
             try {
@@ -109,9 +110,9 @@ public class DocumentationAgent {
                             }
                             case "execute_plan": {
                                 String planResult = executePlanInternal(session, repo, graph);
-                                // Use a consistent key for the final documentation
-                                session.getMemory().getSummary().replaceEntry("documentation", planResult);
-                                System.out.println("Plan execution finished. Result stored in 'documentation'.");
+                                Documentation doc = new Documentation(planResult);
+                                session.getDocumentationHandler().save("main_documentation", doc);
+                                System.out.println("Plan execution finished. Result stored in 'main_documentation'.");
 
                                 // Safely log the tool call, handling null args and empty results
                                 String toolLogKey = "model:tool_call:" + name + (args != null ? args.toString() : "{}");
@@ -135,9 +136,7 @@ public class DocumentationAgent {
                 continue;
             }
 
-            // Early exit on assistant text (Q&A or guidance), and persist to documentation
             if (result.getText().isPresent()) {
-                System.out.println(session.getMemory().getSummary().getRawEntry("documentation"));
                 return result.getText().get();
             }
         }
@@ -161,7 +160,7 @@ public class DocumentationAgent {
         try { return objectMapper.writeValueAsString(p); } catch (Exception e) { return "{}"; }
     }
 
-    private List<Content> buildLoopContent(Memory memory, String userPrompt, DocParams params) {
+    private List<Content> buildLoopContent(Session session, String userPrompt, DocParams params) {
         List<Content> contents = new ArrayList<>();
         String systemInstruction = """
 You are a documentation agent. Your task is to produce excellent project documentation or answer the user's request using tools.
@@ -171,6 +170,7 @@ RULES
 2. Keep responses factual and concise.
 3. ALWAYS use the provided tools to gather information or perform actions; do not make up information.
 4. Unless specified, you must always aim for full coverage of important nodes
+5. Only if needed, retrieve source code using get_summary and plans
 
 STEPS:
 1. Use `get_summary(query)` to get context/summaries from the summary agent (very expensive, use with caution).
@@ -189,16 +189,35 @@ STEPS:
         contents.add(Content.builder().role("user").parts(List.of(Part.fromText(systemInstruction))).build());
 
         StringBuilder context = new StringBuilder();
+        Memory memory = session.getMemory();
 
-        context.append("CURRENT_PLAN:\n").append(memory.getPlan().toString()).append("\n\n");
+        if (memory.getPlan() != null && !memory.getPlan().isEmpty()) {
+            context.append("CURRENT_PLAN:\n").append(memory.getPlan().toString()).append("\n\n");
+        }
 
-        context.append("DOC_PARAMS:\n").append(safeParams(params)).append("\n\n");
+        if (params != null) {
+            context.append("DOC PARAMS:\n").append(safeParams(params)).append("\n\n");
+        }
 
-        context.append("EXISTING SUMMARY:\n").append(memory.getSummary().toString()).append("\n\n");
+        Map<String, Documentation> currentDocs = session.getDocumentation();
+        if (currentDocs != null && !currentDocs.isEmpty()) {
+            context.append("CURRENT_DOCUMENTATION:\n");
+            for (Map.Entry<String, Documentation> entry : currentDocs.entrySet()) {
+                context.append("--- START DOC: ").append(entry.getKey()).append(" ---\n");
+                context.append(entry.getValue().toString());
+                context.append("\n--- END DOC: ").append(entry.getKey()).append(" ---\n\n");
+            }
+        }
 
-        context.append("LOG:\n").append(memory.getEpisodic().toString(DEFAULT_MAX_ITERATIONS * 2)).append("\n\n");
+        if (memory.getSummary() != null && !memory.getSummary().isEmpty()) {
+            context.append("EXISTING SUMMARY:\n").append(memory.getSummary().toString()).append("\n\n");
+        }
 
-        context.append("USER_PROMPT:\n").append(userPrompt == null ? "" : userPrompt).append("\n\n");
+        if (memory.getEpisodic() != null && !memory.getEpisodic().isEmpty()) {
+            context.append("LOG:\n").append(memory.getEpisodic().toString(DEFAULT_MAX_ITERATIONS * 2)).append("\n\n");
+        }
+
+        context.append("USER PROMPT:\n").append(userPrompt == null ? "" : userPrompt).append("\n\n");
 
         contents.add(Content.builder().role("user").parts(List.of(Part.fromText(context.toString()))).build());
         return contents;
