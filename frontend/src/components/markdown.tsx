@@ -280,34 +280,31 @@ const Markdown: React.FC<MarkdownProps> = ({ content }) => {
     },
     table({ children, ...props }: { children?: React.ReactNode }) {
       return (
-        <div className="overflow-x-auto my-6 rounded-md">
-          <table className="min-w-full text-sm border-collapse" {...props}>
+        <div className="markdown-table-container">
+          <table className="markdown-table" {...props}>
             {children}
           </table>
         </div>
       );
     },
     thead({ children, ...props }: { children?: React.ReactNode }) {
-      return <thead className="bg-gray-100 dark:bg-gray-800" {...props}>{children}</thead>;
+      return <thead className="markdown-table-header" {...props}>{children}</thead>;
     },
     tbody({ children, ...props }: { children?: React.ReactNode }) {
-      return <tbody className="divide-y divide-gray-200 dark:divide-gray-700" {...props}>{children}</tbody>;
+      return <tbody className="markdown-table-body" {...props}>{children}</tbody>;
     },
     tr({ children, ...props }: { children?: React.ReactNode }) {
-      return <tr className="hover:bg-gray-50 dark:hover:bg-gray-900" {...props}>{children}</tr>;
+      return <tr className="markdown-table-row" {...props}>{children}</tr>;
     },
     th({ children, ...props }: { children?: React.ReactNode }) {
       return (
-        <th
-          className="px-4 py-3 text-left font-medium text-gray-700 dark:text-gray-300"
-          {...props}
-        >
+        <th className="markdown-table-header-cell" {...props}>
           {children}
         </th>
       );
     },
     td({ children, ...props }: { children?: React.ReactNode }) {
-      return <td className="px-4 py-3 border-t border-gray-200 dark:border-gray-700" {...props}>{children}</td>;
+      return <td className="markdown-table-data-cell" {...props}>{children}</td>;
     },
     code(props: {
       inline?: boolean;

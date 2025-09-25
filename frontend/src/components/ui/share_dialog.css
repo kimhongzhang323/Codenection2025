@@ -1,0 +1,422 @@
+.share-dialog-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  animation: shareDialogOverlayFadeIn 0.2s ease-out;
+}
+
+.share-dialog {
+  background: white;
+  border-radius: 12px;
+  width: 480px;
+  max-width: 90vw;
+  max-height: 90vh;
+  overflow: hidden;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+  animation: shareDialogSlideIn 0.3s ease-out;
+}
+
+.dark .share-dialog {
+  background: #1e1e1e;
+  border: 1px solid #333;
+}
+
+/* Header */
+.share-dialog__header {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 20px 24px 16px;
+  position: relative;
+}
+
+.share-dialog__title {
+  font-size: 18px;
+  font-weight: 500;
+  color: #1f1f1f;
+  margin: 0;
+}
+
+.dark .share-dialog__title {
+  color: #ffffff;
+}
+
+.share-dialog__close-btn {
+  position: absolute;
+  top: 16px;
+  right: 12px;
+  width: 32px;
+  height: 32px;
+  border: none;
+  background: none;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #666;
+  cursor: pointer;
+  outline: none;
+}
+
+.share-dialog__close-btn:focus {
+  outline: none;
+  box-shadow: none;
+}
+
+.share-dialog__close-btn:active {
+  outline: none;
+  box-shadow: none;
+}
+
+.share-dialog__close-btn:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
+.dark .share-dialog__close-btn {
+  color: #ccc;
+}
+
+/* Invite Section */
+.share-dialog__invite-section {
+  padding: 16px 24px;
+}
+
+.share-dialog__invite-input {
+  width: calc(100% - 0px);
+  padding: 12px 16px;
+  border: 1px solid #e5e5e5;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #333;
+  background: white;
+  outline: none;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+}
+
+.share-dialog__invite-input:focus {
+  border-color: #4285f4;
+}
+
+.share-dialog__invite-input::placeholder {
+  color: #999;
+}
+
+.dark .share-dialog__invite-input {
+  background: #2a2a2a;
+  border-color: #444;
+  color: #ffffff;
+}
+
+.dark .share-dialog__invite-input:focus {
+  border-color: #4285f4;
+}
+
+.dark .share-dialog__invite-input::placeholder {
+  color: #666;
+}
+
+/* Section Titles */
+.share-dialog__section-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+  margin: 0 0 12px 0;
+}
+
+.dark .share-dialog__section-title {
+  color: #ffffff;
+}
+
+/* Access Section */
+.share-dialog__access-section {
+  padding: 0 24px 16px;
+}
+
+.share-dialog__access-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+}
+
+.share-dialog__access-avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.share-dialog__avatar-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.share-dialog__user-icon {
+  width: 100%;
+  height: 100%;
+  background-color: #f5f5f5;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #666;
+}
+
+.share-dialog__user-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.dark .share-dialog__user-icon {
+  background-color: #333;
+  color: #ccc;
+}
+
+.share-dialog__access-info {
+  flex: 1;
+}
+
+.share-dialog__access-name {
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+  line-height: 1.4;
+}
+
+.share-dialog__access-email {
+  font-size: 13px;
+  color: #666;
+  line-height: 1.3;
+}
+
+.dark .share-dialog__access-name {
+  color: #ffffff;
+}
+
+.dark .share-dialog__access-email {
+  color: #999;
+}
+
+.share-dialog__access-role {
+  font-size: 13px;
+  color: #666;
+  font-weight: 500;
+}
+
+.dark .share-dialog__access-role {
+  color: #999;
+}
+
+/* General Access Section */
+.share-dialog__general-section {
+  padding: 0 24px 16px;
+}
+
+.share-dialog__general-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.share-dialog__general-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background-color: #f5f5f5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #666;
+  flex-shrink: 0;
+}
+
+.share-dialog__general-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.share-dialog__general-icon--public {
+  background-color: #166534 !important;
+  color: #ffffff !important;
+}
+
+.dark .share-dialog__general-icon--public {
+  background-color: #166534 !important;
+  color: #ffffff !important;
+}
+
+.dark .share-dialog__general-icon {
+  background-color: #333;
+  color: #ccc;
+}
+
+.share-dialog__general-content {
+  flex: 1;
+  padding-top: 4px;
+}
+
+.share-dialog__dropdown-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: none;
+  border: none;
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+  cursor: pointer;
+  padding: 0;
+  outline: none;
+}
+
+.share-dialog__dropdown-btn:hover {
+  text-decoration: underline;
+}
+
+.share-dialog__dropdown-btn:focus {
+  outline: none;
+  box-shadow: none;
+}
+
+.share-dialog__dropdown-btn:active {
+  outline: none;
+  box-shadow: none;
+}
+
+.share-dialog__dropdown-btn:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
+.dark .share-dialog__dropdown-btn {
+  color: #ffffff;
+}
+
+.share-dialog__general-description {
+  font-size: 13px;
+  color: #666;
+  margin-top: 4px;
+  line-height: 1.4;
+}
+
+.dark .share-dialog__general-description {
+  color: #999;
+}
+
+/* Footer */
+.share-dialog__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 24px 20px;
+}
+
+.share-dialog__copy-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: none;
+  border: 1px solid #e5e5e5;
+  border-radius: 28px;
+  padding: 10px 16px;
+  font-size: 14px;
+  color: #333;
+  cursor: pointer;
+  transition: all 0.2s;
+  outline: none;
+}
+
+.share-dialog__copy-btn:hover {
+  background-color: #f5f5f5;
+}
+
+.share-dialog__copy-btn:focus {
+  outline: none;
+  box-shadow: none;
+}
+
+.share-dialog__copy-btn:active {
+  outline: none;
+  box-shadow: none;
+}
+
+.share-dialog__copy-btn:focus-visible {
+  outline: none;
+  box-shadow: none;
+}
+
+.dark .share-dialog__copy-btn {
+  border-color: #444;
+  color: #ffffff;
+}
+
+.dark .share-dialog__copy-btn:hover {
+  background-color: #333;
+}
+
+.share-dialog__done-btn {
+  background: #104464;
+  border: none;
+  border-radius: 28px;
+  padding: 10px 24px;
+  font-size: 14px;
+  font-weight: 500;
+  color: white;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.share-dialog__done-btn:hover {
+  background: #0d3851;
+}
+
+/* Animations */
+@keyframes shareDialogOverlayFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes shareDialogSlideIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+/* Responsive */
+@media (max-width: 640px) {
+  .share-dialog {
+    width: 95vw;
+    margin: 0 auto;
+  }
+  
+  .share-dialog__header,
+  .share-dialog__invite-section,
+  .share-dialog__access-section,
+  .share-dialog__general-section,
+  .share-dialog__footer {
+    padding-left: 16px;
+    padding-right: 16px;
+  }
+}
