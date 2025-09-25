@@ -47,10 +47,13 @@ coverage/
 .eslintcache 
 *.local
 
+### Generated Documentation ###
+documentations/
+
 /todo.md
 /prd.md
+/multi_agent_plan.md
 cloned-repos
 src/main/resources/application.properties
 src/main/resources/application.yml
 .cursor
-
