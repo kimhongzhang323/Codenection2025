@@ -14,6 +14,7 @@ import SuggestionPanel from '../components/ui/suggestion_panel'
 import ContextMenu from '../components/ui/context_menu'
 import FolderContextMenu from '../components/ui/folder_context_menu'
 import { GlobeIcon } from '../components/icons/globe_icon'
+import ShareDialog from '../components/ui/share_dialog'
 
 type DocItem =
   | { type: 'separator'; label: string }
@@ -265,6 +266,7 @@ function DocumentationPage() {
     y: 0,
     itemType: null
   })
+  const [isShareDialogOpen, setIsShareDialogOpen] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Determine encoded repo slug for routing back to repo root
@@ -521,32 +523,8 @@ function DocumentationPage() {
   }
 
   // Handle share functionality
-  const handleShare = async () => {
-    const shareData = {
-      title: 'AutoDocX Documentation',
-      text: 'Check out this amazing documentation!',
-      url: window.location.href,
-    }
-
-    try {
-      if (navigator.share && navigator.canShare && navigator.canShare(shareData)) {
-        await navigator.share(shareData)
-      } else {
-        // Fallback: copy to clipboard
-        await navigator.clipboard.writeText(window.location.href)
-        // You could show a toast notification here
-        console.log('Link copied to clipboard!')
-      }
-    } catch (error) {
-      console.error('Error sharing:', error)
-      // Fallback: copy to clipboard
-      try {
-        await navigator.clipboard.writeText(window.location.href)
-        console.log('Link copied to clipboard!')
-      } catch (clipboardError) {
-        console.error('Failed to copy to clipboard:', clipboardError)
-      }
-    }
+  const handleShare = () => {
+    setIsShareDialogOpen(true)
   }
 
   // Sync document class with theme state
@@ -798,6 +776,11 @@ function DocumentationPage() {
         accept="image/jpeg,image/jpg,image/png"
       />
 
+      {/* Share Dialog */}
+      <ShareDialog
+        isOpen={isShareDialogOpen}
+        onClose={() => setIsShareDialogOpen(false)}
+      />
     </div>
   )
 }

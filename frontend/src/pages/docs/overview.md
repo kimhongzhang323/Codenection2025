@@ -79,3 +79,7 @@ flowchart TD
     C --> E[Enjoy the day!]
     D --> E
 ```
+| Header 1 | Header 2 | Header 3 |
+|----------|----------|----------|
+| Cell 1   | Cell 2   | `code`   |
+| Data     | More     | Values   |
