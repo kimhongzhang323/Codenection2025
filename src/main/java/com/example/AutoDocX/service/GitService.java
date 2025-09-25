@@ -58,7 +58,7 @@ public class GitService {
         try (Git git = Git.open(repoPath.toFile())) {
             PullResult result = git.pull().call();
             if (!result.isSuccessful()) {
-                // Handle unsuccessful pull, maybe log it
+                System.out.println("Pull Failed: " + repoPath + ". Pulling latest changes.");
             }
             return git.getRepository().findRef("HEAD").getObjectId().getName();
         }

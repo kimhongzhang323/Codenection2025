@@ -2,7 +2,7 @@ package com.example.AutoDocX.controller;
 
 import com.example.AutoDocX.service.ApiResponse;
 import com.example.AutoDocX.service.Agent;
-import com.example.AutoDocX.service.SummaryAgent;
+import com.example.AutoDocX.service.GeneralSummaryAgent;
 import com.example.AutoDocX.service.DocumentationAgent;
 import com.example.AutoDocX.service.dto.DocParams;
 import lombok.AllArgsConstructor;
@@ -17,7 +17,7 @@ import org.springframework.web.bind.annotation.*;
 @AllArgsConstructor
 public class AgentController {
     private final Agent agent;
-    private final SummaryAgent summaryAgent;
+    private final GeneralSummaryAgent generalSummaryAgent;
     private final DocumentationAgent documentationAgent;
 
     @PostMapping("/get-response")
@@ -34,7 +34,7 @@ public class AgentController {
     @PostMapping("/run-summary")
     public ResponseEntity<ApiResponse<String>> runSummary(@RequestBody AgentRequest request) {
         try {
-            String summary = summaryAgent.run(request.getGitUrl(), request.getBranch());
+            String summary = generalSummaryAgent.run(request.getGitUrl(), request.getBranch());
             return ResponseEntity.ok(new ApiResponse<>("SUCCESS", "Summary agent finished.", summary));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)

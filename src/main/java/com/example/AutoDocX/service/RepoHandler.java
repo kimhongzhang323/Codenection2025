@@ -106,7 +106,16 @@ public class RepoHandler {
         String cacheKey = repoLink + (branch == null ? "" : "#" + branch);
         ClonedRepo clonedRepo = cache.get(cacheKey);
         if (clonedRepo != null) {
-            logger.info("Retrieved repository from cache: {}", cacheKey);
+            logger.info("Retrieved repository from cache: {}. Pulling latest changes.", cacheKey);
+            try {
+                String latestCommitHash = gitService.pullRepo(clonedRepo.getClonedPath());
+                clonedRepo.setCommitHash(latestCommitHash); // Update commit hash
+                clonedRepo.setGraph(null); // Invalidate graph as it's now stale
+                logger.info("Successfully pulled latest changes for repository: {}", cacheKey);
+            } catch (GitAPIException | IOException e) {
+                logger.error("Failed to pull latest changes for repository {}: {}", cacheKey, e.getMessage(), e);
+                // Optionally, decide if you want to return the stale repo or handle the error differently
+            }
             return clonedRepo;
         } else {
             logger.info("Repository not found in cache, attempting to clone: {}", cacheKey);

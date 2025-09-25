@@ -3,7 +3,6 @@ package com.example.AutoDocX.service;
 import com.example.AutoDocX.model.ClonedRepo;
 import com.example.AutoDocX.model.Documentation;
 import com.example.AutoDocX.model.repo.Model;
-import com.example.AutoDocX.model.repo.GeminiCentral;
 import com.example.AutoDocX.model.repo.GeminiModel;
 import com.example.AutoDocX.model.repo.SendMessageResult;
 import com.example.AutoDocX.model.repo.ModelFinishReason;
@@ -12,7 +11,6 @@ import com.example.AutoDocX.parser.model.GraphAlgo;
 import com.example.AutoDocX.parser.model.GraphNode;
 import com.example.AutoDocX.service.dto.DocParams;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.genai.types.Content;
 import com.google.genai.types.Part;
@@ -21,7 +19,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
-import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -32,6 +29,7 @@ public class DocumentationAgent {
     private final SessionManager sessionManager;
     private final McpToolKit mcpToolKit;
     private final Model model;
+    private final GeneralSummaryAgent generalSummaryAgent;
     private final SummaryAgent summaryAgent;
     private final ObjectMapper objectMapper = new ObjectMapper();
     private static final int DEFAULT_MAX_ITERATIONS = 5;
@@ -42,12 +40,14 @@ public class DocumentationAgent {
             SessionManager sessionManager,
             McpToolKit mcpToolKit,
             @Qualifier("geminiCentral") Model model,
+            GeneralSummaryAgent generalSummaryAgent,
             SummaryAgent summaryAgent
     ) {
         this.repoHandler = repoHandler;
         this.sessionManager = sessionManager;
         this.mcpToolKit = mcpToolKit;
         this.model = model;
+        this.generalSummaryAgent = generalSummaryAgent;
         this.summaryAgent = summaryAgent;
     }
 
@@ -100,12 +100,14 @@ public class DocumentationAgent {
                         // Tool execution
                         switch (name) {
                             case "get_summary": {
-                                String query = String.valueOf(args.getOrDefault("query", ""));
-                                Integer summaryIterations = args.get("iterations") instanceof Number ? ((Number) args.get("iterations")).intValue() : null;
-                                String sum = (summaryIterations == null)
-                                        ? summaryAgent.run(session.getGitUrl(), session.getBranch(), query)
-                                        : summaryAgent.run(session.getGitUrl(), session.getBranch(), query, summaryIterations);
-                                session.getMemory().getSummary().replaceEntry(query, sum);
+                                String query = (String) args.get("query");
+                                String sum;
+                                if (query != null && !query.isBlank()) {
+                                    sum = summaryAgent.run(session.getGitUrl(), session.getBranch(), query);
+                                } else {
+                                    sum = generalSummaryAgent.run(session.getGitUrl(), session.getBranch(), "Project Level Understanding");
+                                }
+                                session.getMemory().getSummary().replaceEntry(query != null ? query : "general_summary", sum);
                                 break;
                             }
                             case "execute_plan": {
@@ -170,7 +172,7 @@ RULES
 2. Keep responses factual and concise.
 3. ALWAYS use the provided tools to gather information or perform actions; do not make up information.
 4. Unless specified, you must always aim for full coverage of important nodes
-5. Only if needed, retrieve source code using get_summary and plans
+5. Only if needed, retrieve source code using get_summary and plans (be detail and explicit of what you want!)
 
 STEPS:
 1. Use `get_summary(query)` to get context/summaries from the summary agent (very expensive, use with caution).

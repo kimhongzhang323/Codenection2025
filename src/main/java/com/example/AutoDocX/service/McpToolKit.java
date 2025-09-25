@@ -127,14 +127,12 @@ public class McpToolKit {
     // Documentation Agent (KISS) toolset: get_summary, update_plan, execute_plan
     declarations.add(FunctionDeclaration.builder()
         .name("get_summary")
-        .description("Generate or refresh a project summary using the code graph. Args: query (string), iterations (optional, number).")
+        .description("Retrieves related context from the codebase. Leave the query is empty to generate a project-level summary")
         .parameters(Schema.builder()
             .type(Type.Known.OBJECT)
             .properties(Map.of(
-                "query", Schema.builder().type(Type.Known.STRING).description("What to focus on in the summary").build(),
-                "iterations", Schema.builder().type(Type.Known.NUMBER).description("Optional iterations hint").build()
+                "query", Schema.builder().type(Type.Known.STRING).description("Prompt passed to the Summarising Agent. Leave empty for a general project summary.").build()
             ))
-            .required(List.of("query"))
             .build())
         .build());
 

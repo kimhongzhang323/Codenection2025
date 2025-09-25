@@ -34,7 +34,7 @@ public class Agent {
     private final SessionManager sessionManager;
     private final Model model;
     private final ObjectMapper objectMapper; // For formatting model params
-    private final SummaryAgent summaryAgent;
+    private final GeneralSummaryAgent generalSummaryAgent;
     private final McpToolKit mcpToolKit;
 
 
@@ -43,14 +43,14 @@ public class Agent {
             McpToolUtils mcpToolUtils,
             SessionManager sessionManager,
             @Qualifier("geminiCentral") Model model,
-            SummaryAgent summaryAgent,
+            GeneralSummaryAgent generalSummaryAgent,
             McpToolKit mcpToolKit
     ) {
         this.repoHandler = repoHandler;
         this.mcpToolUtils = mcpToolUtils;
         this.sessionManager = sessionManager;
         this.model = model;
-        this.summaryAgent = summaryAgent;
+        this.generalSummaryAgent = generalSummaryAgent;
         this.mcpToolKit = mcpToolKit;
         this.objectMapper = new ObjectMapper();
     }
