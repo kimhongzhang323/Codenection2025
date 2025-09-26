@@ -33,7 +33,7 @@ class AuthService {
     localStorage.removeItem('user_email');
   }
 
-  async getCurrentUser(): Promise<any> {
+  async getCurrentUser(): Promise<{ id: string; email: string; [key: string]: unknown }> {
     const token = this.getToken();
     if (!token) {
       throw new Error('No authentication token');

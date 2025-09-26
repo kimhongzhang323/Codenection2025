@@ -15,8 +15,12 @@ import ContextMenu from '../components/ui/context_menu'
 import FolderContextMenu from '../components/ui/folder_context_menu'
 import { GlobeIcon } from '../components/icons/globe_icon'
 import { CodeIcon } from '../components/icons/code_icon'
+import { HistoryIcon } from '../components/icons/history_icon'
+import { DiagramIcon } from '../components/icons/diagram_icon'
 import ShareDialog from '../components/ui/share_dialog'
 import ViewCodeDialog from '../components/ui/view_code_dialog'
+import EmbeddedChangelog from '../components/embedded_changelog'
+import EmbeddedFlowchart from '../components/embedded_flowchart'
 import { documentationApi, type Documentation } from '../services/api'
 
 type DocItem =
@@ -161,12 +165,15 @@ function renderItem(item: DocItem, idx: number, onFileClick: (label: string) => 
 function DocumentationPage() {
   const location = useLocation() as { state?: { repoUrl?: string; repoData?: { name?: string; fullName?: string } } }
   const navigate = useNavigate()
-  const { repo } = useParams<{ repo: string }>()
+  const { repo, subpage } = useParams<{ repo: string; subpage?: string }>()
   const repoUrl = location.state?.repoUrl
   const fallbackUrl = location.state?.repoData?.name
     ? `https://github.com/${location.state.repoData.name.replace(/\s*\/\s*/, '/')}`
     : undefined
-  const githubHref = repoUrl || fallbackUrl || '#'
+  
+  // Construct GitHub URL from repo parameter if available
+  const repoBasedUrl = repo ? `https://github.com/${decodeURIComponent(repo)}` : undefined
+  const githubHref = repoUrl || fallbackUrl || repoBasedUrl || '#'
 
   const [isDarkSelected, setIsDarkSelected] = useState(() => {
     // Check localStorage first, then document class, default to dark
@@ -203,6 +210,13 @@ function DocumentationPage() {
   useEffect(() => {
     if (!githubHref || githubHref === '#') return
 
+    // Clear existing data when repo changes
+    setDocumentationData({})
+    setDocumentationTree([])
+    setActiveLabel('')
+    setMarkdownContent('')
+    setDraftContent('')
+    
     setIsLoadingDocs(true)
     setDocsError(null)
     
@@ -256,9 +270,9 @@ function DocumentationPage() {
         setDocumentationData(docs)
         setDocumentationTree(buildDocumentationTree(docs))
         
-        // Set default active label if none is set
+        // Set default active label - always set to the first key for consistency
         const keys = Object.keys(docs)
-        if (keys.length > 0 && !activeLabel) {
+        if (keys.length > 0) {
           const firstKey = keys[0]
           setActiveLabel(formatFileLabel(firstKey))
         }
@@ -276,7 +290,7 @@ function DocumentationPage() {
     }
 
     loadDocs()
-  }, [githubHref, activeLabel, formatFileLabel])
+  }, [githubHref, repo, formatFileLabel])
   const [isScrolling, setIsScrolling] = useState(false)
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
     if (typeof window === 'undefined') return false
@@ -341,14 +355,17 @@ function DocumentationPage() {
     return ''
   })()
 
-  // Derive sidebar title: prefer fullName from state (case-preserved); fallback to owner/repo from repoUrl
+  // Derive sidebar title: prefer repo name only (without owner) from state or repoUrl
   let sidebarTitle = 'Docs'
   if (location.state?.repoData?.fullName) {
-    sidebarTitle = location.state.repoData.fullName
+    // Extract just the repo name (part after the slash)
+    sidebarTitle = location.state.repoData.fullName.split('/')[1] || location.state.repoData.fullName
   } else if (repoUrl) {
     try {
       const url = new URL(repoUrl)
-      sidebarTitle = url.pathname.replace(/^\//, '') || 'Docs'
+      const fullPath = url.pathname.replace(/^\//, '') || 'Docs'
+      // Extract just the repo name if it's in owner/repo format
+      sidebarTitle = fullPath.split('/')[1] || fullPath
     } catch {
       // ignore parse errors and keep default
     }
@@ -392,6 +409,25 @@ function DocumentationPage() {
     // Sync active label from slug in URL
     if (filePart) {
       const targetSlug = filePart.toLowerCase()
+      
+      console.log('DocumentationPage - URL parsing:', { 
+        filePart, 
+        targetSlug, 
+        subpage, 
+        currentPath: window.location.pathname 
+      })
+      
+      // Handle special routes directly (changelog, flowchart)
+      if (targetSlug === 'changelog') {
+        console.log('Setting activeLabel to Changelog')
+        setActiveLabel('Changelog')
+        return
+      } else if (targetSlug === 'flowchart') {
+        console.log('Setting activeLabel to System Diagrams')
+        setActiveLabel('System Diagrams')
+        return
+      }
+      
       const normTarget = normalizeKey(targetSlug)
       // find matching label in documentation tree (robust to hyphens/spaces)
       const collectLabels = (items: DocItem[], acc: string[] = []): string[] => {
@@ -752,11 +788,53 @@ function DocumentationPage() {
               </div>
             </div>
           </div>
-          <nav 
-            ref={treeRef}
-            className={`docs-tree ${isScrolling ? 'is-scrolling' : ''}`} 
-            aria-label="Documentation navigation"
-          >
+          
+          {/* Special Pages Navigation */}
+          <div className="docs-sidebar__section">
+            <div className="docs-sidebar__section-header">
+              <h3>Repository Overview</h3>
+            </div>
+            <div className="docs-sidebar__nav">
+              <button 
+                className="docs-sidebar__nav-item"
+                onClick={() => {
+                  const repoPath = window.location.pathname.split('/')[1]
+                  navigate(`/${repoPath}/changelog`, {
+                    state: location.state
+                  })
+                }}
+                aria-label="View Changelog"
+              >
+                <HistoryIcon size={16} />
+                <span>Changelog</span>
+              </button>
+              
+              <button 
+                className="docs-sidebar__nav-item"
+                onClick={() => {
+                  const repoPath = window.location.pathname.split('/')[1]
+                  navigate(`/${repoPath}/flowchart`, {
+                    state: location.state
+                  })
+                }}
+                aria-label="View System Diagrams"
+              >
+                <DiagramIcon size={16} />
+                <span>System Diagrams</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Documentation Tree Section */}
+          <div className="docs-sidebar__section" style={{ display: 'none' }}>
+            <div className="docs-sidebar__section-header">
+              <h3>Documentation</h3>
+            </div>
+            <nav 
+              ref={treeRef}
+              className={`docs-tree ${isScrolling ? 'is-scrolling' : ''}`} 
+              aria-label="Documentation navigation"
+            >
             <div className="docs-tree__content">
               {isLoadingDocs ? (
                 <div style={{ padding: '20px', textAlign: 'center', color: 'var(--docs-subtle-text)' }}>
@@ -776,6 +854,25 @@ function DocumentationPage() {
               )}
             </div>
           </nav>
+          </div>
+          
+          {/* Testing Message */}
+          <div className="docs-sidebar__section">
+            <div style={{ 
+              padding: '16px', 
+              textAlign: 'center', 
+              color: 'var(--docs-subtle-text)', 
+              fontSize: '12px',
+              fontStyle: 'italic',
+              border: '1px dashed var(--docs-border)',
+              borderRadius: '6px',
+              margin: '0 16px'
+            }}>
+              Documentation tree temporarily hidden<br/>
+              Use the buttons above to test special pages
+            </div>
+          </div>
+          
           <div className="docs-sidebar__footer">
             <a className="docs-footer__gh" href={githubHref} target="_blank" rel="noreferrer" aria-label="GitHub">
               <GithubIcon />
@@ -819,8 +916,24 @@ function DocumentationPage() {
               />
             ) : (
               <>
-                <Markdown content={draftContent || markdownContent} />
-                {showTOC && <TableOfContents content={draftContent || markdownContent} />}
+                {activeLabel === 'Changelog' ? (
+                  <EmbeddedChangelog 
+                    repo={repo} 
+                    repoUrl={githubHref}
+                    className="changelog-main"
+                  />
+                ) : activeLabel === 'System Diagrams' ? (
+                  <EmbeddedFlowchart 
+                    repo={repo} 
+                    repoUrl={githubHref}
+                    className="flowchart-main"
+                  />
+                ) : (
+                  <>
+                    <Markdown content={draftContent || markdownContent} />
+                    {showTOC && <TableOfContents content={draftContent || markdownContent} />}
+                  </>
+                )}
               </>
             )}
           </div>

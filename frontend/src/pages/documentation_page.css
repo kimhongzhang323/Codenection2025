@@ -292,6 +292,62 @@ html:not(.dark) .docs-sidebar__collapse-icon {
   min-width: 12px;
 }
 
+/* Sidebar Section */
+.docs-sidebar__section {
+  margin-bottom: 16px;
+}
+
+.docs-sidebar__section-header {
+  padding: 8px 16px;
+  border-bottom: 1px solid var(--docs-border);
+  margin-bottom: 8px;
+}
+
+.docs-sidebar__section-header h3 {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--docs-subtle-text);
+}
+
+/* Navigation Section */
+.docs-sidebar__nav {
+  padding: 0 16px;
+}
+
+.docs-sidebar__nav-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 12px;
+  background: none;
+  border: none;
+  color: var(--docs-text);
+  font-size: 14px;
+  font-weight: 500;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: left;
+  margin-bottom: 4px;
+}
+
+.docs-sidebar__nav-item:hover {
+  background: var(--docs-hover-bg);
+  color: var(--docs-text);
+}
+
+.docs-sidebar__nav-item:active {
+  background: var(--docs-active-bg);
+}
+
+.docs-sidebar__nav-item span {
+  font-size: 14px;
+}
+
 /* Tree - align container with footer width */
 .docs-tree { 
   display: flex; 

@@ -5,6 +5,7 @@ import { CheckIcon } from './components/icons/check_icon'
 import { XIcon } from './components/icons/close_icon'
 import { ArrowRightIcon } from './components/icons/arrow_icon'
 import DocumentationPage from './pages/documentation_page'
+import CommitDetailPage from './pages/commit_detail_page'
 import SignUpPage from './pages/signup_page'
 import SignInPage from './pages/signin_page'
 import OAuthCallback from './components/oauth_callback'
@@ -263,6 +264,10 @@ function App() {
         <Route path="/dashboard" element={<HomePage />} />
         <Route path="/auth/callback" element={<OAuthCallback />} />
         <Route path="/docs-flow/:repo" element={<ProtectedRoute><DocsFlowPage /></ProtectedRoute>} />
+
+        <Route path="/:repo/commit/:sha" element={<ProtectedRoute><CommitDetailPage /></ProtectedRoute>} />
+        <Route path="/:repo/changelog" element={<DocumentationPage />} />
+        <Route path="/:repo/flowchart" element={<DocumentationPage />} />
         <Route path="/:repo" element={<DocumentationPage />} />
         <Route path="/:repo/:file" element={<DocumentationPage />} />
         <Route path="/documentation" element={<ProtectedRoute><DocumentationPage /></ProtectedRoute>} />
