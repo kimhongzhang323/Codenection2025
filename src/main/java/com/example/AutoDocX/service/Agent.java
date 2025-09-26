@@ -108,7 +108,7 @@ public class Agent {
             if (result.getModelFinishReason() == ModelFinishReason.OUTPUT_ERROR ||
                     result.getModelFinishReason() == ModelFinishReason.INPUT_ERROR) {
                 currentResponse = "Model stopped due to " + result.getModelFinishReason();
-                session.getMemory().getEpisodic().addEntry("error:model_finish", currentResponse);
+                session.getMemory().getSumAgentLog().addEntry("error:model_finish", currentResponse);
                 break;
             }
 
@@ -119,7 +119,7 @@ public class Agent {
                 break ;
             }
 
-            session.getMemory().getEpisodic().addEntry("model", currentResponse);
+            session.getMemory().getSumAgentLog().addEntry("model", currentResponse);
             break;
         }
 
@@ -130,7 +130,7 @@ public class Agent {
      * Centralized tool call handling. Also stores tool results into relevant memory stores.
      */
     private String handleToolCall(String tool, Map<String, Object> param, ClonedRepo repo, Graph graph, Session session) {
-        ToolExecutionContext context = new ToolExecutionContext(repo, graph, session);
+        ToolExecutionContext context = new ToolExecutionContext(repo, graph, session, session.getMemory().getSumAgentLog());
         return mcpToolKit.executeTool(tool, param, context);
     }
 
@@ -199,7 +199,7 @@ public class Agent {
         }
 
         // === Episodic Memory (recent only, for flow) ===
-        List<Memory.MemoryEntry> episodicEntries = memory.getEpisodic().getEntries();
+        List<Memory.MemoryEntry> episodicEntries = memory.getSumAgentLog().getEntries();
         if (!episodicEntries.isEmpty()) {
             StringBuilder episodicSection = new StringBuilder("LOG MEMORY:\n");
             int start = Math.max(0, episodicEntries.size() - EPISODIC_HISTORY_FOR_PROMPT);
@@ -225,7 +225,7 @@ public class Agent {
 
     private String getFinalResponse(Memory memory) {
         // Prefer the last final_answer in episodic memory
-        List<Memory.MemoryEntry> episodic = memory.getEpisodic().getEntries();
+        List<Memory.MemoryEntry> episodic = memory.getSumAgentLog().getEntries();
         for (int i = episodic.size() - 1; i >= 0; i--) {
             Memory.MemoryEntry e = episodic.get(i);
             if ("model".equals(e.getQuery())) {

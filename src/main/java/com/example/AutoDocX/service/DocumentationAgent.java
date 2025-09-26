@@ -68,7 +68,7 @@ public class DocumentationAgent {
         Graph graph;
         try { graph = repoHandler.getGraph(repo); } catch (Exception e) { return "Graph load failed: " + e.getMessage(); }
 
-        ToolExecutionContext ctx = new ToolExecutionContext(repo, graph, session);
+        ToolExecutionContext ctx = new ToolExecutionContext(repo, graph, session, session.getMemory().getDocAgentLog());
 
         int iterations = 0;
         int maxIterations = (iterationLimit == null || iterationLimit <= 0) ? DEFAULT_MAX_ITERATIONS : iterationLimit;
@@ -82,7 +82,7 @@ public class DocumentationAgent {
             } catch (Exception e) {
                 String msg = "Model invocation error: " + e.getMessage();
                 System.err.println("WARN (DocumentationAgent): " + msg);
-                session.getMemory().getEpisodic().addEntry("error:model_call", msg);
+                session.getMemory().getDocAgentLog().addEntry("error:model_call", msg);
                 break;
             }
 
@@ -90,12 +90,12 @@ public class DocumentationAgent {
                 result.getModelFinishReason() == ModelFinishReason.INPUT_ERROR) {
                 String msg = "Model stopped due to " + result.getModelFinishReason();
                 System.err.println("WARN (DocumentationAgent): " + msg);
-                session.getMemory().getEpisodic().addEntry("error:model_finish", msg);
+                session.getMemory().getDocAgentLog().addEntry("error:model_finish", msg);
                 break; // emergency stop
             }
             if (result.getText().isPresent()) {
                 String assistant = result.getText().get();
-                session.getMemory().getEpisodic().addEntry("doc_agent.assistant", assistant);
+                session.getMemory().getDocAgentLog().addEntry("doc_agent.assistant", assistant);
             }
 
             if (!result.getToolCalls().isEmpty()) {
@@ -133,7 +133,7 @@ public class DocumentationAgent {
                                 if (planResult != null && !planResult.isEmpty()) {
                                     toolLogValue += " Result: " + planResult.substring(0, Math.min(200, planResult.length())) + "... (stored in " + key + ")";
                                 }
-                                session.getMemory().getEpisodic().addEntry(toolLogKey, toolLogValue);
+                                session.getMemory().getDocAgentLog().addEntry(toolLogKey, toolLogValue);
                                 break;
                             }
                             default: {
@@ -249,8 +249,8 @@ STEPS:
             context.append("EXISTING SUMMARY:\n").append(memory.getSummary().toString()).append("\n\n");
         }
 
-        if (memory.getEpisodic() != null && !memory.getEpisodic().isEmpty()) {
-            context.append("LOG:\n").append(memory.getEpisodic().toString(DEFAULT_MAX_ITERATIONS * 2)).append("\n\n");
+        if (memory.getDocAgentLog() != null && !memory.getDocAgentLog().isEmpty()) {
+            context.append("LOG:\n").append(memory.getDocAgentLog().toString(DEFAULT_MAX_ITERATIONS * 2)).append("\n\n");
         }
 
         context.append("USER PROMPT:\n").append(userPrompt == null ? "" : userPrompt).append("\n\n");
