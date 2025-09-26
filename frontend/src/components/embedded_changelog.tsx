@@ -34,7 +34,7 @@ const EmbeddedChangelog: React.FC<EmbeddedChangelogProps> = ({
   const [hasMore, setHasMore] = useState(false)
 
   // Filters
-  const [filters, setFilters] = useState<ChangelogFilter>({
+  const [filters] = useState<ChangelogFilter>({
     searchQuery: '',
     author: '',
     dateFrom: '',
@@ -42,10 +42,9 @@ const EmbeddedChangelog: React.FC<EmbeddedChangelogProps> = ({
     fileExtension: '',
     branch: 'main'
   })
-  const [sortBy, setSortBy] = useState<'date' | 'author' | 'changes'>('date')
-  const [authors, setAuthors] = useState<string[]>([])
 
-  const repoName = location.state?.repoData?.fullName || repo || 'Repository'
+  const [, setAuthors] = useState<string[]>([])
+
   const effectiveRepoUrl = repoUrl || location.state?.repoUrl || (
     repo && repo.includes('/') ? `https://github.com/${repo}` : null
   )

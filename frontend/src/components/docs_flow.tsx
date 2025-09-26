@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { FileText, Sparkles, Check, X, Edit3, Send, Save } from 'lucide-react';
+import { useState } from 'react';
+import { FileText, Check, X, Edit3, Send } from 'lucide-react';
 import './docs_flow.css';
 
 interface SuggestedBlock {
@@ -20,33 +20,18 @@ interface SuggestedOutline {
   blocks: SuggestedBlock[];
 }
 
-interface InlineSuggestion {
-  id: string;
-  content: string;
-  position: number;
-  accepted?: boolean;
-  rejected?: boolean;
-  editing?: boolean;
-}
+
 
 export default function DocumentationSystem({
-  hasExistingDoc = false,
-  isEditing = false,
   onDocumentationCreated,
   onBackToApp
 }: {
-  hasExistingDoc?: boolean;
-  isEditing?: boolean;
   onDocumentationCreated?: (content: string) => void;
   onBackToApp?: () => void;
 }) {
   const [selectedFlow, setSelectedFlow] = useState<'custom' | 'suggested' | null>(null);
   const [customPrompt, setCustomPrompt] = useState('');
-  const [generatedDoc, setGeneratedDoc] = useState('');
   const [selectedOutline, setSelectedOutline] = useState<SuggestedOutline | null>(null);
-  const [refinementPrompt, setRefinementPrompt] = useState('');
-  const [inlineSuggestions, setInlineSuggestions] = useState<InlineSuggestion[]>([]);
-  const [currentIsEditing, setCurrentIsEditing] = useState(isEditing);
 
   const suggestedOutlines: SuggestedOutline[] = [
     {
@@ -224,53 +209,7 @@ export default function DocumentationSystem({
     onDocumentationCreated?.(finalContent);
   };
 
-  const handleRefinementSubmit = () => {
-    if (!refinementPrompt.trim()) return;
 
-    const newSuggestion: InlineSuggestion = {
-      id: Date.now().toString(),
-      content: `## ${refinementPrompt}\n\n(Your content here)\n`,
-      position: generatedDoc.length
-    };
-
-    setInlineSuggestions([...inlineSuggestions, newSuggestion]);
-    setRefinementPrompt('');
-  };
-
-  const handleInlineSuggestionAction = (suggestionId: string, action: 'accept' | 'reject' | 'edit') => {
-    const suggestion = inlineSuggestions.find(s => s.id === suggestionId);
-    if (!suggestion) return;
-
-    if (action === 'accept') {
-      setGeneratedDoc(prev => prev + '\n\n' + suggestion.content);
-      setInlineSuggestions(prev => prev.filter(s => s.id !== suggestionId));
-    } else if (action === 'reject') {
-      setInlineSuggestions(prev => prev.filter(s => s.id !== suggestionId));
-    } else if (action === 'edit') {
-      setInlineSuggestions(prev =>
-        prev.map(s =>
-          s.id === suggestionId
-            ? { ...s, accepted: false, rejected: false, editing: true }
-            : s
-        )
-      );
-    }
-  };
-
-  const generateTOC = (content: string) => {
-    const lines = content.split('\n');
-    const headings = lines.filter(line => line.startsWith('#'));
-
-    return headings.map((heading, index) => {
-      const level = heading.match(/^#+/)?.[0].length || 1;
-      const text = heading.replace(/^#+\s*/, '');
-      return (
-        <div key={index} className={`toc-item toc-level-${level}`}>
-          {text}
-        </div>
-      );
-    });
-  };
 
   // // Editor State
   // if (hasExistingDoc || currentIsEditing) {

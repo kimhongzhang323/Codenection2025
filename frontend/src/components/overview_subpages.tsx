@@ -218,8 +218,6 @@ const OverviewSubpages: React.FC<OverviewSubpagesProps> = ({ content, className 
                 />
               ) : currentSubpage.type === 'flowchart' ? (
                 <EmbeddedFlowchart 
-                  repo={repo} 
-                  repoUrl={repoUrl}
                   className="flowchart-in-overview"
                 />
               ) : (

@@ -7,19 +7,19 @@
 .embedded-flowchart-header {
   margin-bottom: 1.5rem;
   padding-bottom: 1rem;
-  border-bottom: 1px solid var(--border-light);
+  border-bottom: 1px solid var(--sidebar-border);
 }
 
 .embedded-flowchart-header h3 {
   margin: 0 0 0.5rem 0;
   font-size: 1.5rem;
   font-weight: 600;
-  color: var(--text-primary);
+  color: var(--docs-header-text);
 }
 
 .embedded-flowchart-header p {
   margin: 0;
-  color: var(--text-secondary);
+  color: var(--docs-normal-text);
   font-size: 1rem;
   line-height: 1.5;
 }
@@ -30,14 +30,14 @@
   gap: 0.5rem;
   margin-bottom: 1.5rem;
   padding-bottom: 1rem;
-  border-bottom: 1px solid var(--border-light);
+  border-bottom: 1px solid var(--sidebar-border);
 }
 
 .diagram-tab {
   padding: 0.5rem 1rem;
-  background: var(--bg-secondary);
-  color: var(--text-secondary);
-  border: 1px solid var(--border-light);
+  background: var(--docs-bg);
+  color: var(--docs-normal-text);
+  border: 1px solid var(--sidebar-border);
   border-radius: 0.375rem;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -46,20 +46,20 @@
 }
 
 .diagram-tab:hover {
-  background: var(--bg-hover);
-  color: var(--text-primary);
-  border-color: var(--border-dark);
+  background: var(--docs-hover-bg, rgba(100, 108, 255, 0.08));
+  color: var(--docs-header-text);
+  border-color: #646cff;
 }
 
 .diagram-tab.active {
-  background: var(--accent-blue);
+  background: #646cff;
   color: white;
-  border-color: var(--accent-blue);
+  border-color: #646cff;
 }
 
 .diagram-container-embedded {
-  background: var(--bg-secondary);
-  border: 1px solid var(--border-light);
+  background: var(--docs-bg);
+  border: 1px solid var(--sidebar-border);
   border-radius: 0.5rem;
   padding: 1.5rem;
   margin-bottom: 1rem;
@@ -71,19 +71,19 @@
   align-items: center;
   margin-bottom: 1rem;
   padding-bottom: 0.75rem;
-  border-bottom: 1px solid var(--border-light);
+  border-bottom: 1px solid var(--sidebar-border);
 }
 
 .diagram-header-embedded h4 {
   margin: 0;
   font-size: 1.2rem;
   font-weight: 600;
-  color: var(--text-primary);
+  color: var(--docs-header-text);
 }
 
 .diagram-type-badge {
   padding: 0.25rem 0.75rem;
-  background: var(--accent-green);
+  background: #22c55e;
   color: white;
   border-radius: 1rem;
   font-size: 0.75rem;
@@ -96,8 +96,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  background: white;
-  border: 1px solid var(--border-light);
+  background: var(--docs-bg);
+  border: 1px solid var(--sidebar-border);
   border-radius: 0.375rem;
   padding: 1rem;
   margin-bottom: 1rem;
@@ -105,7 +105,7 @@
 }
 
 .diagram-info-embedded {
-  color: var(--text-secondary);
+  color: var(--docs-normal-text);
   font-size: 0.9rem;
   line-height: 1.5;
 }
@@ -115,9 +115,9 @@
 }
 
 /* Dark mode adjustments */
-[data-theme="dark"] .diagram-content-embedded {
-  background: var(--bg-primary);
-  border-color: var(--border-dark);
+.dark .diagram-content-embedded {
+  background: var(--docs-bg);
+  border-color: var(--sidebar-border);
 }
 
 /* Responsive design */

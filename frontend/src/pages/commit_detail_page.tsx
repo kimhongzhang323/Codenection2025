@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate, useLocation } from 'react-router-dom'
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
+import { tomorrow, prism } from 'react-syntax-highlighter/dist/cjs/styles/prism'
 import type { ChangelogEntry, FileChange } from '../types/changelog'
 import { changelogApi } from '../services/api'
 import './commit_detail_page.css'
@@ -46,6 +48,77 @@ const CommitDetailPage: React.FC<CommitDetailPageProps> = () => {
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [copiedSha, setCopiedSha] = useState(false)
+
+  // Get language for syntax highlighting
+  const getLanguageFromFilename = (filename: string): string => {
+    const ext = filename.toLowerCase().split('.').pop() || ''
+    const languageAliases: Record<string, string> = {
+      'js': 'javascript',
+      'jsx': 'jsx',
+      'ts': 'typescript',
+      'tsx': 'tsx',
+      'py': 'python',
+      'java': 'java',
+      'cpp': 'cpp',
+      'c++': 'cpp',
+      'cxx': 'cpp',
+      'cc': 'cpp',
+      'c': 'c',
+      'h': 'c',
+      'hpp': 'cpp',
+      'hxx': 'cpp',
+      'cs': 'csharp',
+      'fs': 'fsharp',
+      'vb': 'vbnet',
+      'php': 'php',
+      'rb': 'ruby',
+      'go': 'go',
+      'rs': 'rust',
+      'kt': 'kotlin',
+      'swift': 'swift',
+      'scala': 'scala',
+      'dart': 'dart',
+      'html': 'html',
+      'htm': 'html',
+      'xml': 'xml',
+      'css': 'css',
+      'scss': 'scss',
+      'sass': 'sass',
+      'less': 'less',
+      'json': 'json',
+      'yaml': 'yaml',
+      'yml': 'yaml',
+      'toml': 'toml',
+      'ini': 'ini',
+      'cfg': 'ini',
+      'conf': 'ini',
+      'properties': 'properties',
+      'sh': 'bash',
+      'bash': 'bash',
+      'ps1': 'powershell',
+      'bat': 'batch',
+      'cmd': 'batch',
+      'sql': 'sql',
+      'dockerfile': 'dockerfile',
+      'md': 'markdown',
+      'tex': 'latex',
+      'r': 'r',
+      'pl': 'perl',
+      'lua': 'lua',
+      'vim': 'vim',
+      'diff': 'diff',
+      'log': 'log',
+      'txt': 'text'
+    }
+    return languageAliases[ext] || 'diff'
+  }
+
+  // Get theme based on current theme preference
+  const getTheme = () => {
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark' ||
+                   window.matchMedia('(prefers-color-scheme: dark)').matches
+    return isDark ? tomorrow : prism
+  }
 
   // Get repository info from location state or localStorage
   const repoUrl = location.state?.repoUrl || localStorage.getItem('current_repo_url')
@@ -285,7 +358,33 @@ const CommitDetailPage: React.FC<CommitDetailPageProps> = () => {
                 
                 {file.patch && (
                   <div className="file-patch">
-                    <pre><code>{file.patch}</code></pre>
+                    <SyntaxHighlighter
+                      language={getLanguageFromFilename(file.filename)}
+                      style={getTheme()}
+                      customStyle={{
+                        margin: 0,
+                        padding: '16px',
+                        background: 'var(--background)',
+                        fontSize: '13px',
+                        lineHeight: 1.4,
+                        borderRadius: '0 0 8px 8px',
+                        fontFamily: '"SF Mono", Monaco, "Cascadia Code", "Roboto Mono", Consolas, "Courier New", monospace',
+                      }}
+                      showLineNumbers={true}
+                      wrapLines={false}
+                      wrapLongLines={false}
+                      lineNumberStyle={{
+                        minWidth: '3rem',
+                        padding: '0 0.5rem 0 0.25rem',
+                        marginRight: '0.5rem',
+                        textAlign: 'right',
+                        userSelect: 'none',
+                        opacity: 0.6,
+                        borderRight: '1px solid var(--border)',
+                      }}
+                    >
+                      {file.patch}
+                    </SyntaxHighlighter>
                   </div>
                 )}
               </div>

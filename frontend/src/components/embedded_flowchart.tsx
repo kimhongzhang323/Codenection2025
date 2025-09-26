@@ -3,14 +3,10 @@ import PlantUML from './plantuml'
 import './embedded_flowchart.css'
 
 interface EmbeddedFlowchartProps {
-  repoUrl?: string
-  repo?: string
   className?: string
 }
 
 const EmbeddedFlowchart: React.FC<EmbeddedFlowchartProps> = ({ 
-  repoUrl, 
-  repo, 
   className = '' 
 }) => {
   const [selectedDiagram, setSelectedDiagram] = useState<string>('system-overview')

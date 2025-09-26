@@ -1,4 +1,6 @@
 import React, { useState, useMemo } from 'react'
+import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter'
+import { tomorrow, prism } from 'react-syntax-highlighter/dist/cjs/styles/prism'
 import type { CodeDiff, DiffHunk, DiffLine } from '../../types/changelog'
 import { CheckIcon } from '../icons/check_icon'
 import { XIcon } from '../icons/close_icon'
@@ -59,6 +61,77 @@ const CodeDiffViewer: React.FC<CodeDiffViewerProps> = ({
   const getFileExtension = (filename: string) => {
     const parts = filename.split('.')
     return parts.length > 1 ? parts[parts.length - 1].toLowerCase() : ''
+  }
+
+  // Get language for syntax highlighting
+  const getLanguageFromExtension = (filename: string): string => {
+    const ext = getFileExtension(filename)
+    const languageAliases: Record<string, string> = {
+      'js': 'javascript',
+      'jsx': 'jsx',
+      'ts': 'typescript',
+      'tsx': 'tsx',
+      'py': 'python',
+      'java': 'java',
+      'cpp': 'cpp',
+      'c++': 'cpp',
+      'cxx': 'cpp',
+      'cc': 'cpp',
+      'c': 'c',
+      'h': 'c',
+      'hpp': 'cpp',
+      'hxx': 'cpp',
+      'cs': 'csharp',
+      'fs': 'fsharp',
+      'vb': 'vbnet',
+      'php': 'php',
+      'rb': 'ruby',
+      'go': 'go',
+      'rs': 'rust',
+      'kt': 'kotlin',
+      'swift': 'swift',
+      'scala': 'scala',
+      'dart': 'dart',
+      'html': 'html',
+      'htm': 'html',
+      'xml': 'xml',
+      'css': 'css',
+      'scss': 'scss',
+      'sass': 'sass',
+      'less': 'less',
+      'json': 'json',
+      'yaml': 'yaml',
+      'yml': 'yaml',
+      'toml': 'toml',
+      'ini': 'ini',
+      'cfg': 'ini',
+      'conf': 'ini',
+      'properties': 'properties',
+      'sh': 'bash',
+      'bash': 'bash',
+      'ps1': 'powershell',
+      'bat': 'batch',
+      'cmd': 'batch',
+      'sql': 'sql',
+      'dockerfile': 'dockerfile',
+      'md': 'markdown',
+      'tex': 'latex',
+      'r': 'r',
+      'pl': 'perl',
+      'lua': 'lua',
+      'vim': 'vim',
+      'diff': 'diff',
+      'log': 'log',
+      'txt': 'text'
+    }
+    return languageAliases[ext] || 'text'
+  }
+
+  // Get theme based on current theme preference
+  const getTheme = () => {
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark' ||
+                   window.matchMedia('(prefers-color-scheme: dark)').matches
+    return isDark ? tomorrow : prism
   }
 
   // Get status color class
@@ -134,7 +207,33 @@ const CodeDiffViewer: React.FC<CodeDiffViewerProps> = ({
           {line.type === 'addition' ? '+' : line.type === 'deletion' ? '-' : ' '}
         </td>
         <td className="diff-line__content">
-          <code>{line.content}</code>
+          <SyntaxHighlighter
+            language={getLanguageFromExtension(diff.filename)}
+            style={getTheme()}
+            customStyle={{
+              margin: 0,
+              padding: '0 8px',
+              background: 'transparent',
+              fontSize: '13px',
+              lineHeight: '1.4',
+              fontFamily: '"SF Mono", Monaco, "Cascadia Code", "Roboto Mono", Consolas, "Courier New", monospace',
+            }}
+            wrapLines={false}
+            wrapLongLines={false}
+            showLineNumbers={false}
+            PreTag={({ children, ...props }) => (
+              <div {...props} style={{ margin: 0, padding: 0, background: 'transparent' }}>
+                {children}
+              </div>
+            )}
+            CodeTag={({ children, ...props }) => (
+              <code {...props} style={{ background: 'transparent', padding: 0 }}>
+                {children}
+              </code>
+            )}
+          >
+            {line.content}
+          </SyntaxHighlighter>
         </td>
       </tr>
     )
