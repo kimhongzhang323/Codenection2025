@@ -30,6 +30,7 @@ public class GeneralSummaryAgent {
     private final SessionManager sessionManager;
     private final McpToolKit mcpToolKit;
     private final Model model;
+    private final DocumentHandlingService documentHandlingService;
     private final ObjectMapper objectMapper;
 
     @Autowired
@@ -37,116 +38,125 @@ public class GeneralSummaryAgent {
             RepoHandler repoHandler,
             SessionManager sessionManager,
             McpToolKit mcpToolKit,
-            @Qualifier("geminiCentral") Model model
+            @Qualifier("geminiCentral") Model model,
+            DocumentHandlingService documentHandlingService
     ) {
         this.repoHandler = repoHandler;
         this.sessionManager = sessionManager;
         this.mcpToolKit = mcpToolKit;
         this.model = model;
+        this.documentHandlingService = documentHandlingService;
         this.objectMapper = new ObjectMapper();
     }
 
-    public String run(String gitUrl, String branch) {
+    public String run(String gitUrl, String branch) throws Exception {
         return runCore(gitUrl, branch, null, null);
     }
 
     // Overload: allow callers to provide a focus prompt to steer exploration toward specific parts
     // without ignoring the rest of the project (breadth-first remains required by the prompt).
-    public String run(String gitUrl, String branch, String focusPrompt) {
+    public String run(String gitUrl, String branch, String focusPrompt) throws Exception {
         return runCore(gitUrl, branch, focusPrompt, null);
     }
 
     // Overload: allow callers to set iteration limit
-    public String run(String gitUrl, String branch, Integer iterations) {
+    public String run(String gitUrl, String branch, Integer iterations) throws Exception {
         return runCore(gitUrl, branch, null, iterations);
     }
 
     // Overload: focus + iteration limit
-    public String run(String gitUrl, String branch, String focusPrompt, Integer iterations) {
+    public String run(String gitUrl, String branch, String focusPrompt, Integer iterations) throws Exception {
         return runCore(gitUrl, branch, focusPrompt, iterations);
     }
 
     // DRY core implementation used by both run() overloads; focusPrompt may be null
-    private String runCore(String gitUrl, String branch, String focusPrompt, Integer iterationLimit) {
+    private String runCore(String gitUrl, String branch, String focusPrompt, Integer iterationLimit) throws Exception {
         Session session = sessionManager.getSession(gitUrl, branch);
-        ClonedRepo repo = repoHandler.getRepo(gitUrl, branch);
-        if (repo == null) return "Repository not found.";
+        if (!session.getIsGeneralSummaryRunning().compareAndSet(false, true)) {
+            throw new Exception("GeneralSummaryAgent is already running, please wait");
+        }
 
-        Graph graph;
         try {
-            graph = repoHandler.getGraph(repo);
-        } catch (Exception e) {
-            return "Error loading graph: " + e.getMessage();
-        }
-        ToolExecutionContext toolExecutionContext = new ToolExecutionContext(repo, graph, session, session.getMemory().getSumAgentLog());
+            ClonedRepo repo = repoHandler.getRepo(gitUrl, branch);
+            if (repo == null) return "Repository not found.";
+            DocumentationHandler docHandler = documentHandlingService.getDocumentHandler(session);
 
-        if (!session.isInitialStructureLogged()) {
-            session.getMemory().getStructure().addEntry("graph_structure", graph.toString());
-            mcpToolKit.executeTool("find_central_nodes", Map.of("n", 10), toolExecutionContext);
-            session.setInitialStructureLogged(true);
-        }
-        String runId = java.util.UUID.randomUUID().toString();
-        int iterations = 0;
-        int maxIterations = (iterationLimit == null || iterationLimit <= 0) ? DEFAULT_MAX_ITERATIONS : iterationLimit;
-        while (iterations++ < maxIterations) {
-            List<Tool> summaryTools = mcpToolKit.getExplorationTools();
-            String basePrompt = "Explore the codebase to provide a project-level summary. Your primary goal is breadth-first coverage of all important components.";
-            String loopPrompt = (focusPrompt != null && !focusPrompt.isBlank())
-                ? basePrompt + "\nUSER QUERY/FOCUS: " + focusPrompt
-                : basePrompt;
-
-            List<Content> contents = buildLoopContent(session.getMemory(), loopPrompt);
-
-            SendMessageResult result;
+            Graph graph;
             try {
-                result = model.sendMessageNew(contents, summaryTools);
+                graph = repoHandler.getGraph(repo);
             } catch (Exception e) {
-                String msg = "Model invocation error: " + e.getMessage();
-                logger.warn("SUM[{}] {}", runId, msg);
-                session.getMemory().getSumAgentLog().addEntry("error:model_call", msg);
-                break;
+                return "Error loading graph: " + e.getMessage();
             }
+            ToolExecutionContext toolExecutionContext = new ToolExecutionContext(repo, graph, session, session.getMemory().getSumAgentLog());
 
-            if (!result.getToolCalls().isEmpty()) {
-                for (ToolCallData fc : result.getToolCalls()) {
-                    logger.info("SUM[{}] Executing tool: {} with args: {}", runId, fc.getName(), fc.getArgs());
-                    mcpToolKit.executeTool(fc.getName(), fc.getArgs(), toolExecutionContext);
+            if (!session.isInitialStructureLogged()) {
+                session.getMemory().getStructure().addEntry("graph_structure", graph.toString());
+                mcpToolKit.executeTool("get_modified_nodes", Map.of(), toolExecutionContext);
+                mcpToolKit.executeTool("find_central_nodes", Map.of("n", 10), toolExecutionContext);
+                session.setInitialStructureLogged(true);
+            }
+            String runId = java.util.UUID.randomUUID().toString();
+            int iterations = 0;
+            int maxIterations = (iterationLimit == null || iterationLimit <= 0) ? DEFAULT_MAX_ITERATIONS : iterationLimit;
+            while (iterations++ < maxIterations) {
+                List<Tool> summaryTools = mcpToolKit.getExplorationTools();
+                String basePrompt = "Explore the codebase to provide a project-level summary. Your primary goal is breadth-first coverage of all important components.";
+                String loopPrompt = (focusPrompt != null && !focusPrompt.isBlank())
+                    ? basePrompt + "\nUSER QUERY/FOCUS: " + focusPrompt
+                    : basePrompt;
+
+                List<Content> contents = buildLoopContent(session.getMemory(), loopPrompt, docHandler);
+
+                SendMessageResult result;
+                try {
+                    result = model.sendMessage(contents, summaryTools);
+                } catch (Exception e) {
+                    String msg = "Model invocation error: " + e.getMessage();
+                    logger.warn("SUM[{}] {}", runId, msg);
+                    session.getMemory().getSumAgentLog().addEntry("error:model_call", msg);
+                    break;
                 }
-                continue; // let model process tool results in next loop
-            }
 
-            // End early if no tools are called
-            if (result.getToolCalls().isEmpty()) {
+                if (!result.getToolCalls().isEmpty()) {
+                    for (ToolCallData fc : result.getToolCalls()) {
+                        logger.info("SUM[{}] Executing tool: {} with args: {}", runId, fc.getName(), fc.getArgs());
+                        mcpToolKit.executeTool(fc.getName(), fc.getArgs(), toolExecutionContext);
+                    }
+                    continue; // let model process tool results in next loop
+                }
+
                 if (result.getText().isPresent()) {
                     session.getMemory().getSumAgentLog().addEntry("model", result.getText().get());
                     return result.getText().get();
                 }
                 break;
             }
+
+            // Final summary generation step
+            String defaultFinalPrompt = "Now produce the final project-level summary. Use your recorded understanding and memory. Provide: intro, architecture overview, and complete inventory of nodes (mark summarised vs inferred).";
+            String finalPrompt = (focusPrompt != null && !focusPrompt.isBlank())
+                ? defaultFinalPrompt + "\nFOCUS: " + focusPrompt
+                : defaultFinalPrompt;
+
+            String finalSummary = generateFinalSummary(session, finalPrompt, docHandler);
+            session.getMemory().getSummary().replaceEntry("general_summary", finalSummary);
+            return finalSummary;
+        } finally {
+            session.getIsGeneralSummaryRunning().set(false);
         }
-
-        // Final summary generation step
-        String defaultFinalPrompt = "Now produce the final project-level summary. Use your recorded understanding and memory. Provide: intro, architecture overview, and complete inventory of nodes (mark summarised vs inferred).";
-        String finalPrompt = (focusPrompt != null && !focusPrompt.isBlank())
-            ? defaultFinalPrompt + "\nFOCUS: " + focusPrompt
-            : defaultFinalPrompt;
-
-        String finalSummary = generateFinalSummary(session, finalPrompt);
-        session.getMemory().getSummary().replaceEntry("general_summary", finalSummary);
-        return finalSummary;
     }
 
-    private String generateFinalSummary(Session session, String finalPrompt) {
+    private String generateFinalSummary(Session session, String finalPrompt, DocumentationHandler docHandler) {
         List<Content> contents = null;
         try {
-            contents = buildFinalSummaryContent(session.getMemory(), finalPrompt, repoHandler.getGraph(session));
+            contents = buildFinalSummaryContent(session.getMemory(), finalPrompt, repoHandler.getGraph(session), docHandler);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
     // Final request logging centralized in GeminiModel
         SendMessageResult result;
         try {
-            result = model.sendMessageNew(contents, List.of());
+            result = model.sendMessage(contents, List.of());
         } catch (Exception e) {
             String msg = "Final summary generation failed: " + e.getMessage();
             logger.warn("SUM-FINAL {}", msg);
@@ -160,7 +170,7 @@ public class GeneralSummaryAgent {
         return "No summary generated.";
     }
 
-    private List<Content> buildLoopContent(Memory memory, String userPrompt) {
+    private List<Content> buildLoopContent(Memory memory, String userPrompt, DocumentationHandler docHandler) {
         List<Content> contents = new ArrayList<>();
         String systemInstruction =
 """
@@ -221,6 +231,11 @@ Never produce a response without it.
 
                 contents.add(Content.builder().role("user").parts(Part.builder().text(systemInstruction).build()).build());
 
+                String docContext = docHandler.toContextString();
+                if (!docContext.isBlank()) {
+                    contents.add(Content.builder().parts(Part.builder().text(docContext).build()).role("user").build());
+                }
+
                 // Structure Memory (recent)
                 List<Memory.MemoryEntry> structureEntries = memory.getStructure().getEntries();
                 if (!structureEntries.isEmpty()) {
@@ -251,7 +266,7 @@ Never produce a response without it.
                 return contents;
             }
 
-            private List<Content> buildFinalSummaryContent(Memory memory, String userPrompt, Graph graph) {
+            private List<Content> buildFinalSummaryContent(Memory memory, String userPrompt, Graph graph, DocumentationHandler docHandler) {
                 List<Content> contents = new ArrayList<>();
 
                 String systemInstruction =
@@ -262,9 +277,15 @@ Deliver:
 - Project introduction
 - Architectural overview of modules and relationships
 - Complete inventory of nodes to document, each marked summarised (based on code summary) or inferred (context-only). Format node_id: (inferred/summarised) {summary}
+    * if a node has been modified, mark it as [modified] after its summary
 """;
 
         contents.add(Content.builder().role("user").parts(Part.builder().text(systemInstruction).build()).build());
+
+        String docContext = docHandler.toContextString();
+        if (!docContext.isBlank()) {
+            contents.add(Content.builder().parts(Part.builder().text(docContext).build()).role("user").build());
+        }
 
         String understanding = Optional.ofNullable(memory.getSummary().getEntry("understanding")).orElse("");
         if (!understanding.isBlank()) {

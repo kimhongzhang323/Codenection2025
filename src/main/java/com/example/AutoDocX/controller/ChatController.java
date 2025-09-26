@@ -46,7 +46,7 @@ public class ChatController {
 
             List<Tool> tools = new ArrayList<>(); // Empty list of tools for now
 
-            Map<String, Object> modelResponseMap = model.sendMessage(contents, tools);
+            Map<String, Object> modelResponseMap = model.sendMessageOld(contents, tools);
 
             // Assuming modelResponseMap contains "final_answer" or similar for success
             if (modelResponseMap.containsKey("final_answer")) {

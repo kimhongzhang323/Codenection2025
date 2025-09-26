@@ -89,7 +89,7 @@ public class Agent {
 
 
             // ✅ new structured response
-            SendMessageResult result = model.sendMessageNew(contents, agentTools);
+            SendMessageResult result = model.sendMessage(contents, agentTools);
 
             // ✅ execute all tool calls if present
             if (!result.getToolCalls().isEmpty()) {

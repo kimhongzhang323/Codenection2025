@@ -32,13 +32,13 @@ public class GeminiModel implements Model {
     }
 
     @Override
-    public Map<String, Object> sendMessage(List<Content> contents, List<Tool> tools) {
-        SendMessageResult res = sendMessageNew(contents, tools);
+    public Map<String, Object> sendMessageOld(List<Content> contents, List<Tool> tools) {
+        SendMessageResult res = sendMessage(contents, tools);
         return res.toMap();
     }
 
     // New version
-    public SendMessageResult sendMessageNew(List<Content> contents, List<Tool> tools) {
+    public SendMessageResult sendMessage(List<Content> contents, List<Tool> tools) {
         String rid = UUID.randomUUID().toString();
         try {
             var config = com.google.genai.types.GenerateContentConfig.builder()
@@ -179,7 +179,7 @@ public class GeminiModel implements Model {
     ) {
         List<CompletableFuture<SendMessageResult>> futures = requests.stream()
                 .map(req -> CompletableFuture.supplyAsync(
-                        () -> sendMessageNew(req.getKey(), req.getValue()), executor
+                        () -> sendMessage(req.getKey(), req.getValue()), executor
                 ))
                 .toList();
 
@@ -194,7 +194,7 @@ public class GeminiModel implements Model {
     ) {
         List<CompletableFuture<SendMessageResult>> futures = requests.stream()
                 .map(req -> CompletableFuture.supplyAsync(
-                        () -> sendMessageNew(req.getKey(), req.getValue()), executor
+                        () -> sendMessage(req.getKey(), req.getValue()), executor
                 ))
                 .toList();
 

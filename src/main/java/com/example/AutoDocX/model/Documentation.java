@@ -9,21 +9,22 @@ import java.util.Date;
 @Setter
 public class Documentation {
     private String content;
-    private Date lastUpdated;
-    private int expandedCounter = 0;
-
-    public Documentation() {
-        this.lastUpdated = new Date();
-    }
+    private int expandedCounter = 0; // How many more turns this doc stays expanded
+    private Date lastModified;
 
     public Documentation(String content) {
         this.content = content;
-        this.lastUpdated = new Date();
+        this.lastModified = new Date();
+    }
+
+    public Documentation(String content, Date lastModified) {
+        this.content = content;
+        this.lastModified = lastModified;
     }
 
     public void setContent(String content) {
         this.content = content;
-        this.lastUpdated = new Date();
+        this.lastModified = new Date();
     }
 
     public boolean isExpanded() {

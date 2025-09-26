@@ -53,21 +53,21 @@ public class GeminiCentral implements Model {
     }
 
     @Override
-    public Map<String, Object> sendMessage(List<Content> contents, List<Tool> tools) {
-        SendMessageResult result = sendMessageNew(contents, tools);
+    public Map<String, Object> sendMessageOld(List<Content> contents, List<Tool> tools) {
+        SendMessageResult result = sendMessage(contents, tools);
         return result.toMap();
     }
 
     private static final long FAILURE_PENALTY = 1_000_000L; // 1 million tokens
 
     @Override
-    public SendMessageResult sendMessageNew(List<Content> contents, List<Tool> tools) {
+    public SendMessageResult sendMessage(List<Content> contents, List<Tool> tools) {
         int maxRetries = Math.min(apiKeys.size(), maxKeysPerRequest);
         for (int i = 0; i < maxRetries; i++) {
             String apiKey = getLeastUsedApiKey();
             int apiKeyIndex = apiKeys.indexOf(apiKey);
             GeminiModel model = geminiModels.get(apiKey);
-            SendMessageResult result = model.sendMessageNew(contents, tools);
+            SendMessageResult result = model.sendMessage(contents, tools);
 
             if (result.getModelFinishReason() != ModelFinishReason.OUTPUT_ERROR &&
                     !result.getErrorMessage().map(m -> m.contains("token exceeded")).orElse(false)) {
@@ -100,7 +100,7 @@ public class GeminiCentral implements Model {
     ) {
         List<CompletableFuture<SendMessageResult>> futures = requests.stream()
                 .map(req -> CompletableFuture.supplyAsync(
-                        () -> sendMessageNew(req.getKey(), req.getValue()), executor
+                        () -> sendMessage(req.getKey(), req.getValue()), executor
                 ))
                 .toList();
 
@@ -114,7 +114,7 @@ public class GeminiCentral implements Model {
     ) {
         List<CompletableFuture<SendMessageResult>> futures = requests.stream()
                 .map(req -> CompletableFuture.supplyAsync(
-                        () -> sendMessageNew(req.getKey(), req.getValue()), executor
+                        () -> sendMessage(req.getKey(), req.getValue()), executor
                 ))
                 .toList();
 

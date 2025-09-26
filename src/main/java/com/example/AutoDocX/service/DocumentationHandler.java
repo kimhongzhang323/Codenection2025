@@ -1,29 +1,29 @@
 package com.example.AutoDocX.service;
 
 import com.example.AutoDocX.model.Documentation;
+import lombok.Getter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import org.eclipse.jgit.api.errors.GitAPIException;
 
 public class DocumentationHandler {
 
     private static final Logger logger = LoggerFactory.getLogger(DocumentationHandler.class);
     private final Map<String, Documentation> documentationMap = new ConcurrentHashMap<>();
+    @Getter
     private String defaultDocumentationKey;
 
-    public void loadFromDirectory(Path repoRoot) {
+    public void loadFromDirectory(Path repoRoot, GitService gitService) {
         if (repoRoot == null || !Files.isDirectory(repoRoot)) {
             logger.warn("Repository root is null or not a directory: {}", repoRoot);
             return;
@@ -35,10 +35,11 @@ public class DocumentationHandler {
                         try {
                             String content = Files.readString(path);
                             String relativePath = repoRoot.relativize(path).toString();
-                            documentationMap.put(relativePath, new Documentation(content));
-                            logger.info("Loaded markdown file: {}", relativePath);
-                        } catch (IOException e) {
-                            logger.error("Failed to read markdown file: {}", path, e);
+                            Date lastModified = gitService.getFileLastModified(repoRoot, relativePath);
+                            documentationMap.put(relativePath, new Documentation(content, lastModified));
+                            logger.info("Loaded markdown file: {} (last modified: {})", relativePath, lastModified);
+                        } catch (IOException | GitAPIException e) {
+                            logger.error("Failed to read or get history for markdown file: {}", path, e);
                         }
                     });
         } catch (IOException e) {
@@ -133,15 +134,52 @@ public class DocumentationHandler {
         documentationMap.clear();
     }
 
-    public String getDefaultDocumentationKey() {
-        return defaultDocumentationKey;
-    }
-
     public boolean setDefaultDocumentationKey(String key) {
         if (documentationMap.containsKey(key)) {
             this.defaultDocumentationKey = key;
             return true;
         }
         return false;
+    }
+
+    public String toContextString() {
+        StringBuilder sb = new StringBuilder();
+
+        if (!documentationMap.isEmpty()) {
+            sb.append("CURRENT_DOCUMENTATION:\n");
+            for (Map.Entry<String, Documentation> entry : documentationMap.entrySet()) {
+                if (entry.getValue().isExpanded()) {
+                    sb.append("--- START DOC: ").append(entry.getKey()).append(" ---\n");
+                    sb.append(entry.getValue().toString());
+                    sb.append("\n--- END DOC: ").append(entry.getKey()).append(" ---\n\n");
+                } else {
+                    String key = entry.getKey();
+                    Documentation doc = entry.getValue();
+                    long lineCount = doc.getContent() != null ? doc.getContent().lines().count() : 0;
+                    List<String> sections = listSections(key);
+                    List<String> sectionPreview = sections.stream().limit(5).collect(Collectors.toList());
+
+                    sb.append("- ").append(key).append(" ");
+                    sb.append("(collapsed, ").append(lineCount).append(" Lines), ");
+//                    sb.append("Sections Preview (top 5): ");
+//                    if (sectionPreview.isEmpty()) {
+//                        sb.append("No sections found");
+//                    } else {
+//                        sb.append(String.join(" | ", sectionPreview));
+//                    }
+                    sb.append("\n");
+                }
+            }
+            sb.append("\n");
+        }
+        return sb.toString();
+    }
+
+    public String getMostRecentDocumentationKey() {
+        return documentationMap.entrySet().stream()
+                .filter(entry -> entry.getValue().getLastModified() != null)
+                .max(Map.Entry.comparingByValue(Comparator.comparing(Documentation::getLastModified)))
+                .map(Map.Entry::getKey)
+                .orElse(null);
     }
 }

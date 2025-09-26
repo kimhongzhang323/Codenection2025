@@ -45,6 +45,10 @@ public class RepoHandler {
     @Autowired
     private JavaGraphConverter javaGraphConverter;
 
+    public GitService getGitService() {
+        return gitService;
+    }
+
     private final LinkedHashMap<String, ClonedRepo> cache = new LinkedHashMap<String, ClonedRepo>(MAX_ENTRIES, 0.75f, true) {
         @Override
         protected boolean removeEldestEntry(Map.Entry<String, ClonedRepo> eldest) {
@@ -168,7 +172,7 @@ public class RepoHandler {
         if (clonedRepo.getGraph() == null) {
             logger.info("Generating graph for repository: {} | {}", clonedRepo.getRepoLink(), clonedRepo.getClonedPath());
             List<JavaClass> javaTree = javaTreeConverter.convertRepoToJavaTree(clonedRepo.getClonedPath());
-            Graph graph = javaGraphConverter.convertJavaTreeToGraph(javaTree);
+            Graph graph = javaGraphConverter.convertJavaTreeToGraph(javaTree, gitService, clonedRepo.getClonedPath());
             clonedRepo.setGraph(graph);
         }
         return clonedRepo.getGraph();

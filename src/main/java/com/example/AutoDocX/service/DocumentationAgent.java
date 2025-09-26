@@ -78,7 +78,7 @@ public class DocumentationAgent {
 
             SendMessageResult result;
             try {
-                result = model.sendMessageNew(contents, tools);
+                result = model.sendMessage(contents, tools);
             } catch (Exception e) {
                 String msg = "Model invocation error: " + e.getMessage();
                 System.err.println("WARN (DocumentationAgent): " + msg);
@@ -102,6 +102,8 @@ public class DocumentationAgent {
                 for (var call : result.getToolCalls()) {
                     String name = call.getName();
                     Map<String, Object> args = call.getArgs();
+                    String toolLogKey = "model:tool_call:" + name + args;
+                    String toolLogValue = "Execution finished.";
                     try {
                         // Tool execution
                         switch (name) {
@@ -109,11 +111,12 @@ public class DocumentationAgent {
                                 String query = (String) args.get("query");
                                 String sum;
                                 if (query != null && !query.isBlank()) {
-                                    summaryAgent.run(session.getGitUrl(), session.getBranch(), query);
-                                } else {
-                                    sum = generalSummaryAgent.run(session.getGitUrl(), session.getBranch(), "Project Level Understanding");
+                                    sum = summaryAgent.run(session.getGitUrl(), session.getBranch(), query);
                                     session.getMemory().getSummary().replaceEntry(query, sum);
+                                } else {
+                                    generalSummaryAgent.run(session.getGitUrl(), session.getBranch(), "Project Level Understanding");
                                 }
+                                session.getMemory().getDocAgentLog().addEntry(toolLogKey, toolLogValue);
                                 break;
                             }
                             case "execute_plan": {
@@ -128,8 +131,6 @@ public class DocumentationAgent {
                                 System.out.println("Plan execution finished. Result stored in '" + key + "'.");
 
                                 // Safely log the tool call, handling null args and empty results
-                                String toolLogKey = "model:tool_call:" + name + (args != null ? args.toString() : "{}");
-                                String toolLogValue = "Execution finished.";
                                 if (planResult != null && !planResult.isEmpty()) {
                                     toolLogValue += " Result: " + planResult.substring(0, Math.min(200, planResult.length())) + "... (stored in " + key + ")";
                                 }
@@ -157,17 +158,6 @@ public class DocumentationAgent {
         return "Incomplete loop, continue needed";
     }
 
-    // Deprecated helpers retained for potential future use
-    @Deprecated
-    private void planOneShot(Session session, ClonedRepo repo, Graph graph, String userPrompt) { }
-
-    @Deprecated
-    private List<Content> buildSectionContents(Session session, ClonedRepo repo, Graph graph, String userPrompt,
-                                               String sectionName, String focus, List<String> nodes) { return List.of(); }
-
-    @Deprecated
-    private String combineSections(String userPrompt, Map<String, String> sectionOutputs) { return ""; }
-
     private String safeParams(Object p) {
         if (p == null) return "{}";
         try { return objectMapper.writeValueAsString(p); } catch (Exception e) { return "{}"; }
@@ -184,6 +174,8 @@ RULES
 3. ALWAYS use the provided tools to gather information or perform actions; do not make up information.
 4. Unless specified, you must always aim for full coverage of important nodes
 5. Only if needed, retrieve source code using get_summary (The prompt must be in full sentence)
+6. Plans are useful for code related documentations, they have full access to source code.
+    - Example: add_plan(node_id), execute_plan("temp"), modify_docs([main_doc, temp], "add temp into main doc")
 
 STEPS:
 1. Use `get_summary(query)` to get context/summaries from the summary agent (very expensive, use with caution).
@@ -194,11 +186,14 @@ STEPS:
     - Example context:
         a) section index (so each section have synced index (start from 1!!), or no index)
         b) formatting & focus on eg. (usage, architecture, dependencies, purpose)
-        c) long & detailed vs short & concise
 3. Use `execute_plan` AFTER all sections have been completed. to run all those subtasks using dedicated agents.
     - Tips: Use different keys to cleverly organise the docs system (avoid replacing original docs unless requested).
-4. Respond to user's input, describing what you did in detail (the documentation is visible to user)
+4. Use the `modify_docs` to refine the NEW documentation, or merge it with EXISTING documentations (Optional).
+5. Respond to user's input, describing what you did in detail (the documentation is visible to user)
+
+
 """;
+        // 6. ALL docs operations can ONLY be performed on expanded docs
 
         contents.add(Content.builder().role("user").parts(List.of(Part.fromText(systemInstruction))).build());
 
@@ -213,7 +208,7 @@ STEPS:
 
         String defaultDocKey = docHandler.getDefaultDocumentationKey();
         if (defaultDocKey != null) {
-            context.append("DEFAULT_DOCUMENTATION_KEY: ").append(defaultDocKey).append("\n\n");
+            context.append("MAIN_DOCUMENTATION_KEY: ").append(defaultDocKey).append("\n\n");
         }
 
         Map<String, Documentation> currentDocs = docHandler.getAll();
@@ -232,13 +227,13 @@ STEPS:
                     List<String> sectionPreview = sections.stream().limit(5).collect(Collectors.toList());
 
                     context.append("- ").append(key).append(" ");
-                    context.append("(hidden, ").append(lineCount).append(" Lines), ");
-                    context.append("Sections[:5]: ");
-                    if (sectionPreview.isEmpty()) {
-                        context.append("No sections found");
-                    } else {
-                        context.append(String.join(" | ", sectionPreview));
-                    }
+                    context.append("(collapsed, ").append(lineCount).append(" Lines), ");
+//                    context.append("Sections Preview (top 5): ");
+//                    if (sectionPreview.isEmpty()) {
+//                        context.append("No sections found");
+//                    } else {
+//                        context.append(String.join(" | ", sectionPreview));
+//                    }
                     context.append("\n");
                 }
             }
@@ -253,7 +248,7 @@ STEPS:
             context.append("LOG:\n").append(memory.getDocAgentLog().toString(DEFAULT_MAX_ITERATIONS * 2)).append("\n\n");
         }
 
-        context.append("USER PROMPT:\n").append(userPrompt == null ? "" : userPrompt).append("\n\n");
+        context.append("USER PROMPT WAS:\n").append(userPrompt == null ? "" : userPrompt).append("\n\n");
 
         contents.add(Content.builder().role("user").parts(List.of(Part.fromText(context.toString()))).build());
         return contents;

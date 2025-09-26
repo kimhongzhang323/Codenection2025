@@ -22,35 +22,6 @@ import java.util.stream.Collectors;
 @Service
 public class GraphClusteringService {
 
-    // ------------------------ Public API ------------------------
-
-    /**
-     * Assigns clusters to nodes by running the selected algorithm.
-     * clusterId format: "<ALGO>:<level>:<communityId>"
-     */
-    public void assignClusters(
-            Graph graph,
-            Set<GraphLink.LinkType> edgeTypesToUse,
-            int maxIterations
-    ) {
-        // Build undirected weighted adjacency
-        UndirectedGraph ug = buildUndirected(graph, edgeTypesToUse);
-
-        Map<String, Integer> community = louvain(ug, maxIterations);
-
-        // Write back cluster IDs to nodes
-        // Normalize to contiguous community ids
-        Map<Integer, Integer> remap = remapCommunities(community.values());
-        for (GraphNode node : graph.getNodes()) {
-            Integer c = community.get(node.getId());
-            if (c == null) {
-                node.setClusterId("-1");
-            } else {
-                node.setClusterId("" + remap.get(c));
-            }
-        }
-    }
-
     // ------------------------ Label Propagation ------------------------
 
     /**

@@ -14,6 +14,7 @@ public class AgentConfig {
     private String tone = "concise";
     private String depth = "detailed";
     private String format = "markdown";
+    private String documentationTemplate = "";
     private Map<String, String> extra;
 
     @Override
@@ -22,7 +23,8 @@ public class AgentConfig {
         sb.append("{Audience: ").append(audience).append(", ");
         sb.append("Tone: ").append(tone).append(", ");
         sb.append("Depth: ").append(depth).append(", ");
-        sb.append("Format: ").append(format);
+        sb.append("Format: ").append(format).append(", ");
+        sb.append("Template: ").append(documentationTemplate);
         if (extra != null && !extra.isEmpty()) {
             sb.append(", Extra: ").append(extra);
         }
