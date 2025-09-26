@@ -5,7 +5,6 @@ import com.example.AutoDocX.model.repo.Model;
 import com.example.AutoDocX.model.repo.SendMessageResult;
 import com.example.AutoDocX.model.repo.ToolCallData;
 import com.example.AutoDocX.parser.model.Graph;
-import com.example.AutoDocX.parser.model.GraphNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.genai.types.Content;
 import com.google.genai.types.Part;
@@ -18,7 +17,6 @@ import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Service
 public class SummaryAgent {
@@ -73,7 +71,7 @@ public class SummaryAgent {
         } catch (Exception e) {
             return "Error loading graph: " + e.getMessage();
         }
-        ToolExecutionContext toolExecutionContext = new ToolExecutionContext(repo, graph, session);
+        ToolExecutionContext toolExecutionContext = new ToolExecutionContext(repo, graph, session, session.getMemory().getSumAgentLog());
 
         if (!session.isInitialStructureLogged()) {
             session.getMemory().getStructure().addEntry("graph_structure", graph.toString());
@@ -83,7 +81,7 @@ public class SummaryAgent {
 
         String runId = UUID.randomUUID().toString();
         int iterations = 0;
-        int maxIterations = (iterationLimit == null || iterationLimit <= 0) ? DEFAULT_MAX_ITERATIONS : iterationLimit;
+        int maxIterations = (iterationLimit == null || iterationLimit < 0) ? DEFAULT_MAX_ITERATIONS : iterationLimit;
 
         while (iterations++ < maxIterations) {
             List<Tool> summaryTools = mcpToolKit.getExplorationTools();
@@ -100,7 +98,7 @@ public class SummaryAgent {
             } catch (Exception e) {
                 String msg = "Model invocation error: " + e.getMessage();
                 logger.warn("SUM[{}] {}", runId, msg);
-                session.getMemory().getEpisodic().addEntry("error:model_call", msg);
+                session.getMemory().getSumAgentLog().addEntry("error:model_call", msg);
                 break;
             }
 
@@ -115,7 +113,7 @@ public class SummaryAgent {
             // End early if no tools are called
             if (result.getToolCalls().isEmpty()) {
                 if (result.getText().isPresent()) {
-                    session.getMemory().getEpisodic().addEntry("model", result.getText().get());
+                    session.getMemory().getSumAgentLog().addEntry("model", result.getText().get());
                     return result.getText().get();
                 }
                 break;

@@ -22,7 +22,8 @@ public class Memory {
     private static final int MAX_STORE_CHARS = 5000; // change as needed
     private static final String TRUNCATION_NOTICE = "... [TRUNCATED]";
 
-    private final MemoryStore episodic = new MemoryStore("Episodic");
+    private final MemoryStore sumAgentLog = new MemoryStore("Summary Log");
+    private final MemoryStore docAgentLog = new MemoryStore("Documentation Log");
     private final MemoryStore code = new MemoryStore("Code");
     private final MemoryStore structure = new MemoryStore("Structure");
     private final MemoryStore summary = new MemoryStore("Summary");
@@ -33,7 +34,8 @@ public class Memory {
      */
     public String prettyPrintAll(int latestN) {
         StringBuilder sb = new StringBuilder();
-        sb.append("=== Episodic Memory ===\n").append(episodic.toString(latestN)).append("\n\n");
+        sb.append("=== Summary Episodic Memory ===\n").append(sumAgentLog.toString(latestN)).append("\n\n");
+        sb.append("=== Documentation Episodic Memory ===\n").append(docAgentLog.toString(latestN)).append("\n\n");
         sb.append("=== Code Memory ===\n").append(code.toString(latestN)).append("\n\n");
         sb.append("=== Structure Memory ===\n").append(structure.toString(latestN)).append("\n\n");
         sb.append("=== Summary Memory ===\n").append(summary.toString(latestN)).append("\n\n");

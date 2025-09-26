@@ -78,7 +78,7 @@ public class GeneralSummaryAgent {
         } catch (Exception e) {
             return "Error loading graph: " + e.getMessage();
         }
-        ToolExecutionContext toolExecutionContext = new ToolExecutionContext(repo, graph, session);
+        ToolExecutionContext toolExecutionContext = new ToolExecutionContext(repo, graph, session, session.getMemory().getSumAgentLog());
 
         if (!session.isInitialStructureLogged()) {
             session.getMemory().getStructure().addEntry("graph_structure", graph.toString());
@@ -90,13 +90,12 @@ public class GeneralSummaryAgent {
         int maxIterations = (iterationLimit == null || iterationLimit <= 0) ? DEFAULT_MAX_ITERATIONS : iterationLimit;
         while (iterations++ < maxIterations) {
             List<Tool> summaryTools = mcpToolKit.getExplorationTools();
-            String basePrompt = "Explore the codebase breadth-first. Use tools in batches. After finishing tool calls, call update_understanding with a concise plan: current understanding + next actions.";
+            String basePrompt = "Explore the codebase to provide a project-level summary. Your primary goal is breadth-first coverage of all important components.";
             String loopPrompt = (focusPrompt != null && !focusPrompt.isBlank())
-                    ? basePrompt + "\nFOCUS: " + focusPrompt
-                    : basePrompt;
-            List<Content> contents = buildLoopContent(session.getMemory(), loopPrompt);
+                ? basePrompt + "\nUSER QUERY/FOCUS: " + focusPrompt
+                : basePrompt;
 
-            // Request/response logging centralized in GeminiModel
+            List<Content> contents = buildLoopContent(session.getMemory(), loopPrompt);
 
             SendMessageResult result;
             try {
@@ -104,22 +103,25 @@ public class GeneralSummaryAgent {
             } catch (Exception e) {
                 String msg = "Model invocation error: " + e.getMessage();
                 logger.warn("SUM[{}] {}", runId, msg);
-                session.getMemory().getEpisodic().addEntry("error:model_call", msg);
+                session.getMemory().getSumAgentLog().addEntry("error:model_call", msg);
                 break;
             }
-            // Response summary logged centrally in GeminiModel
 
             if (!result.getToolCalls().isEmpty()) {
                 for (ToolCallData fc : result.getToolCalls()) {
                     logger.info("SUM[{}] Executing tool: {} with args: {}", runId, fc.getName(), fc.getArgs());
                     mcpToolKit.executeTool(fc.getName(), fc.getArgs(), toolExecutionContext);
                 }
-                // continue loop to let the model process tool results; understanding update is required by prompt
-                continue;
+                continue; // let model process tool results in next loop
             }
 
-            if (result.getText().isPresent()) {
-                session.getMemory().getEpisodic().addEntry("model", result.getText().get());
+            // End early if no tools are called
+            if (result.getToolCalls().isEmpty()) {
+                if (result.getText().isPresent()) {
+                    session.getMemory().getSumAgentLog().addEntry("model", result.getText().get());
+                    return result.getText().get();
+                }
+                break;
             }
         }
 
