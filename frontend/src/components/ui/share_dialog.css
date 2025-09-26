@@ -35,7 +35,7 @@
   display: flex;
   align-items: center;
   justify-content: flex-start;
-  padding: 20px 24px 16px;
+  padding: 20px 24px 20px;
   position: relative;
 }
 
@@ -88,7 +88,7 @@
 
 /* Invite Section */
 .share-dialog__invite-section {
-  padding: 16px 24px;
+  padding: 0 24px 20px;
 }
 
 .share-dialog__invite-input {
@@ -128,10 +128,11 @@
 
 /* Section Titles */
 .share-dialog__section-title {
-  font-size: 14px;
-  font-weight: 500;
+  font-size: 16px;
+  font-weight: 400;
   color: #333;
-  margin: 0 0 12px 0;
+  margin: 0 0 16px 0;
+  padding: 0 0px;
 }
 
 .dark .share-dialog__section-title {
@@ -140,14 +141,14 @@
 
 /* Access Section */
 .share-dialog__access-section {
-  padding: 0 24px 16px;
+  padding: 0 24px 20px;
 }
 
 .share-dialog__access-item {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 8px 0;
+  padding: 0;
 }
 
 .share-dialog__access-avatar {
@@ -191,7 +192,7 @@
 
 .share-dialog__access-name {
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 400;
   color: #333;
   line-height: 1.4;
 }
@@ -213,7 +214,7 @@
 .share-dialog__access-role {
   font-size: 13px;
   color: #666;
-  font-weight: 500;
+  font-weight: 400;
 }
 
 .dark .share-dialog__access-role {
@@ -222,7 +223,7 @@
 
 /* General Access Section */
 .share-dialog__general-section {
-  padding: 0 24px 16px;
+  padding: 0 24px 20px;
 }
 
 .share-dialog__general-item {
@@ -275,7 +276,7 @@
   background: none;
   border: none;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 400;
   color: #333;
   cursor: pointer;
   padding: 0;
@@ -373,7 +374,7 @@
   border-radius: 28px;
   padding: 10px 24px;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 400;
   color: white;
   cursor: pointer;
   transition: background-color 0.2s;
