@@ -16,9 +16,4 @@ public class ClonedRepo {
     private Path clonedPath;
     private String commitHash;
     private Graph graph;
-
-    // Overloaded constructor for backward compatibility
-    public ClonedRepo(String repoLink, Path clonedPath, String commitHash, Graph graph) {
-        this(repoLink, "default", clonedPath, commitHash, graph); // Assuming 'default' for main/master
-    }
 }
