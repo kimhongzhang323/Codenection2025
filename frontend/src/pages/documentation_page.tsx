@@ -28,6 +28,8 @@ import { ExportIcon } from '../components/icons/export_icon'
 import TranslationDialog from '../components/ui/translation_dialog'
 import { useTranslation } from '../contexts/TranslationContext'
 import { usePageTranslation } from '../hooks/usePageTranslation'
+import DiscordNotificationConfig from '../components/ui/discord_notification_config'
+import NotificationIcon from '../components/icons/notification_icon'
 
 
 
@@ -113,6 +115,7 @@ function DocumentationPage() {
   const [isViewCodeDialogOpen, setIsViewCodeDialogOpen] = useState(false)
   const [isExportDialogOpen, setIsExportDialogOpen] = useState(false)
   const [isTranslationDialogOpen, setIsTranslationDialogOpen] = useState(false)
+  const [isDiscordConfigOpen, setIsDiscordConfigOpen] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   
   // Translation context
@@ -434,7 +437,7 @@ function DocumentationPage() {
         </button>
       </div>
 
-      {/* Lightbulb Button - Above AI Chat Button */}
+      {/* Lightbulb Button - Above Discord Button */}
       <div className="docs-lightbulb-button-container">
         <button 
           className="docs-lightbulb-button"
@@ -442,6 +445,20 @@ function DocumentationPage() {
           aria-label="Open suggestions"
         >
           <LightbulbIcon size={18} />
+        </button>
+      </div>
+
+      {/* Discord Notification Button - Above AI Chat Button */}
+      <div className="docs-discord-button-container">
+        <button 
+          className="docs-discord-button"
+          onClick={() => setIsDiscordConfigOpen(true)}
+          aria-label="Configure Discord notifications"
+          title="Configure Discord notifications for component changes"
+        >
+          <NotificationIcon />
+          {/* Status indicator dot if monitoring is active */}
+          <span className="docs-discord-status-dot" />
         </button>
       </div>
 
@@ -841,6 +858,15 @@ function DocumentationPage() {
       <TranslationDialog
         isOpen={isTranslationDialogOpen}
         onClose={() => setIsTranslationDialogOpen(false)}
+      />
+
+      {/* Discord Notification Config Dialog */}
+      <DiscordNotificationConfig
+        isOpen={isDiscordConfigOpen}
+        onClose={() => setIsDiscordConfigOpen(false)}
+        repoUrl={githubHref}
+        repoName={repo || 'Repository'}
+        changelogUrl={`${window.location.origin}/changelog/${encodeURIComponent(githubHref)}`}
       />
     </div>
   )
