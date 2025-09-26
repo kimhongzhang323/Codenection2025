@@ -539,6 +539,33 @@ export const changelogApi = {
       ...commits.slice(detailedCommits.length)
     ]
   },
+
+  // Get repository branches
+  async getBranches(gitUrl: string): Promise<string[]> {
+    const { owner, name } = parseGitUrl(gitUrl)
+    const accessToken = localStorage.getItem('github_access_token')
+    
+    if (!accessToken) {
+      throw new Error('No GitHub access token available')
+    }
+
+    const response = await fetch(
+      `https://api.github.com/repos/${owner}/${name}/branches`, 
+      {
+        headers: {
+          'Authorization': `token ${accessToken}`,
+          'Accept': 'application/vnd.github.v3+json',
+        },
+      }
+    )
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch branches: ${response.statusText}`)
+    }
+
+    const branches: Array<{ name: string }> = await response.json()
+    return branches.map(branch => branch.name)
+  },
 }
 
 // Utility function to parse GitHub URL

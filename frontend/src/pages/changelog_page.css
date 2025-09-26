@@ -49,6 +49,37 @@
   position: relative;
 }
 
+.changelog-controls-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+.changelog-branch-selector {
+  flex-shrink: 0;
+}
+
+.changelog-branch-selector:hover:not(:disabled) {
+  background: var(--docs-subtle-bg) !important;
+  border-color: var(--docs-border) !important;
+}
+
+.changelog-branch-selector:focus {
+  outline: none;
+  border-color: var(--docs-accent) !important;
+  box-shadow: 0 0 0 2px var(--docs-accent-alpha) !important;
+}
+
+.changelog-refresh-button {
+  flex-shrink: 0;
+}
+
+.changelog-refresh-button:hover:not(:disabled) {
+  background: var(--docs-subtle-bg) !important;
+  border-color: var(--docs-border) !important;
+}
+
 .changelog-search-input {
   width: 100%;
   padding: 12px 16px 12px 44px;

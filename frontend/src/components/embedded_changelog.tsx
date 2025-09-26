@@ -2,9 +2,9 @@ import React, { useState, useEffect, useCallback } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { SearchIcon } from './icons/search_icon'
 import { HistoryIcon } from './icons/history_icon'
+import BranchIcon from './icons/branch_icon'
 import type { 
-  ChangelogEntry, 
-  ChangelogFilter
+  ChangelogEntry
 } from '../types/changelog'
 import type { GitHubCommit } from '../services/api'
 import { changelogApi } from '../services/api'
@@ -33,15 +33,12 @@ const EmbeddedChangelog: React.FC<EmbeddedChangelogProps> = ({
   const [currentPage, setCurrentPage] = useState(1)
   const [hasMore, setHasMore] = useState(false)
 
-  // Filters
-  const [filters] = useState<ChangelogFilter>({
-    searchQuery: '',
-    author: '',
-    dateFrom: '',
-    dateTo: '',
-    fileExtension: '',
-    branch: 'main'
-  })
+  // Filters and branch selection
+  const [selectedBranch, setSelectedBranch] = useState<string>('main')
+  const [availableBranches, setAvailableBranches] = useState<string[]>(['main'])
+  const [isLoadingBranches, setIsLoadingBranches] = useState(false)
+
+
 
   const [, setAuthors] = useState<string[]>([])
 
@@ -53,6 +50,29 @@ const EmbeddedChangelog: React.FC<EmbeddedChangelogProps> = ({
   const effectiveRepo = effectiveRepoUrl ? 
     effectiveRepoUrl.replace('https://github.com/', '') : 
     (repo || '')
+
+  // Load available branches
+  const loadBranches = useCallback(async () => {
+    if (!effectiveRepoUrl) return
+
+    try {
+      setIsLoadingBranches(true)
+      const branches = await changelogApi.getBranches(effectiveRepoUrl)
+      setAvailableBranches(branches)
+      
+      // Set default branch if main/master is available, otherwise use first branch
+      const defaultBranch = branches.includes('main') ? 'main' 
+        : branches.includes('master') ? 'master' 
+        : branches[0] || 'main'
+      setSelectedBranch(defaultBranch)
+    } catch (error) {
+      console.error('Failed to load branches:', error)
+      // Keep default branches if API fails
+      setAvailableBranches(['main', 'master'])
+    } finally {
+      setIsLoadingBranches(false)
+    }
+  }, [effectiveRepoUrl])
 
   // Convert GitHub commit to ChangelogEntry
   const convertGitHubCommitToEntry = useCallback((commit: GitHubCommit): ChangelogEntry => {
@@ -118,7 +138,7 @@ const EmbeddedChangelog: React.FC<EmbeddedChangelogProps> = ({
       setIsLoading(true)
       setError(null)
 
-      const commits = await changelogApi.getCommits(effectiveRepoUrl, filters.branch || 'main', page)
+      const commits = await changelogApi.getCommits(effectiveRepoUrl, selectedBranch, page)
       const newEntries = commits.map(convertGitHubCommitToEntry)
 
       if (append) {
@@ -138,14 +158,33 @@ const EmbeddedChangelog: React.FC<EmbeddedChangelogProps> = ({
     } finally {
       setIsLoading(false)
     }
-  }, [effectiveRepoUrl, filters, convertGitHubCommitToEntry])
+  }, [effectiveRepoUrl, selectedBranch, convertGitHubCommitToEntry])
 
-  // Load entries on mount and filter changes
+  // Load branches on mount
   useEffect(() => {
     if (effectiveRepo) {
+      loadBranches()
+    }
+  }, [loadBranches, effectiveRepo])
+
+  // Load entries when repo or branch changes
+  useEffect(() => {
+    if (effectiveRepo && selectedBranch) {
       loadEntries(1, false)
     }
-  }, [loadEntries, effectiveRepo])
+  }, [loadEntries, effectiveRepo, selectedBranch])
+
+  // Auto-refresh changelog every 2 minutes
+  useEffect(() => {
+    if (effectiveRepo && selectedBranch) {
+      const refreshInterval = setInterval(() => {
+        console.log('Auto-refreshing changelog...')
+        loadEntries(1, false)
+      }, 120000) // 2 minutes
+
+      return () => clearInterval(refreshInterval)
+    }
+  }, [effectiveRepo, selectedBranch, loadEntries])
 
   // Apply search filter
   const filteredEntries = entries.filter(entry => {
@@ -165,6 +204,13 @@ const EmbeddedChangelog: React.FC<EmbeddedChangelogProps> = ({
       hour: '2-digit',
       minute: '2-digit'
     }).format(date)
+  }
+
+  // Handle branch change
+  const handleBranchChange = (newBranch: string) => {
+    setSelectedBranch(newBranch)
+    setCurrentPage(1)
+    setEntries([]) // Clear current entries while loading new branch
   }
 
   // Handle commit click
@@ -217,6 +263,78 @@ const EmbeddedChangelog: React.FC<EmbeddedChangelogProps> = ({
             className="changelog-search-input"
           />
         </div>
+        <div className="changelog-controls-right">
+          <div className="changelog-branch-wrapper" style={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
+            <BranchIcon 
+              className="changelog-branch-icon"
+              style={{
+                position: 'absolute',
+                left: '8px',
+                zIndex: 1,
+                pointerEvents: 'none',
+                width: '16px',
+                height: '16px'
+              }}
+            />
+            <select
+              value={selectedBranch}
+              onChange={(e) => handleBranchChange(e.target.value)}
+              disabled={isLoadingBranches}
+              className="changelog-branch-selector"
+              title="Select branch"
+              style={{
+                padding: '8px 32px 8px 32px',
+                border: '1px solid var(--sidebar-border)',
+                borderRadius: '6px',
+                background: 'var(--docs-bg)',
+                color: 'var(--docs-text)',
+                cursor: isLoadingBranches ? 'not-allowed' : 'pointer',
+                fontSize: '14px',
+                fontWeight: '500',
+                transition: 'all 0.2s ease',
+                minWidth: '140px',
+                backgroundImage: `url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'/%3e%3c/svg%3e")`,
+                backgroundRepeat: 'no-repeat',
+                backgroundPosition: 'right 8px center',
+                backgroundSize: '16px',
+                appearance: 'none'
+              }}
+            >
+              {isLoadingBranches ? (
+                <option value="">Loading branches...</option>
+              ) : (
+                availableBranches.map(branch => (
+                  <option key={branch} value={branch}>
+                    {branch}
+                  </option>
+                ))
+              )}
+            </select>
+          </div>
+          <button
+            onClick={() => loadEntries(1, false)}
+            disabled={isLoading}
+            className="changelog-refresh-button"
+            title="Refresh changelog"
+            style={{
+              padding: '8px 16px',
+              border: '1px solid var(--sidebar-border)',
+              borderRadius: '6px',
+              background: 'var(--docs-bg)',
+              color: 'var(--docs-text)',
+              cursor: isLoading ? 'not-allowed' : 'pointer',
+              fontSize: '14px',
+              fontWeight: '500',
+              transition: 'all 0.2s ease',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}
+          >
+            <HistoryIcon />
+            {isLoading ? 'Refreshing...' : 'Refresh'}
+          </button>
+        </div>
       </div>
 
       {isLoading && entries.length === 0 ? (
@@ -236,7 +354,7 @@ const EmbeddedChangelog: React.FC<EmbeddedChangelogProps> = ({
             <>
               <div className="changelog-results-header">
                 <div className="changelog-results-count">
-                  Showing {filteredEntries.length} {filteredEntries.length === 1 ? 'commit' : 'commits'}
+                  Showing {filteredEntries.length} {filteredEntries.length === 1 ? 'commit' : 'commits'} from <strong>{selectedBranch}</strong> branch
                 </div>
               </div>
               
