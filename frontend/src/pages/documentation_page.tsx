@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import './documentation_page.css'
 import { GithubIcon } from '../components/icons/github_icon'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
@@ -24,6 +24,10 @@ import EmbeddedChangelog from '../components/embedded_changelog'
 import EmbeddedFlowchart from '../components/embedded_flowchart'
 
 import { ExportIcon } from '../components/icons/export_icon'
+
+import TranslationDialog from '../components/ui/translation_dialog'
+import { useTranslation } from '../contexts/TranslationContext'
+import { usePageTranslation } from '../hooks/usePageTranslation'
 
 
 
@@ -108,7 +112,14 @@ function DocumentationPage() {
   const [isShareDialogOpen, setIsShareDialogOpen] = useState(false)
   const [isViewCodeDialogOpen, setIsViewCodeDialogOpen] = useState(false)
   const [isExportDialogOpen, setIsExportDialogOpen] = useState(false)
+  const [isTranslationDialogOpen, setIsTranslationDialogOpen] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  
+  // Translation context
+  const { isTranslationActive, currentLanguageCode } = useTranslation()
+  
+  // Enable page translation
+  usePageTranslation()
 
   // Determine encoded repo slug for routing back to repo root
   const repoSlug = (() => {
@@ -216,11 +227,11 @@ function DocumentationPage() {
 
 
 
-  const handleSidebarToggle = () => {
+  const handleSidebarToggle = useCallback(() => {
     const newState = !isSidebarCollapsed
     setIsSidebarCollapsed(newState)
     localStorage.setItem('sidebarCollapsed', JSON.stringify(newState))
-  }
+  }, [isSidebarCollapsed])
 
   // Handle clicking on overlay to close sidebar on smaller screens
   const handleOverlayClick = () => {
@@ -375,6 +386,19 @@ function DocumentationPage() {
     return () => window.removeEventListener('resize', handleResize)
   }, [isSidebarCollapsed])
 
+  // Keyboard shortcut for toggling sidebar (Ctrl+B)
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Check for Ctrl+B (or Cmd+B on Mac)
+      if ((event.ctrlKey || event.metaKey) && event.key === 'b') {
+        event.preventDefault() // Prevent default browser behavior
+        handleSidebarToggle()
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [handleSidebarToggle])
 
   return (
     <div className="documentation-page">
@@ -398,6 +422,17 @@ function DocumentationPage() {
           </button>
         </div>
       )}
+
+      {/* Translation Button - Above Smart Suggestions */}
+      <div className="docs-translate-button-container">
+        <button 
+          className={`docs-translate-button ${isTranslationActive ? 'active' : ''}`}
+          onClick={() => setIsTranslationDialogOpen(true)}
+          aria-label={`Current language: ${currentLanguageCode}. Click to change language`}
+        >
+          <span className="docs-translate-button-text">{currentLanguageCode}</span>
+        </button>
+      </div>
 
       {/* Lightbulb Button - Above AI Chat Button */}
       <div className="docs-lightbulb-button-container">
@@ -506,7 +541,7 @@ function DocumentationPage() {
             </div>
             <div className="docs-sidebar__nav">
               <button 
-                className="docs-sidebar__nav-item"
+                className={`docs-sidebar__nav-item ${activeLabel === 'Changelog' ? 'is-active' : ''}`}
                 onClick={() => {
                   const repoPath = window.location.pathname.split('/')[1]
                   navigate(`/${repoPath}/changelog`, {
@@ -520,7 +555,7 @@ function DocumentationPage() {
               </button>
               
               <button 
-                className="docs-sidebar__nav-item"
+                className={`docs-sidebar__nav-item ${activeLabel === 'System Diagrams' ? 'is-active' : ''}`}
                 onClick={() => {
                   const repoPath = window.location.pathname.split('/')[1]
                   navigate(`/${repoPath}/flowchart`, {
@@ -551,7 +586,6 @@ function DocumentationPage() {
                 }}
                 aria-label="View Overview"
               >
-                <span>🚀</span>
                 <span>Overview</span>
               </button>
               
@@ -565,7 +599,6 @@ function DocumentationPage() {
                 }}
                 aria-label="View Quick Start"
               >
-                <span>⚡</span>
                 <span>Quick Start</span>
               </button>
               
@@ -579,7 +612,6 @@ function DocumentationPage() {
                 }}
                 aria-label="View Requirements"
               >
-                <span>�</span>
                 <span>Requirements</span>
               </button>
               
@@ -593,7 +625,6 @@ function DocumentationPage() {
                 }}
                 aria-label="View Full Documentation"
               >
-                <span>📚</span>
                 <span>Full README</span>
               </button>
             </div>
@@ -804,6 +835,12 @@ function DocumentationPage() {
         onClose={() => setIsExportDialogOpen(false)}
         markdownContent=""
         documentationData={{}}
+      />
+
+      {/* Translation Dialog */}
+      <TranslationDialog
+        isOpen={isTranslationDialogOpen}
+        onClose={() => setIsTranslationDialogOpen(false)}
       />
     </div>
   )
