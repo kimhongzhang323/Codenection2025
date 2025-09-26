@@ -21,6 +21,12 @@ public class Documentation {
         this.lastUpdated = new Date();
     }
 
+    public Documentation(String content, int expandedCounter) {
+        this.content = content;
+        this.lastUpdated = new Date();
+        this.expandedCounter = expandedCounter;
+    }
+
     public void setContent(String content) {
         this.content = content;
         this.lastUpdated = new Date();

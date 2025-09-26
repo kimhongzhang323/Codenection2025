@@ -28,6 +28,7 @@ public class SummaryAgent {
     private final SessionManager sessionManager;
     private final McpToolKit mcpToolKit;
     private final Model model;
+    private final DocumentHandlingService documentHandlingService;
     private final ObjectMapper objectMapper;
 
     @Autowired
@@ -35,12 +36,14 @@ public class SummaryAgent {
             RepoHandler repoHandler,
             SessionManager sessionManager,
             McpToolKit mcpToolKit,
-            @Qualifier("geminiCentral") Model model
+            @Qualifier("geminiCentral") Model model,
+            DocumentHandlingService documentHandlingService
     ) {
         this.repoHandler = repoHandler;
         this.sessionManager = sessionManager;
         this.mcpToolKit = mcpToolKit;
         this.model = model;
+        this.documentHandlingService = documentHandlingService;
         this.objectMapper = new ObjectMapper();
     }
 
@@ -64,6 +67,7 @@ public class SummaryAgent {
         Session session = sessionManager.getSession(gitUrl, branch);
         ClonedRepo repo = repoHandler.getRepo(gitUrl, branch);
         if (repo == null) return "Repository not found.";
+        DocumentationHandler docHandler = documentHandlingService.getDocumentHandler(session);
 
         Graph graph;
         try {
@@ -90,11 +94,11 @@ public class SummaryAgent {
                     ? basePrompt + "\nUSER QUERY/FOCUS: " + focusPrompt
                     : basePrompt;
 
-            List<Content> contents = buildLoopContent(session.getMemory(), loopPrompt);
+            List<Content> contents = buildLoopContent(session.getMemory(), loopPrompt, docHandler);
 
             SendMessageResult result;
             try {
-                result = model.sendMessageNew(contents, summaryTools);
+                result = model.sendMessage(contents, summaryTools);
             } catch (Exception e) {
                 String msg = "Model invocation error: " + e.getMessage();
                 logger.warn("SUM[{}] {}", runId, msg);
@@ -124,20 +128,20 @@ public class SummaryAgent {
                 ? "Provide a final summary and context for the query. USER QUERY/FOCUS: " + focusPrompt
                 : "Provide a final summary and context for the user’s query.";
 
-        return generateFinalSummary(session, finalPrompt);
+        return generateFinalSummary(session, finalPrompt, docHandler);
     }
 
-    private String generateFinalSummary(Session session, String finalPrompt) {
+    private String generateFinalSummary(Session session, String finalPrompt, DocumentationHandler docHandler) {
         List<Content> contents;
         try {
-            contents = buildFinalSummaryContent(session.getMemory(), finalPrompt, repoHandler.getGraph(session));
+            contents = buildFinalSummaryContent(session.getMemory(), finalPrompt, repoHandler.getGraph(session), docHandler);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
 
         SendMessageResult result;
         try {
-            result = model.sendMessageNew(contents, List.of());
+            result = model.sendMessage(contents, List.of());
         } catch (Exception e) {
             String msg = "Final summary generation failed: " + e.getMessage();
             logger.warn("SUM-FINAL {}", msg);
@@ -147,7 +151,7 @@ public class SummaryAgent {
         return result.getText().orElse("No summary generated.");
     }
 
-    private List<Content> buildLoopContent(Memory memory, String userPrompt) {
+    private List<Content> buildLoopContent(Memory memory, String userPrompt, DocumentationHandler docHandler) {
         List<Content> contents = new ArrayList<>();
 
         String systemInstruction =
@@ -175,6 +179,11 @@ IMPORTANT
 
         contents.add(Content.builder().role("user").parts(Part.builder().text(systemInstruction).build()).build());
 
+        String docContext = docHandler.toContextString();
+        if (!docContext.isBlank()) {
+            contents.add(Content.builder().parts(Part.builder().text(docContext).build()).role("user").build());
+        }
+
         List<Memory.MemoryEntry> structureEntries = memory.getStructure().getEntries();
         if (!structureEntries.isEmpty()) {
             StringBuilder structureSection = new StringBuilder("STRUCTURE MEMORY:\n");
@@ -200,7 +209,7 @@ IMPORTANT
         return contents;
     }
 
-    private List<Content> buildFinalSummaryContent(Memory memory, String userPrompt, Graph graph) {
+    private List<Content> buildFinalSummaryContent(Memory memory, String userPrompt, Graph graph, DocumentationHandler docHandler) {
         List<Content> contents = new ArrayList<>();
 
         String systemInstruction =
@@ -214,6 +223,11 @@ You are an expert software architect.
 """;
 
         contents.add(Content.builder().role("user").parts(Part.builder().text(systemInstruction).build()).build());
+
+        String docContext = docHandler.toContextString();
+        if (!docContext.isBlank()) {
+            contents.add(Content.builder().parts(Part.builder().text(docContext).build()).role("user").build());
+        }
 
         String understanding = Optional.ofNullable(memory.getSummary().getEntry("understanding")).orElse("");
         if (!understanding.isBlank()) {

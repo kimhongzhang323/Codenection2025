@@ -40,6 +40,9 @@ public class ConfigController {
         if (newConfig.getFormat() != null) {
             config.setFormat(newConfig.getFormat());
         }
+        if (newConfig.getDocumentationTemplate() != null) {
+            config.setDocumentationTemplate(newConfig.getDocumentationTemplate());
+        }
         if (newConfig.getExtra() != null) {
             config.setExtra(newConfig.getExtra());
         }

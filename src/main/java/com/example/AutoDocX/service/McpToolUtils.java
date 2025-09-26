@@ -3,6 +3,7 @@ package com.example.AutoDocX.service;
 import com.example.AutoDocX.model.ClonedRepo;
 import com.example.AutoDocX.model.Documentation;
 import com.example.AutoDocX.model.repo.GeminiModel;
+import com.example.AutoDocX.model.repo.ModelFinishReason;
 import com.example.AutoDocX.model.repo.SendMessageResult;
 import com.example.AutoDocX.parser.model.Graph;
 import com.example.AutoDocX.parser.model.GraphLink;
@@ -325,35 +326,65 @@ public class McpToolUtils {
         DocumentationHandler docHandler = documentHandlingService.getDocumentHandler(session);
         Documentation doc = docHandler.get(docKey);
         if (doc == null) {
-            return "Error: Document with key '" + docKey + "' not found.";
+            throw new IllegalArgumentException("Document with key '" + docKey + "' not found.");
         }
         String content = doc.getContent();
         String newContent = content.replace(oldString, newString);
-        docHandler.save(docKey, new Documentation(newContent));
+        doc.setContent(newContent);
         return "OK: Replaced string in document '" + docKey + "'.";
     }
 
-    public String insertIntoDoc(Session session, String docKey, String contentToInsert, String afterString) {
+    public String insertEditIntoDoc(Session session, String docKey, String patch) {
         DocumentationHandler docHandler = documentHandlingService.getDocumentHandler(session);
         Documentation doc = docHandler.get(docKey);
         if (doc == null) {
-            return "Error: Document with key '" + docKey + "' not found.";
+            throw new IllegalArgumentException("Document with key '" + docKey + "' not found.");
         }
-        String content = doc.getContent();
+        String originalContent = doc.getContent();
 
-        String newContent;
-        if (afterString == null || afterString.isEmpty()) {
-            newContent = contentToInsert + content;
-        } else {
-            int index = content.indexOf(afterString);
-            if (index == -1) {
-                return "Error: The 'after_string' was not found in the document '" + docKey + "'.";
+        String prompt = "You are an expert text editor. Apply the following patch to the original document. " +
+                "The patch uses '...existing content...' to denote unchanged parts. " +
+                "Respond with only the full, modified document content.\n\n" +
+                "--- ORIGINAL DOCUMENT ---\n" +
+                originalContent + "\n\n" +
+                "--- PATCH ---\n" +
+                patch;
+
+        List<Content> contents = List.of(Content.builder().role("user").parts(Part.builder().text(prompt).build()).build());
+        SendMessageResult result = model.sendMessage(contents, List.of());
+
+        if (result.getModelFinishReason() != ModelFinishReason.FINAL || !result.getToolCalls().isEmpty())
+            throw new RuntimeException("Model failed to generate the edited document.");
+
+        String newContent = result.getText().orElse("");
+        doc.setContent(newContent);
+
+        return "OK: Applied intelligent edit to document '" + docKey + "'.";
+    }
+
+    public String modifyDocs(Session session, List<String> documentsInvolved, String saveKey, String whatToDo) {
+        DocumentationHandler docHandler = documentHandlingService.getDocumentHandler(session);
+        StringBuilder promptBuilder = new StringBuilder();
+        promptBuilder.append("You are an expert document editor. Perform the following task as instructed. Respond with only the final, resulting document content.\n\n");
+        promptBuilder.append("--- TASK ---\n");
+        promptBuilder.append(whatToDo).append("\n\n");
+
+        for (String docKey : documentsInvolved) {
+            Documentation doc = docHandler.get(docKey);
+            if (doc == null) {
+                throw new IllegalArgumentException("Document with key '" + docKey + "' not found in the list of documents to modify.");
             }
-            int insertPosition = index + afterString.length();
-            newContent = content.substring(0, insertPosition) + contentToInsert + content.substring(insertPosition);
+            promptBuilder.append("--- DOCUMENT: ").append(docKey).append(" ---\n");
+            promptBuilder.append(doc.getContent()).append("\n\n");
         }
-        docHandler.save(docKey, new Documentation(newContent));
-        return "OK: Inserted content into document '" + docKey + "'.";
+
+        List<Content> contents = List.of(Content.builder().role("user").parts(Part.builder().text(promptBuilder.toString()).build()).build());
+        SendMessageResult result = model.sendMessage(contents, List.of());
+
+        String newContent = result.getText().orElseThrow(() -> new RuntimeException("Model failed to generate the modified document."));
+        docHandler.save(saveKey, new Documentation(newContent));
+
+        return "OK: The document modification task was completed and the result was saved to '" + saveKey + "'.";
     }
 
     public String readDoc(Session session, String key, int countdown) {

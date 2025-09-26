@@ -8,8 +8,9 @@ import java.util.AbstractMap;
 import java.util.concurrent.CompletableFuture;
 
 public interface Model {
-    Map<String, Object> sendMessage(List<Content> contents, List<Tool> tools);
-    SendMessageResult sendMessageNew(List<Content> contents, List<Tool> tools);
+    @Deprecated
+    Map<String, Object> sendMessageOld(List<Content> contents, List<Tool> tools);
+    SendMessageResult sendMessage(List<Content> contents, List<Tool> tools);
 
     List<SendMessageResult> sendMessageBulk(
             List<AbstractMap.SimpleEntry<List<Content>, List<Tool>>> requests

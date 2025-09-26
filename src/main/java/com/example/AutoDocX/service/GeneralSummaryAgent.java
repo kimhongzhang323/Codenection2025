@@ -30,6 +30,7 @@ public class GeneralSummaryAgent {
     private final SessionManager sessionManager;
     private final McpToolKit mcpToolKit;
     private final Model model;
+    private final DocumentHandlingService documentHandlingService;
     private final ObjectMapper objectMapper;
 
     @Autowired
@@ -37,12 +38,14 @@ public class GeneralSummaryAgent {
             RepoHandler repoHandler,
             SessionManager sessionManager,
             McpToolKit mcpToolKit,
-            @Qualifier("geminiCentral") Model model
+            @Qualifier("geminiCentral") Model model,
+            DocumentHandlingService documentHandlingService
     ) {
         this.repoHandler = repoHandler;
         this.sessionManager = sessionManager;
         this.mcpToolKit = mcpToolKit;
         this.model = model;
+        this.documentHandlingService = documentHandlingService;
         this.objectMapper = new ObjectMapper();
     }
 
@@ -71,6 +74,7 @@ public class GeneralSummaryAgent {
         Session session = sessionManager.getSession(gitUrl, branch);
         ClonedRepo repo = repoHandler.getRepo(gitUrl, branch);
         if (repo == null) return "Repository not found.";
+        DocumentationHandler docHandler = documentHandlingService.getDocumentHandler(session);
 
         Graph graph;
         try {
@@ -95,11 +99,11 @@ public class GeneralSummaryAgent {
                 ? basePrompt + "\nUSER QUERY/FOCUS: " + focusPrompt
                 : basePrompt;
 
-            List<Content> contents = buildLoopContent(session.getMemory(), loopPrompt);
+            List<Content> contents = buildLoopContent(session.getMemory(), loopPrompt, docHandler);
 
             SendMessageResult result;
             try {
-                result = model.sendMessageNew(contents, summaryTools);
+                result = model.sendMessage(contents, summaryTools);
             } catch (Exception e) {
                 String msg = "Model invocation error: " + e.getMessage();
                 logger.warn("SUM[{}] {}", runId, msg);
@@ -115,14 +119,11 @@ public class GeneralSummaryAgent {
                 continue; // let model process tool results in next loop
             }
 
-            // End early if no tools are called
-            if (result.getToolCalls().isEmpty()) {
-                if (result.getText().isPresent()) {
-                    session.getMemory().getSumAgentLog().addEntry("model", result.getText().get());
-                    return result.getText().get();
-                }
-                break;
+            if (result.getText().isPresent()) {
+                session.getMemory().getSumAgentLog().addEntry("model", result.getText().get());
+                return result.getText().get();
             }
+            break;
         }
 
         // Final summary generation step
@@ -131,22 +132,22 @@ public class GeneralSummaryAgent {
             ? defaultFinalPrompt + "\nFOCUS: " + focusPrompt
             : defaultFinalPrompt;
 
-        String finalSummary = generateFinalSummary(session, finalPrompt);
+        String finalSummary = generateFinalSummary(session, finalPrompt, docHandler);
         session.getMemory().getSummary().replaceEntry("general_summary", finalSummary);
         return finalSummary;
     }
 
-    private String generateFinalSummary(Session session, String finalPrompt) {
+    private String generateFinalSummary(Session session, String finalPrompt, DocumentationHandler docHandler) {
         List<Content> contents = null;
         try {
-            contents = buildFinalSummaryContent(session.getMemory(), finalPrompt, repoHandler.getGraph(session));
+            contents = buildFinalSummaryContent(session.getMemory(), finalPrompt, repoHandler.getGraph(session), docHandler);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
     // Final request logging centralized in GeminiModel
         SendMessageResult result;
         try {
-            result = model.sendMessageNew(contents, List.of());
+            result = model.sendMessage(contents, List.of());
         } catch (Exception e) {
             String msg = "Final summary generation failed: " + e.getMessage();
             logger.warn("SUM-FINAL {}", msg);
@@ -160,7 +161,7 @@ public class GeneralSummaryAgent {
         return "No summary generated.";
     }
 
-    private List<Content> buildLoopContent(Memory memory, String userPrompt) {
+    private List<Content> buildLoopContent(Memory memory, String userPrompt, DocumentationHandler docHandler) {
         List<Content> contents = new ArrayList<>();
         String systemInstruction =
 """
@@ -221,6 +222,11 @@ Never produce a response without it.
 
                 contents.add(Content.builder().role("user").parts(Part.builder().text(systemInstruction).build()).build());
 
+                String docContext = docHandler.toContextString();
+                if (!docContext.isBlank()) {
+                    contents.add(Content.builder().parts(Part.builder().text(docContext).build()).role("user").build());
+                }
+
                 // Structure Memory (recent)
                 List<Memory.MemoryEntry> structureEntries = memory.getStructure().getEntries();
                 if (!structureEntries.isEmpty()) {
@@ -251,7 +257,7 @@ Never produce a response without it.
                 return contents;
             }
 
-            private List<Content> buildFinalSummaryContent(Memory memory, String userPrompt, Graph graph) {
+            private List<Content> buildFinalSummaryContent(Memory memory, String userPrompt, Graph graph, DocumentationHandler docHandler) {
                 List<Content> contents = new ArrayList<>();
 
                 String systemInstruction =
@@ -265,6 +271,11 @@ Deliver:
 """;
 
         contents.add(Content.builder().role("user").parts(Part.builder().text(systemInstruction).build()).build());
+
+        String docContext = docHandler.toContextString();
+        if (!docContext.isBlank()) {
+            contents.add(Content.builder().parts(Part.builder().text(docContext).build()).role("user").build());
+        }
 
         String understanding = Optional.ofNullable(memory.getSummary().getEntry("understanding")).orElse("");
         if (!understanding.isBlank()) {

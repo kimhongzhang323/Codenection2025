@@ -1,6 +1,7 @@
 package com.example.AutoDocX.service;
 
 import com.example.AutoDocX.model.Documentation;
+import lombok.Getter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -21,6 +22,7 @@ public class DocumentationHandler {
 
     private static final Logger logger = LoggerFactory.getLogger(DocumentationHandler.class);
     private final Map<String, Documentation> documentationMap = new ConcurrentHashMap<>();
+    @Getter
     private String defaultDocumentationKey;
 
     public void loadFromDirectory(Path repoRoot) {
@@ -133,15 +135,44 @@ public class DocumentationHandler {
         documentationMap.clear();
     }
 
-    public String getDefaultDocumentationKey() {
-        return defaultDocumentationKey;
-    }
-
     public boolean setDefaultDocumentationKey(String key) {
         if (documentationMap.containsKey(key)) {
             this.defaultDocumentationKey = key;
             return true;
         }
         return false;
+    }
+
+    public String toContextString() {
+        StringBuilder sb = new StringBuilder();
+
+        if (!documentationMap.isEmpty()) {
+            sb.append("CURRENT_DOCUMENTATION:\n");
+            for (Map.Entry<String, Documentation> entry : documentationMap.entrySet()) {
+                if (entry.getValue().isExpanded()) {
+                    sb.append("--- START DOC: ").append(entry.getKey()).append(" ---\n");
+                    sb.append(entry.getValue().toString());
+                    sb.append("\n--- END DOC: ").append(entry.getKey()).append(" ---\n\n");
+                } else {
+                    String key = entry.getKey();
+                    Documentation doc = entry.getValue();
+                    long lineCount = doc.getContent() != null ? doc.getContent().lines().count() : 0;
+                    List<String> sections = listSections(key);
+                    List<String> sectionPreview = sections.stream().limit(5).collect(Collectors.toList());
+
+                    sb.append("- ").append(key).append(" ");
+                    sb.append("(collapsed, ").append(lineCount).append(" Lines), ");
+//                    sb.append("Sections Preview (top 5): ");
+//                    if (sectionPreview.isEmpty()) {
+//                        sb.append("No sections found");
+//                    } else {
+//                        sb.append(String.join(" | ", sectionPreview));
+//                    }
+                    sb.append("\n");
+                }
+            }
+            sb.append("\n");
+        }
+        return sb.toString();
     }
 }

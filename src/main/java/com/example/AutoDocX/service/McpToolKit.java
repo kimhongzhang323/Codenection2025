@@ -204,29 +204,49 @@ public class McpToolKit {
         .build());
 
     declarations.add(FunctionDeclaration.builder()
-        .name("insert_into_doc")
-        .description("Inserts a string into a documentation entry, either at the beginning or after a specified marker.")
+        .name("insert_edit_into_doc")
+        .description("Performs an intelligent, agent-based edit on a documentation entry using a patch-like syntax.")
         .parameters(Schema.builder()
             .type(Type.Known.OBJECT)
             .properties(Map.of(
                 "key", Schema.builder().type(Type.Known.STRING).description("The key of the documentation entry to modify.").build(),
-                "content_to_insert", Schema.builder().type(Type.Known.STRING).description("The content to insert.").build(),
-                "after_string", Schema.builder().type(Type.Known.STRING).description("Optional. The string after which the content should be inserted. If empty, inserts at the beginning.").build()
+                "patch", Schema.builder().type(Type.Known.STRING).description("A patch-like string describing the edit. Use '...existing content...' to represent unchanged parts.").build()
             ))
-            .required(List.of("key", "content_to_insert"))
+            .required(List.of("key", "patch"))
             .build())
         .build());
 
     declarations.add(FunctionDeclaration.builder()
         .name("read_doc")
-        .description("Marks a documentation entry as 'expanded' for a specified number of agent iterations, making its full content visible in the context.")
+        .description("Expands a collapsed document for reading")
         .parameters(Schema.builder()
             .type(Type.Known.OBJECT)
             .properties(Map.of(
                 "key", Schema.builder().type(Type.Known.STRING).description("The key of the documentation entry to expand.").build(),
-                "countdown", Schema.builder().type(Type.Known.NUMBER).description("The number of turns to keep the document expanded.").build()
+                "countdown", Schema.builder().type(Type.Known.NUMBER).description("The number of cycles to keep the document expanded.").build()
             ))
             .required(List.of("key", "countdown"))
+            .build())
+        .build());
+
+    declarations.add(FunctionDeclaration.builder()
+        .name("modify_docs")
+        .description("Performs a complex, instruction-based manipulation on one or more documents and saves the result.")
+        .parameters(Schema.builder()
+            .type(Type.Known.OBJECT)
+            .properties(Map.of(
+                "documents_involved", Schema.builder()
+                    .type(Type.Known.ARRAY)
+                    .items(Schema.builder().type(Type.Known.STRING).build())
+                    .description("A list of document keys to be used as source material.").build(),
+                "save_key", Schema.builder()
+                    .type(Type.Known.STRING)
+                    .description("The key where the final, modified document will be saved.").build(),
+                "what_to_do", Schema.builder()
+                    .type(Type.Known.STRING)
+                    .description("Full sentence. A natural language instruction describing the manipulation (e.g., 'Merge doc1 and doc2', 'Remove the introduction from main_doc', 'insert xxx into README.md at Introduction').").build()
+            ))
+            .required(List.of("documents_involved", "save_key", "what_to_do"))
             .build())
         .build());
 
@@ -234,13 +254,18 @@ public class McpToolKit {
     }
 
     public List<Tool> getExplorationTools() {
-        List<String> names = List.of("get_code", "find_neighbour_nodes", "update_understanding");
+        List<String> names = List.of(
+            "get_code", 
+            "find_neighbour_nodes", 
+            "update_understanding",
+            "read_doc"
+        );
         return buildTools(names);
     }
 
     // KISS: unified agent tools
     public List<Tool> getDocumentationAgentTools() {
-        List<String> names = List.of("get_summary", "add_plan", "execute_plan", "replace_string_in_doc", "insert_into_doc", "read_doc");
+        List<String> names = List.of("get_summary", "add_plan", "execute_plan", "read_doc", "modify_docs"); //"replace_string_in_doc", "insert_edit_into_doc"
         return buildTools(names);
     }
 
@@ -285,8 +310,9 @@ public class McpToolKit {
                 case "execute_plan":
                 case "update_documentation":
                 case "replace_string_in_doc":
-                case "insert_into_doc":
+                case "insert_edit_into_doc":
                 case "read_doc":
+                case "modify_docs":
                     // handled internally; nothing to store synchronously here
                     break;
                 case "update_understanding":
@@ -348,11 +374,16 @@ return result;
                 String newString = (String) paramsMap.get("new_string");
                 return mcpToolUtils.replaceStringInDoc(context.getSession(), key, oldString, newString);
             }
-            case "insert_into_doc": {
+            case "insert_edit_into_doc": {
                 String key = (String) paramsMap.get("key");
-                String contentToInsert = (String) paramsMap.get("content_to_insert");
-                String afterString = (String) paramsMap.get("after_string");
-                return mcpToolUtils.insertIntoDoc(context.getSession(), key, contentToInsert, afterString);
+                String patch = (String) paramsMap.get("patch");
+                return mcpToolUtils.insertEditIntoDoc(context.getSession(), key, patch);
+            }
+            case "modify_docs": {
+                List<String> documentsInvolved = (List<String>) paramsMap.get("documents_involved");
+                String saveKey = (String) paramsMap.get("save_key");
+                String whatToDo = (String) paramsMap.get("what_to_do");
+                return mcpToolUtils.modifyDocs(context.getSession(), documentsInvolved, saveKey, whatToDo);
             }
             case "read_doc": {
                 String key = (String) paramsMap.get("key");
