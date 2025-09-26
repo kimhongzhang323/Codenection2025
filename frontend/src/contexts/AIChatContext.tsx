@@ -10,6 +10,8 @@ interface AIChatContextType {
   setInitialMessage: (message: string) => void
   initialMessage: string | null
   clearInitialMessage: () => void
+  setRepositoryInfo: (gitUrl: string, branch?: string) => void
+  repositoryInfo: { gitUrl: string; branch: string } | null
 }
 
 const AIChatContext = createContext<AIChatContextType | undefined>(undefined)
@@ -29,6 +31,7 @@ interface AIChatProviderProps {
 export const AIChatProvider: React.FC<AIChatProviderProps> = ({ children }) => {
   const [isOpen, setIsOpen] = useState(false)
   const [initialMessage, setInitialMessageState] = useState<string | null>(null)
+  const [repositoryInfo, setRepositoryInfoState] = useState<{ gitUrl: string; branch: string } | null>(null)
 
   const openChat = () => setIsOpen(true)
   const closeChat = () => setIsOpen(false)
@@ -49,6 +52,10 @@ export const AIChatProvider: React.FC<AIChatProviderProps> = ({ children }) => {
     setInitialMessageState(null)
   }
 
+  const setRepositoryInfo = (gitUrl: string, branch: string = 'main') => {
+    setRepositoryInfoState({ gitUrl, branch })
+  }
+
   const value: AIChatContextType = {
     isOpen,
     openChat,
@@ -57,7 +64,9 @@ export const AIChatProvider: React.FC<AIChatProviderProps> = ({ children }) => {
     sendMessage,
     setInitialMessage,
     initialMessage,
-    clearInitialMessage
+    clearInitialMessage,
+    setRepositoryInfo,
+    repositoryInfo
   }
 
   return (

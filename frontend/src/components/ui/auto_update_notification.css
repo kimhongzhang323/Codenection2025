@@ -1,0 +1,291 @@
+.auto-update-notification {
+  position: fixed;
+  top: 80px;
+  right: 20px;
+  max-width: 420px;
+  background: var(--bg-primary, #ffffff);
+  border: 1px solid var(--border-primary, #e2e8f0);
+  border-radius: 12px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  z-index: 1000;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  overflow: hidden;
+  animation: slideInFromRight 0.3s ease-out;
+  backdrop-filter: blur(10px);
+}
+
+@keyframes slideInFromRight {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+.auto-update-header {
+  display: flex;
+  align-items: flex-start;
+  padding: 16px;
+  gap: 12px;
+  border-bottom: 1px solid var(--border-secondary, #f1f5f9);
+}
+
+.auto-update-icon {
+  flex-shrink: 0;
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  background: linear-gradient(135deg, #10b981, #059669);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.05);
+  }
+}
+
+.auto-update-content {
+  flex: 1;
+  min-width: 0;
+}
+
+.auto-update-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary, #1e293b);
+  margin-bottom: 2px;
+  line-height: 1.4;
+}
+
+.auto-update-subtitle {
+  font-size: 12px;
+  color: var(--text-secondary, #64748b);
+  line-height: 1.3;
+}
+
+.auto-update-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.auto-update-expand-btn,
+.auto-update-dismiss-btn {
+  padding: 6px;
+  border: none;
+  background: transparent;
+  color: var(--text-secondary, #64748b);
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.auto-update-expand-btn:hover,
+.auto-update-dismiss-btn:hover {
+  background: var(--bg-secondary, #f8fafc);
+  color: var(--text-primary, #1e293b);
+}
+
+.auto-update-expand-btn svg {
+  transition: transform 0.2s ease;
+}
+
+.auto-update-refresh-btn {
+  padding: 6px 12px;
+  border: 1px solid var(--border-primary, #e2e8f0);
+  background: var(--bg-primary, #ffffff);
+  color: var(--text-primary, #1e293b);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+}
+
+.auto-update-refresh-btn:hover {
+  background: var(--bg-secondary, #f8fafc);
+  border-color: var(--border-secondary, #cbd5e1);
+  transform: translateY(-1px);
+}
+
+.auto-update-refresh-btn:active {
+  transform: translateY(0);
+}
+
+.auto-update-details {
+  padding: 0 16px 16px 16px;
+  border-top: 1px solid var(--border-secondary, #f1f5f9);
+  background: var(--bg-secondary, #f8fafc);
+}
+
+.commits-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 16px;
+}
+
+.commit-item {
+  display: grid;
+  grid-template-columns: 60px 1fr auto auto;
+  gap: 8px;
+  align-items: center;
+  padding: 8px;
+  background: var(--bg-primary, #ffffff);
+  border-radius: 8px;
+  border: 1px solid var(--border-secondary, #f1f5f9);
+  font-size: 12px;
+  transition: all 0.2s ease;
+}
+
+.commit-item:hover {
+  border-color: var(--border-primary, #e2e8f0);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.commit-hash {
+  font-family: 'SF Mono', Consolas, monospace;
+}
+
+.commit-link {
+  color: var(--text-secondary, #64748b);
+  text-decoration: none;
+  padding: 2px 6px;
+  background: var(--bg-secondary, #f8fafc);
+  border-radius: 4px;
+  border: 1px solid var(--border-secondary, #f1f5f9);
+  font-size: 11px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.commit-link:hover {
+  color: var(--text-primary, #1e293b);
+  background: var(--bg-primary, #ffffff);
+  border-color: var(--border-primary, #e2e8f0);
+}
+
+.commit-message {
+  color: var(--text-primary, #1e293b);
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.commit-author {
+  color: var(--text-secondary, #64748b);
+  font-size: 11px;
+  text-align: right;
+}
+
+.commit-time {
+  color: var(--text-tertiary, #94a3b8);
+  font-size: 11px;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.commits-more {
+  text-align: center;
+  color: var(--text-secondary, #64748b);
+  font-size: 12px;
+  font-style: italic;
+  padding: 8px;
+  background: var(--bg-primary, #ffffff);
+  border-radius: 8px;
+  border: 1px dashed var(--border-secondary, #f1f5f9);
+}
+
+/* Dark mode support */
+[data-theme="dark"] .auto-update-notification {
+  --bg-primary: #1e293b;
+  --bg-secondary: #334155;
+  --text-primary: #f1f5f9;
+  --text-secondary: #cbd5e1;
+  --text-tertiary: #94a3b8;
+  --border-primary: #475569;
+  --border-secondary: #374151;
+}
+
+[data-theme="dark"] .auto-update-notification {
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="dark"] .auto-update-refresh-btn:hover {
+  background: var(--bg-secondary, #334155);
+}
+
+[data-theme="dark"] .commit-item:hover {
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .auto-update-notification {
+    right: 10px;
+    left: 10px;
+    max-width: none;
+    top: 70px;
+  }
+
+  .commit-item {
+    grid-template-columns: 50px 1fr;
+    grid-template-rows: auto auto;
+    gap: 4px 8px;
+  }
+
+  .commit-hash {
+    grid-row: 1;
+    grid-column: 1;
+  }
+
+  .commit-message {
+    grid-row: 1;
+    grid-column: 2;
+  }
+
+  .commit-author {
+    grid-row: 2;
+    grid-column: 1;
+    text-align: left;
+  }
+
+  .commit-time {
+    grid-row: 2;
+    grid-column: 2;
+    text-align: left;
+  }
+}
+
+/* Animation for refresh button */
+.auto-update-refresh-btn.refreshing svg {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}

@@ -8,7 +8,6 @@ import Mermaid from './mermaid.tsx';
 import FilesRenderer from './files_renderer';
 import Callout from './ui/callout';
 import CopyMarkdownButton from './ui/copy_markdown_button';
-import SummarizeButton from './ui/summarize_button';
 import './markdown.css';
 import { CopyIcon, type CopyIconHandle } from './icons/copy_icon';
 
@@ -16,10 +15,9 @@ const MarkdownRawContext = createContext<string>('');
 
 interface MarkdownProps {
   content: string;
-  repoUrl?: string;
 }
 
-const Markdown: React.FC<MarkdownProps> = ({ content, repoUrl }) => {
+const Markdown: React.FC<MarkdownProps> = ({ content }) => {
   // Helper to extract plain text from React children for nested markdown parsing
   const extractText = (node: React.ReactNode): string => {
     if (node == null) return '';
@@ -116,7 +114,6 @@ const Markdown: React.FC<MarkdownProps> = ({ content, repoUrl }) => {
           </h1>
           <div style={{ marginTop: '0.9rem', marginBottom: '1rem', display: 'flex', gap: '16px', alignItems: 'center' }}>
             <CopyMarkdownButton content={raw} />
-            <SummarizeButton repoUrl={repoUrl} pageContent={raw} />
           </div>
         </div>
       );

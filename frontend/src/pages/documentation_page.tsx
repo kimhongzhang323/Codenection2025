@@ -5,9 +5,8 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom'
 
 import { AnimatedThemeToggler } from '../components/theme'
 import { BottomMiniDialog } from '../components/ui/bottom_mini_dialog'
-import { SparklesIcon } from '../components/icons/sparkles_icon'
-import { LightbulbIcon } from '../components/icons/lightbulb_icon'
 import { useAIChat } from '../contexts/AIChatContext'
+import ToolsDropdown from '../components/ui/tools_dropdown'
 import SearchDialog from '../components/ui/search_dialog'
 import SuggestionPanel from '../components/ui/suggestion_panel'
 import ContextMenu from '../components/ui/context_menu'
@@ -19,6 +18,7 @@ import { DiagramIcon } from '../components/icons/diagram_icon'
 import ShareDialog from '../components/ui/share_dialog'
 import ViewCodeDialog from '../components/ui/view_code_dialog'
 import DocumentationSection from '../components/documentation_section'
+
 import ExportDialog from '../components/ui/export_dialog'
 import EmbeddedChangelog from '../components/embedded_changelog'
 import EmbeddedFlowchart from '../components/embedded_flowchart'
@@ -28,6 +28,11 @@ import { ExportIcon } from '../components/icons/export_icon'
 import TranslationDialog from '../components/ui/translation_dialog'
 import { useTranslation } from '../contexts/TranslationContext'
 import { usePageTranslation } from '../hooks/usePageTranslation'
+import DiscordNotificationConfig from '../components/ui/discord_notification_config'
+import { useAutoUpdate } from '../hooks/useAutoUpdate'
+import AutoUpdateNotification from '../components/ui/auto_update_notification'
+import type { GitHubCommit } from '../services/api'
+import { gitHubWebhookService } from '../services/github-webhook-service'
 
 
 
@@ -47,6 +52,16 @@ function DocumentationPage() {
   // Construct GitHub URL from repo parameter if available
   const repoBasedUrl = repo ? `https://github.com/${decodeURIComponent(repo)}` : undefined
   const githubHref = repoUrl || fallbackUrl || repoBasedUrl || '#'
+  
+  // Debug GitHub URL construction
+  console.log('[DocumentationPage] GitHub URL construction:', {
+    repoUrl,
+    fallbackUrl,
+    repoBasedUrl,
+    repo,
+    githubHref,
+    locationState: locationState?.repoData
+  })
 
   const [isDarkSelected, setIsDarkSelected] = useState(() => {
     // Check localStorage first, then document class, default to dark
@@ -92,7 +107,7 @@ function DocumentationPage() {
     // On larger screens, use saved preference or default to open
     return saved ? JSON.parse(saved) : false
   })
-  const { toggleChat } = useAIChat()
+  const { toggleChat, setRepositoryInfo } = useAIChat()
 
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [isSuggestionPanelOpen, setIsSuggestionPanelOpen] = useState(false)
@@ -113,7 +128,99 @@ function DocumentationPage() {
   const [isViewCodeDialogOpen, setIsViewCodeDialogOpen] = useState(false)
   const [isExportDialogOpen, setIsExportDialogOpen] = useState(false)
   const [isTranslationDialogOpen, setIsTranslationDialogOpen] = useState(false)
+  const [isDiscordConfigOpen, setIsDiscordConfigOpen] = useState(false)
+  const [isDiscordMonitoringActive, setIsDiscordMonitoringActive] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  
+  // Auto-update functionality
+  const [refreshKey, setRefreshKey] = useState(0)
+  const [lastContentUpdate, setLastContentUpdate] = useState<Date | null>(null)
+  
+  // Export functionality - store current content for export
+  const [currentMarkdownContent, setCurrentMarkdownContent] = useState('')
+  const [currentDocumentationData, setCurrentDocumentationData] = useState<Record<string, unknown>>({})
+  
+
+  
+  const {
+    isMonitoring,
+    lastUpdate,
+    newCommitsCount,
+    latestCommits,
+    startMonitoring,
+    stopMonitoring,
+    forceCheck,
+    clearNotifications
+  } = useAutoUpdate({
+    repoUrl: githubHref !== '#' ? githubHref : undefined,
+    branch: 'main', // You can make this dynamic based on branch selector
+    checkInterval: 2, // Check every 2 minutes
+    autoStart: true,
+    onNewCommits: (commits: GitHubCommit[]) => {
+      console.log('New commits detected:', commits)
+      // You can add additional logic here like showing toast notifications
+    },
+    onContentUpdate: () => {
+      console.log('Content update triggered')
+      setLastContentUpdate(new Date())
+      // This will trigger re-rendering of documentation content
+      setRefreshKey(prev => prev + 1)
+    },
+    onError: (error: Error) => {
+      console.error('Auto-update error:', error)
+    }
+  })
+
+
+  // GitHub webhook integration
+  const [isGitHubBotEnabled, setIsGitHubBotEnabled] = useState(false)
+  
+
+
+  useEffect(() => {
+    // Set up GitHub webhook integration when repo URL is available
+    if (githubHref !== '#') {
+      // Subscribe to GitHub webhook events for Discord notifications
+      gitHubWebhookService.subscribeToRepository(githubHref, {
+        componentMappings: {
+          'Frontend Components': ['src/components/**/*.tsx', 'src/components/**/*.ts'],
+          'Documentation': ['README.md', 'docs/**/*.md', '*.md'],
+          'Styles': ['src/**/*.css', 'src/**/*.scss'],
+          'API Services': ['src/services/**/*.ts', 'src/api/**/*.ts'],
+          'Configuration': ['package.json', 'tsconfig.json', 'vite.config.ts', '*.config.*']
+        }
+      })
+      
+      // Enable GitHub bot simulation for demo purposes
+      setIsGitHubBotEnabled(true)
+      
+      // Start webhook simulation (for demo - in production this would be real webhooks)
+      gitHubWebhookService.startWebhookSimulation(githubHref, 3) // Every 3 minutes
+      
+      // Listen for GitHub push events to refresh content
+      const handleGitHubPush = (event: CustomEvent) => {
+        if (event.detail.repoUrl === githubHref) {
+          console.log('GitHub push detected, refreshing content...')
+          setRefreshKey(prev => prev + 1)
+          setLastContentUpdate(new Date())
+        }
+      }
+      
+      window.addEventListener('github-push-refresh', handleGitHubPush as EventListener)
+      
+      return () => {
+        window.removeEventListener('github-push-refresh', handleGitHubPush as EventListener)
+        gitHubWebhookService.stopWebhookSimulation()
+      }
+    }
+  }, [githubHref])
+
+  // Set repository info for AI chat
+  useEffect(() => {
+    if (githubHref && githubHref !== '#') {
+      setRepositoryInfo(githubHref, 'main')
+    }
+  }, [githubHref, setRepositoryInfo])
   
   // Translation context
   const { isTranslationActive, currentLanguageCode } = useTranslation()
@@ -175,6 +282,7 @@ function DocumentationPage() {
     if (repoPart && !filePart) {
       console.log('Setting activeLabel to Welcome (root path)')
       setActiveLabel('Welcome')
+      setRefreshKey(prev => prev + 1) // Force refresh
       return
     }
 
@@ -193,14 +301,17 @@ function DocumentationPage() {
       if (targetSlug === 'changelog') {
         console.log('Setting activeLabel to Changelog')
         setActiveLabel('Changelog')
+        setRefreshKey(prev => prev + 1) // Force refresh
         return
       } else if (targetSlug === 'flowchart') {
         console.log('Setting activeLabel to System Diagrams')
         setActiveLabel('System Diagrams')
+        setRefreshKey(prev => prev + 1) // Force refresh
         return
       } else if (targetSlug === 'documentation') {
         console.log('Setting activeLabel to Main Documentation')
         setActiveLabel('Main Documentation')
+        setRefreshKey(prev => prev + 1) // Force refresh
         return
       } else if (targetSlug === 'docs') {
         // Handle docs sub-routes
@@ -211,17 +322,20 @@ function DocumentationPage() {
         if (subSection === 'overview') {
           console.log('Setting activeLabel to Overview')
           setActiveLabel('Overview')
+          setRefreshKey(prev => prev + 1) // Force refresh
         } else if (subSection === 'quickstart') {
           console.log('Setting activeLabel to Quick Start')
           setActiveLabel('Quick Start')
+          setRefreshKey(prev => prev + 1) // Force refresh
         } else if (subSection === 'requirements') {
           console.log('Setting activeLabel to Requirements')
           setActiveLabel('Requirements')
+          setRefreshKey(prev => prev + 1) // Force refresh
         }
         return
       }
     }
-  }, [location.pathname, repoSlug, subpage, activeLabel])
+  }, [location.pathname, repoSlug, subpage]) // eslint-disable-line react-hooks/exhaustive-deps
 
 
 
@@ -232,6 +346,10 @@ function DocumentationPage() {
     setIsSidebarCollapsed(newState)
     localStorage.setItem('sidebarCollapsed', JSON.stringify(newState))
   }, [isSidebarCollapsed])
+
+  const handleDiscordMonitoringStateChange = useCallback((isActive: boolean) => {
+    setIsDiscordMonitoringActive(isActive)
+  }, [])
 
   // Handle clicking on overlay to close sidebar on smaller screens
   const handleOverlayClick = () => {
@@ -337,6 +455,12 @@ function DocumentationPage() {
     setIsViewCodeDialogOpen(true)
   }
 
+  // Handle content loaded from DocumentationSection for export
+  const handleContentLoaded = (content: string, metadata: Record<string, unknown>) => {
+    setCurrentMarkdownContent(content)
+    setCurrentDocumentationData(metadata)
+  }
+
   // Handle export functionality
   const handleExport = () => {
     setIsExportDialogOpen(true)
@@ -423,37 +547,40 @@ function DocumentationPage() {
         </div>
       )}
 
-      {/* Translation Button - Above Smart Suggestions */}
-      <div className="docs-translate-button-container">
-        <button 
-          className={`docs-translate-button ${isTranslationActive ? 'active' : ''}`}
-          onClick={() => setIsTranslationDialogOpen(true)}
-          aria-label={`Current language: ${currentLanguageCode}. Click to change language`}
-        >
-          <span className="docs-translate-button-text">{currentLanguageCode}</span>
-        </button>
-      </div>
-
-      {/* Lightbulb Button - Above AI Chat Button */}
-      <div className="docs-lightbulb-button-container">
-        <button 
-          className="docs-lightbulb-button"
-          onClick={() => setIsSuggestionPanelOpen(prev => !prev)}
-          aria-label="Open suggestions"
-        >
-          <LightbulbIcon size={18} />
-        </button>
-      </div>
-
-      {/* AI Chat Button - Top Right Corner */}
-      <div className="docs-ai-chat-button-container">
-        <button 
-          className="docs-ai-chat-button"
-          onClick={toggleChat}
-          aria-label="Open AI chat"
-        >
-          <SparklesIcon size={18} />
-        </button>
+      {/* Tools Dropdown - Contains all tools */}
+      <div className="docs-tools-dropdown-container">
+        <ToolsDropdown 
+          githubHref={githubHref}
+          pageContent={`Current page: ${activeLabel}`}
+          isTranslationActive={isTranslationActive}
+          currentLanguageCode={currentLanguageCode}
+          onOpenTranslation={() => setIsTranslationDialogOpen(true)}
+          onToggleSuggestions={() => setIsSuggestionPanelOpen(prev => !prev)}
+          isMonitoring={isMonitoring}
+          newCommitsCount={newCommitsCount}
+          onToggleAutoUpdate={() => {
+            if (isMonitoring) {
+              stopMonitoring()
+            } else {
+              startMonitoring()
+            }
+          }}
+          isGitHubBotEnabled={isGitHubBotEnabled}
+          onToggleGitHubBot={() => {
+            if (isGitHubBotEnabled) {
+              gitHubWebhookService.stopWebhookSimulation()
+              setIsGitHubBotEnabled(false)
+            } else {
+              if (githubHref !== '#') {
+                gitHubWebhookService.startWebhookSimulation(githubHref, 3)
+                setIsGitHubBotEnabled(true)
+              }
+            }
+          }}
+          isDiscordMonitoringActive={isDiscordMonitoringActive}
+          onOpenDiscordConfig={() => setIsDiscordConfigOpen(true)}
+          onToggleAIChat={toggleChat}
+        />
       </div>
 
       {/* View Code Button - Top Right Corner */}
@@ -547,6 +674,7 @@ function DocumentationPage() {
                   navigate(`/${repoPath}/changelog`, {
                     state: location.state
                   })
+                  setTimeout(() => window.location.reload(), 100)
                 }}
                 aria-label="View Changelog"
               >
@@ -561,6 +689,7 @@ function DocumentationPage() {
                   navigate(`/${repoPath}/flowchart`, {
                     state: location.state
                   })
+                  setTimeout(() => window.location.reload(), 100)
                 }}
                 aria-label="View System Diagrams"
               >
@@ -583,6 +712,7 @@ function DocumentationPage() {
                   navigate(`/${repoPath}/docs/overview`, {
                     state: location.state
                   })
+                  setTimeout(() => window.location.reload(), 100)
                 }}
                 aria-label="View Overview"
               >
@@ -596,6 +726,7 @@ function DocumentationPage() {
                   navigate(`/${repoPath}/docs/quickstart`, {
                     state: location.state
                   })
+                  setTimeout(() => window.location.reload(), 100)
                 }}
                 aria-label="View Quick Start"
               >
@@ -609,6 +740,7 @@ function DocumentationPage() {
                   navigate(`/${repoPath}/docs/requirements`, {
                     state: location.state
                   })
+                  setTimeout(() => window.location.reload(), 100)
                 }}
                 aria-label="View Requirements"
               >
@@ -622,6 +754,7 @@ function DocumentationPage() {
                   navigate(`/${repoPath}/documentation`, {
                     state: location.state
                   })
+                  setTimeout(() => window.location.reload(), 100)
                 }}
                 aria-label="View Full Documentation"
               >
@@ -656,27 +789,35 @@ function DocumentationPage() {
                   />
                 ) : activeLabel === 'Main Documentation' ? (
                   <DocumentationSection 
+                    key={`fullreadme-${refreshKey}`}
                     section="fullreadme" 
                     githubHref={githubHref}
                     showTOC={showTOC}
+                    onContentLoaded={handleContentLoaded}
                   />
                 ) : activeLabel === 'Overview' ? (
                   <DocumentationSection 
+                    key={`overview-${refreshKey}`}
                     section="overview" 
                     githubHref={githubHref}
                     showTOC={showTOC}
+                    onContentLoaded={handleContentLoaded}
                   />
                 ) : activeLabel === 'Quick Start' ? (
                   <DocumentationSection 
+                    key={`quickstart-${refreshKey}`}
                     section="quickstart" 
                     githubHref={githubHref}
                     showTOC={showTOC}
+                    onContentLoaded={handleContentLoaded}
                   />
                 ) : activeLabel === 'Requirements' ? (
                   <DocumentationSection 
+                    key={`requirements-${refreshKey}`}
                     section="requirements" 
                     githubHref={githubHref}
                     showTOC={showTOC}
+                    onContentLoaded={handleContentLoaded}
                   />
                 ) : (
                   <div style={{ 
@@ -710,6 +851,7 @@ function DocumentationPage() {
                         onClick={() => {
                           const repoPath = window.location.pathname.split('/')[1]
                           navigate(`/${repoPath}/changelog`, { state: location.state })
+                          setTimeout(() => window.location.reload(), 100)
                         }}
                         style={{
                           padding: '12px 24px',
@@ -729,6 +871,7 @@ function DocumentationPage() {
                         onClick={() => {
                           const repoPath = window.location.pathname.split('/')[1]
                           navigate(`/${repoPath}/flowchart`, { state: location.state })
+                          setTimeout(() => window.location.reload(), 100)
                         }}
                         style={{
                           padding: '12px 24px',
@@ -748,6 +891,7 @@ function DocumentationPage() {
                         onClick={() => {
                           const repoPath = window.location.pathname.split('/')[1]
                           navigate(`/${repoPath}/documentation`, { state: location.state })
+                          setTimeout(() => window.location.reload(), 100)
                         }}
                         style={{
                           padding: '12px 24px',
@@ -833,14 +977,43 @@ function DocumentationPage() {
       <ExportDialog
         isOpen={isExportDialogOpen}
         onClose={() => setIsExportDialogOpen(false)}
-        markdownContent=""
-        documentationData={{}}
+        markdownContent={currentMarkdownContent}
+        documentationData={currentDocumentationData}
       />
 
       {/* Translation Dialog */}
       <TranslationDialog
         isOpen={isTranslationDialogOpen}
         onClose={() => setIsTranslationDialogOpen(false)}
+      />
+
+      {/* Discord Notification Config Dialog */}
+      <DiscordNotificationConfig
+        isOpen={isDiscordConfigOpen}
+        onClose={() => setIsDiscordConfigOpen(false)}
+        repoUrl={githubHref}
+        repoName={repo || 'Repository'}
+        changelogUrl={`${window.location.origin}/changelog/${encodeURIComponent(githubHref)}`}
+        onMonitoringStateChange={handleDiscordMonitoringStateChange}
+      />
+
+      {/* Auto Update Notification */}
+      <AutoUpdateNotification
+        newCommitsCount={newCommitsCount}
+        latestCommits={latestCommits}
+        lastUpdate={lastUpdate}
+        onRefresh={async () => {
+          try {
+            await forceCheck()
+            // Trigger content refresh
+            setRefreshKey(prev => prev + 1)
+            window.location.reload() // Force full page refresh to get latest content
+          } catch (error) {
+            console.error('Failed to refresh content:', error)
+          }
+        }}
+        onDismiss={clearNotifications}
+        repoUrl={githubHref !== '#' ? githubHref : undefined}
       />
     </div>
   )

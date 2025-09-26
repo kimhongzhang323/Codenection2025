@@ -1,0 +1,34 @@
+/* Simple TL;DR Button Styles */
+.tldr-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0;
+  border: none;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  width: 100%;
+  justify-content: flex-start;
+}
+
+.tldr-button:hover:not(:disabled) {
+  color: var(--accent-color, #4a90e2);
+}
+
+.tldr-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.tldr-button-icon {
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+}
+
+.tldr-button:hover:not(:disabled) .tldr-button-icon {
+  transform: scale(1.1);
+}
