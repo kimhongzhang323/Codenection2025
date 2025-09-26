@@ -269,6 +269,9 @@
   .flow-header {
     margin-bottom: 48px;
     animation: fadeInUp 0.6s ease-out;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
   }
   
   .flow-header h2 {
@@ -1442,3 +1445,180 @@
       text-align: center;
     }
   }
+
+/* Configuration Modal Styles */
+.config-btn {
+  background: #2d2d2d;
+  border: 1px solid #404040;
+  color: #ffffff;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  transition: all 0.2s ease;
+}
+
+.config-btn:hover {
+  background: #3a3a3a;
+  border-color: #4a4a4a;
+}
+
+.config-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.config-modal {
+  background: #1e1e1e;
+  border: 1px solid #404040;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 600px;
+  max-height: 80vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.config-modal-header {
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid #2a2a2a;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.config-modal-header h3 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.config-close-btn {
+  background: none;
+  border: none;
+  color: #888;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.config-close-btn:hover {
+  color: #ffffff;
+  background: #2a2a2a;
+}
+
+.config-modal-content {
+  padding: 20px 24px;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.config-error {
+  background: #3d1a1a;
+  border: 1px solid #8b2635;
+  color: #ff8a9a;
+  padding: 12px 16px;
+  border-radius: 6px;
+  margin-bottom: 20px;
+  font-size: 14px;
+}
+
+.config-field {
+  margin-bottom: 20px;
+}
+
+.config-field label {
+  display: block;
+  margin-bottom: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #e0e0e0;
+}
+
+.config-field input[type="checkbox"] {
+  margin-right: 8px;
+}
+
+.config-field select,
+.config-field textarea {
+  width: 100%;
+  background: #2a2a2a;
+  border: 1px solid #404040;
+  color: #ffffff;
+  padding: 10px 12px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-family: inherit;
+  transition: border-color 0.2s ease;
+}
+
+.config-field select:focus,
+.config-field textarea:focus {
+  outline: none;
+  border-color: #007acc;
+}
+
+.config-field textarea {
+  resize: vertical;
+  min-height: 120px;
+  font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+}
+
+.config-modal-actions {
+  padding: 16px 24px 20px;
+  border-top: 1px solid #2a2a2a;
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.config-cancel-btn,
+.config-save-btn {
+  padding: 10px 16px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: 1px solid transparent;
+}
+
+.config-cancel-btn {
+  background: #2a2a2a;
+  color: #e0e0e0;
+  border-color: #404040;
+}
+
+.config-cancel-btn:hover:not(:disabled) {
+  background: #3a3a3a;
+}
+
+.config-save-btn {
+  background: #007acc;
+  color: #ffffff;
+}
+
+.config-save-btn:hover:not(:disabled) {
+  background: #0066aa;
+}
+
+.config-cancel-btn:disabled,
+.config-save-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
