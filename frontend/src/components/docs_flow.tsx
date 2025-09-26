@@ -1,5 +1,7 @@
-import { useState } from 'react';
-import { FileText, Check, X, Edit3, Send } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { FileText, Check, X, Edit3, Send, Settings } from 'lucide-react';
+import type { DocumentConfig } from '../services/api';
+import { configApi } from '../services/api';
 import './docs_flow.css';
 
 interface SuggestedBlock {
@@ -24,14 +26,66 @@ interface SuggestedOutline {
 
 export default function DocumentationSystem({
   onDocumentationCreated,
-  onBackToApp
+  onBackToApp,
+  repoUrl
 }: {
   onDocumentationCreated?: (content: string) => void;
   onBackToApp?: () => void;
+  repoUrl: string;
 }) {
   const [selectedFlow, setSelectedFlow] = useState<'custom' | 'suggested' | null>(null);
   const [customPrompt, setCustomPrompt] = useState('');
   const [selectedOutline, setSelectedOutline] = useState<SuggestedOutline | null>(null);
+  
+  // Configuration state
+  const [showConfigStep, setShowConfigStep] = useState(false);
+  const [config, setConfig] = useState<DocumentConfig>({
+    audience: 'technical project managers',
+    tone: 'formal',
+    documentationTemplate: '# Project: {{projectName}}\n\n## Section: {{sectionName}}\n\n{{content}}',
+    extra: {
+      include_diagrams: 'true'
+    }
+  });
+  const [configLoading, setConfigLoading] = useState(false);
+  const [configError, setConfigError] = useState<string | null>(null);
+
+  // Load existing configuration on component mount
+  useEffect(() => {
+    const loadConfig = async () => {
+      try {
+        setConfigLoading(true);
+        const existingConfig = await configApi.get(repoUrl);
+        if (existingConfig) {
+          setConfig(existingConfig.config);
+        }
+      } catch (error) {
+        console.error('Failed to load configuration:', error);
+        setConfigError('Failed to load existing configuration');
+      } finally {
+        setConfigLoading(false);
+      }
+    };
+
+    if (repoUrl) {
+      loadConfig();
+    }
+  }, [repoUrl]);
+
+  // Save configuration
+  const saveConfig = async () => {
+    try {
+      setConfigLoading(true);
+      setConfigError(null);
+      await configApi.set(repoUrl, undefined, config);
+      setShowConfigStep(false);
+    } catch (error) {
+      console.error('Failed to save configuration:', error);
+      setConfigError('Failed to save configuration');
+    } finally {
+      setConfigLoading(false);
+    }
+  };
 
   const suggestedOutlines: SuggestedOutline[] = [
     {
@@ -323,6 +377,10 @@ export default function DocumentationSystem({
             <div className="back-btn" onClick={onBackToApp}>
               ← Back to Main
             </div>
+            <button className="config-btn" onClick={() => setShowConfigStep(true)}>
+              <Settings size={16} />
+              Configure
+            </button>
           </div>
           <div className="welcome-header">
             <h1>Create Your Documentation</h1>
@@ -527,6 +585,104 @@ export default function DocumentationSystem({
               <FileText size={16} />
               Create Documentation
             </button>
+          </div>
+        </div>
+      )}
+
+      {/* Configuration Modal */}
+      {showConfigStep && (
+        <div className="config-modal-overlay">
+          <div className="config-modal">
+            <div className="config-modal-header">
+              <h3>Document Template Configuration</h3>
+              <button 
+                className="config-close-btn" 
+                onClick={() => setShowConfigStep(false)}
+              >
+                <X size={18} />
+              </button>
+            </div>
+            
+            <div className="config-modal-content">
+              {configError && (
+                <div className="config-error">
+                  {configError}
+                </div>
+              )}
+              
+              <div className="config-field">
+                <label htmlFor="audience">Target Audience</label>
+                <select
+                  id="audience"
+                  value={config.audience}
+                  onChange={(e) => setConfig({ ...config, audience: e.target.value })}
+                >
+                  <option value="technical project managers">Technical Project Managers</option>
+                  <option value="developers">Developers</option>
+                  <option value="end users">End Users</option>
+                  <option value="business stakeholders">Business Stakeholders</option>
+                </select>
+              </div>
+
+              <div className="config-field">
+                <label htmlFor="tone">Tone</label>
+                <select
+                  id="tone"
+                  value={config.tone}
+                  onChange={(e) => setConfig({ ...config, tone: e.target.value })}
+                >
+                  <option value="formal">Formal</option>
+                  <option value="casual">Casual</option>
+                  <option value="technical">Technical</option>
+                  <option value="friendly">Friendly</option>
+                </select>
+              </div>
+
+              <div className="config-field">
+                <label htmlFor="template">Documentation Template</label>
+                <textarea
+                  id="template"
+                  value={config.documentationTemplate}
+                  onChange={(e) => setConfig({ ...config, documentationTemplate: e.target.value })}
+                  rows={6}
+                  placeholder="Use variables like {{projectName}}, {{sectionName}}, {{content}}"
+                />
+              </div>
+
+              <div className="config-field">
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={config.extra?.include_diagrams === 'true'}
+                    onChange={(e) => setConfig({ 
+                      ...config, 
+                      extra: { 
+                        ...config.extra, 
+                        include_diagrams: e.target.checked ? 'true' : 'false' 
+                      } 
+                    })}
+                  />
+                  Include Diagrams
+                </label>
+              </div>
+            </div>
+
+            <div className="config-modal-actions">
+              <button 
+                className="config-cancel-btn" 
+                onClick={() => setShowConfigStep(false)}
+                disabled={configLoading}
+              >
+                Cancel
+              </button>
+              <button 
+                className="config-save-btn" 
+                onClick={saveConfig}
+                disabled={configLoading}
+              >
+                {configLoading ? 'Saving...' : 'Save Configuration'}
+              </button>
+            </div>
           </div>
         </div>
       )}
