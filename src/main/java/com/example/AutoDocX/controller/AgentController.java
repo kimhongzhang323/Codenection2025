@@ -35,7 +35,7 @@ public class AgentController {
     @PostMapping("/run-summary")
     public ResponseEntity<ApiResponse<String>> runSummary(@RequestBody AgentRequest request) {
         try {
-            String summary = summaryAgent.run(request.getGitUrl(), request.getBranch(), request.getUserPrompt(), 0);
+            String summary = summaryAgent.run(request.getGitUrl(), request.getBranch(), request.getUserPrompt() + " make it into one paragraph only", 0);
             return ResponseEntity.ok(new ApiResponse<>("SUCCESS", "Summary agent finished.", summary));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)

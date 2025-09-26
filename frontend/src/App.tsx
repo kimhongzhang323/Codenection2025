@@ -267,6 +267,9 @@ function App() {
         <Route path="/:repo/changelog" element={<DocumentationPage />} />
         <Route path="/:repo/flowchart" element={<DocumentationPage />} />
         <Route path="/:repo/documentation" element={<DocumentationPage />} />
+        <Route path="/:repo/docs/overview" element={<DocumentationPage />} />
+        <Route path="/:repo/docs/quickstart" element={<DocumentationPage />} />
+        <Route path="/:repo/docs/requirements" element={<DocumentationPage />} />
         <Route path="/:repo" element={<DocumentationPage />} />
         <Route path="/:repo/:file" element={<DocumentationPage />} />
         <Route path="/documentation" element={<ProtectedRoute><DocumentationPage /></ProtectedRoute>} />

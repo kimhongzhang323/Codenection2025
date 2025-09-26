@@ -16,9 +16,10 @@ const MarkdownRawContext = createContext<string>('');
 
 interface MarkdownProps {
   content: string;
+  repoUrl?: string;
 }
 
-const Markdown: React.FC<MarkdownProps> = ({ content }) => {
+const Markdown: React.FC<MarkdownProps> = ({ content, repoUrl }) => {
   // Helper to extract plain text from React children for nested markdown parsing
   const extractText = (node: React.ReactNode): string => {
     if (node == null) return '';
@@ -115,7 +116,7 @@ const Markdown: React.FC<MarkdownProps> = ({ content }) => {
           </h1>
           <div style={{ marginTop: '0.9rem', marginBottom: '1rem', display: 'flex', gap: '16px', alignItems: 'center' }}>
             <CopyMarkdownButton content={raw} />
-            <SummarizeButton content={raw} />
+            <SummarizeButton repoUrl={repoUrl} pageContent={raw} />
           </div>
         </div>
       );
