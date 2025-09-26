@@ -1,7 +1,6 @@
 package com.example.AutoDocX.service;
 
 import com.example.AutoDocX.model.Documentation;
-import lombok.Getter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -10,6 +9,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -17,15 +17,15 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import org.eclipse.jgit.api.errors.GitAPIException;
 
 public class DocumentationHandler {
 
     private static final Logger logger = LoggerFactory.getLogger(DocumentationHandler.class);
     private final Map<String, Documentation> documentationMap = new ConcurrentHashMap<>();
-    @Getter
     private String defaultDocumentationKey;
 
-    public void loadFromDirectory(Path repoRoot) {
+    public void loadFromDirectory(Path repoRoot, GitService gitService) {
         if (repoRoot == null || !Files.isDirectory(repoRoot)) {
             logger.warn("Repository root is null or not a directory: {}", repoRoot);
             return;
@@ -37,10 +37,11 @@ public class DocumentationHandler {
                         try {
                             String content = Files.readString(path);
                             String relativePath = repoRoot.relativize(path).toString();
-                            documentationMap.put(relativePath, new Documentation(content));
-                            logger.info("Loaded markdown file: {}", relativePath);
-                        } catch (IOException e) {
-                            logger.error("Failed to read markdown file: {}", path, e);
+                            Date lastModified = gitService.getFileLastModified(repoRoot, relativePath);
+                            documentationMap.put(relativePath, new Documentation(content, lastModified));
+                            logger.info("Loaded markdown file: {} (last modified: {})", relativePath, lastModified);
+                        } catch (IOException | GitAPIException e) {
+                            logger.error("Failed to read or get history for markdown file: {}", path, e);
                         }
                     });
         } catch (IOException e) {
@@ -133,6 +134,10 @@ public class DocumentationHandler {
 
     public void clear() {
         documentationMap.clear();
+    }
+
+    public String getDefaultDocumentationKey() {
+        return defaultDocumentationKey;
     }
 
     public boolean setDefaultDocumentationKey(String key) {

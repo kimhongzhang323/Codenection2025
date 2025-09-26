@@ -3,6 +3,7 @@ package com.example.AutoDocX.service;
 import org.eclipse.jgit.api.CloneCommand;
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.PullResult;
+import org.eclipse.jgit.api.LogCommand;
 import org.eclipse.jgit.api.errors.GitAPIException;
 import org.springframework.stereotype.Service;
 import org.eclipse.jgit.revwalk.RevCommit;
@@ -18,6 +19,7 @@ import org.eclipse.jgit.util.io.DisabledOutputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.*;
+import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -157,5 +159,16 @@ public class GitService {
             }
         }
         return content.toString();
+    }
+
+    public Date getFileLastModified(Path repoPath, String filePath) throws GitAPIException, IOException {
+        try (Git git = Git.open(repoPath.toFile())) {
+            LogCommand log = git.log().addPath(filePath).setMaxCount(1);
+            Iterable<RevCommit> logs = log.call();
+            for (RevCommit rev : logs) {
+                return rev.getAuthorIdent().getWhen();
+            }
+        }
+        return null; // Or throw an exception if no commit found
     }
 }

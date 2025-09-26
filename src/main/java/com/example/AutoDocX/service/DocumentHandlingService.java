@@ -24,7 +24,7 @@ public class DocumentHandlingService {
         loadedSessions.computeIfAbsent(sessionKey, key -> {
             ClonedRepo repo = repoHandler.getRepo(session.getGitUrl(), session.getBranch());
             if (repo != null && repo.getClonedPath() != null) {
-                session.getDocumentationHandler().loadFromDirectory(repo.getClonedPath());
+                session.getDocumentationHandler().loadFromDirectory(repo.getClonedPath(), repoHandler.getGitService());
                 return true; // Mark as loaded
             }
             return false; // Mark as not loaded if repo was unavailable

@@ -245,7 +245,7 @@ STEPS:
             context.append("LOG:\n").append(memory.getDocAgentLog().toString(DEFAULT_MAX_ITERATIONS * 2)).append("\n\n");
         }
 
-        context.append("USER PROMPT:\n").append(userPrompt == null ? "" : userPrompt).append("\n\n");
+        context.append("USER PROMPT WAS:\n").append(userPrompt == null ? "" : userPrompt).append("\n\n");
 
         contents.add(Content.builder().role("user").parts(List.of(Part.fromText(context.toString()))).build());
         return contents;

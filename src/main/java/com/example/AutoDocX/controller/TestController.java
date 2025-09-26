@@ -2,6 +2,7 @@ package com.example.AutoDocX.controller;
 
 import com.example.AutoDocX.parser.model.Graph;
 import com.example.AutoDocX.parser.model.GraphNode;
+import com.example.AutoDocX.service.GitService;
 import com.example.AutoDocX.service.JavaGraphConverter;
 import com.example.AutoDocX.service.JavaTreeConverter;
 import com.example.AutoDocX.service.McpToolUtils;
@@ -23,6 +24,8 @@ public class TestController {
 
     @Autowired
     private McpToolUtils mcpToolUtils;
+    @Autowired
+    GitService gitService;
 
     /**
      * Build a graph of THIS project (src/main/java)
@@ -31,7 +34,7 @@ public class TestController {
     private Graph buildGraphInternal() throws IOException {
         Path repoPath = Path.of("src/main/java");
         var javaClasses = javaTreeConverter.convertRepoToJavaTree(repoPath);
-        return javaGraphConverter.convertJavaTreeToGraph(javaClasses);
+        return javaGraphConverter.convertJavaTreeToGraph(javaClasses, gitService, repoPath);
     }
 
     @GetMapping("/build")
@@ -70,7 +73,7 @@ public class TestController {
     public GraphNode getNodeById(@PathVariable String nodeId) throws IOException {
         Path repoPath = Path.of("src/main/java");
         var javaClasses = javaTreeConverter.convertRepoToJavaTree(repoPath);
-        Graph graph = javaGraphConverter.convertJavaTreeToGraph(javaClasses);
+        Graph graph = javaGraphConverter.convertJavaTreeToGraph(javaClasses, gitService, repoPath);
 
         return graph.getNode(nodeId).orElse(null);
     }

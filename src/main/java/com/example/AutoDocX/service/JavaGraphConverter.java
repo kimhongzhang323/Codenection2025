@@ -6,6 +6,9 @@ import com.github.javaparser.ast.expr.MethodCallExpr;
 import com.github.javaparser.ast.expr.ObjectCreationExpr;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+import org.eclipse.jgit.api.errors.GitAPIException;
+import java.io.IOException;
+import java.nio.file.Path;
 
 import java.util.*;
 
@@ -17,9 +20,9 @@ public class JavaGraphConverter {
 
     private static final int CLASS_SIZE_THRESHOLD = 50; // configurable LOC threshold
 
-    public Graph convertJavaTreeToGraph(List<JavaClass> javaClasses) {
+    public Graph convertJavaTreeToGraph(List<JavaClass> javaClasses, GitService gitService, Path repoPath) {
         Graph graph = new Graph();
-        Map<String, GraphNode> nodesMap = createNodes(graph, javaClasses);
+        Map<String, GraphNode> nodesMap = createNodes(graph, javaClasses, gitService, repoPath);
 
         for (JavaClass javaClass : javaClasses) {
             String classId = generateNodeId(javaClass);
@@ -35,11 +38,19 @@ public class JavaGraphConverter {
     }
 
     // ---------- Node Creation ----------
-    private Map<String, GraphNode> createNodes(Graph graph, List<JavaClass> javaClasses) {
+    private Map<String, GraphNode> createNodes(Graph graph, List<JavaClass> javaClasses, GitService gitService, Path repoPath) {
         Map<String, GraphNode> nodesMap = new HashMap<>();
 
         for (JavaClass javaClass : javaClasses) {
             boolean isSmall = (javaClass.getEndLine() - javaClass.getStartLine()) <= CLASS_SIZE_THRESHOLD;
+
+            Date lastModified = null;
+            try {
+                lastModified = gitService.getFileLastModified(repoPath, javaClass.getFilePath());
+            } catch (GitAPIException | IOException e) {
+                System.err.println("Could not retrieve last modified date for " + javaClass.getFilePath());
+            }
+
 
             if (isSmall) {
                 // One node for the entire class (with all methods + fields)
@@ -54,7 +65,7 @@ public class JavaGraphConverter {
                         extractFullClassCode(javaClass),
                         new ArrayList<>(),
                         new ArrayList<>(),
-                        null
+                        lastModified
                 );
                 graph.addNode(classNode);
                 nodesMap.put(classId, classNode);
@@ -71,7 +82,7 @@ public class JavaGraphConverter {
                         extractClassWithoutMethods(javaClass),
                         new ArrayList<>(),
                         new ArrayList<>(),
-                        null
+                        lastModified
                 );
                 graph.addNode(classNode);
                 nodesMap.put(classId, classNode);
@@ -92,7 +103,7 @@ public class JavaGraphConverter {
                             method.getBody(),
                             new ArrayList<>(),
                             new ArrayList<>(),
-                            null
+                            lastModified
                     );
                     graph.addNode(methodNode);
                     nodesMap.put(methodId, methodNode);
