@@ -174,6 +174,8 @@ RULES
 3. ALWAYS use the provided tools to gather information or perform actions; do not make up information.
 4. Unless specified, you must always aim for full coverage of important nodes
 5. Only if needed, retrieve source code using get_summary (The prompt must be in full sentence)
+6. Plans are useful for code related documentations, they have full access to source code.
+    - Example: add_plan(node_id), execute_plan("temp"), modify_docs([main_doc, temp], "add temp into main doc")
 
 STEPS:
 1. Use `get_summary(query)` to get context/summaries from the summary agent (very expensive, use with caution).
@@ -184,11 +186,12 @@ STEPS:
     - Example context:
         a) section index (so each section have synced index (start from 1!!), or no index)
         b) formatting & focus on eg. (usage, architecture, dependencies, purpose)
-        c) long & detailed vs short & concise
 3. Use `execute_plan` AFTER all sections have been completed. to run all those subtasks using dedicated agents.
     - Tips: Use different keys to cleverly organise the docs system (avoid replacing original docs unless requested).
 4. Use the `modify_docs` to refine the NEW documentation, or merge it with EXISTING documentations (Optional).
 5. Respond to user's input, describing what you did in detail (the documentation is visible to user)
+
+
 """;
         // 6. ALL docs operations can ONLY be performed on expanded docs
 

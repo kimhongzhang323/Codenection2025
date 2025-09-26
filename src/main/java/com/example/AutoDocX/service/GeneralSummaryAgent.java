@@ -86,6 +86,7 @@ public class GeneralSummaryAgent {
 
         if (!session.isInitialStructureLogged()) {
             session.getMemory().getStructure().addEntry("graph_structure", graph.toString());
+            mcpToolKit.executeTool("get_modified_nodes", Map.of(), toolExecutionContext);
             mcpToolKit.executeTool("find_central_nodes", Map.of("n", 10), toolExecutionContext);
             session.setInitialStructureLogged(true);
         }
@@ -268,6 +269,7 @@ Deliver:
 - Project introduction
 - Architectural overview of modules and relationships
 - Complete inventory of nodes to document, each marked summarised (based on code summary) or inferred (context-only). Format node_id: (inferred/summarised) {summary}
+    * if a node has been modified, mark it as [modified] after its summary
 """;
 
         contents.add(Content.builder().role("user").parts(Part.builder().text(systemInstruction).build()).build());

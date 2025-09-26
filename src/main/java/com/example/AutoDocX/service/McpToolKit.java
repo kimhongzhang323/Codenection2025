@@ -9,6 +9,7 @@ import com.google.genai.types.Type;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -250,6 +251,20 @@ public class McpToolKit {
             .build())
         .build());
 
+        declarations.add(FunctionDeclaration.builder()
+                .name("get_modified_nodes")
+                .description("Get a list of nodes that have been modified since the documentation was last updated.")
+                .parameters(Schema.builder()
+                        .type(Type.Known.OBJECT)
+                        .properties(Map.of(
+                                "doc_key", Schema.builder()
+                                        .type(Type.Known.STRING)
+                                        .description("The key of the documentation file to compare against. If not provided, the default documentation is used.")
+                                        .build()
+                        ))
+                        .build())
+                .build());
+
         return declarations;
     }
 
@@ -265,7 +280,13 @@ public class McpToolKit {
 
     // KISS: unified agent tools
     public List<Tool> getDocumentationAgentTools() {
-        List<String> names = List.of("get_summary", "add_plan", "execute_plan", "read_doc", "modify_docs"); //"replace_string_in_doc", "insert_edit_into_doc"
+        List<String> names = List.of(
+                "get_summary",
+                "add_plan",
+                "execute_plan",
+                "read_doc",
+                "modify_docs"
+        ); //"replace_string_in_doc", "insert_edit_into_doc"
         return buildTools(names);
     }
 
@@ -299,6 +320,7 @@ public class McpToolKit {
                 case "find_neighbour_nodes":
                 case "folder_tree_structure":
                 case "find_central_nodes":
+                case "get_modified_nodes":
                     context.getSession().getMemory().getStructure().addEntry(toolName + ":" + extractNameFromParams(params), result);
                     break;
                 case "summarise_code":
@@ -389,6 +411,18 @@ return result;
                 String key = (String) paramsMap.get("key");
                 int countdown = ((Number) paramsMap.get("countdown")).intValue();
                 return mcpToolUtils.readDoc(context.getSession(), key, countdown);
+            }
+            case "get_modified_nodes": {
+                String docKey = (String) paramsMap.get("doc_key");
+                String result = mcpToolUtils.getModifiedNodes(
+                        context.getGraph(),
+                        context.getSession().getDocumentationHandler(),
+                        docKey,
+                        mcpToolUtils.getGitService(),
+                        context.getRepo().getClonedPath()
+                );
+                context.getEpisodicMemory().addEntry("tool_result:" + toolName, result);
+                return result;
             }
             default:
                 throw new IllegalArgumentException("Unknown tool: " + toolName);

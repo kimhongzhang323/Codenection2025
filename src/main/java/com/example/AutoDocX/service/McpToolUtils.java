@@ -3,7 +3,6 @@ package com.example.AutoDocX.service;
 import com.example.AutoDocX.model.ClonedRepo;
 import com.example.AutoDocX.model.Documentation;
 import com.example.AutoDocX.model.repo.GeminiModel;
-import com.example.AutoDocX.model.repo.ModelFinishReason;
 import com.example.AutoDocX.model.repo.SendMessageResult;
 import com.example.AutoDocX.parser.model.Graph;
 import com.example.AutoDocX.parser.model.GraphLink;
@@ -28,6 +27,8 @@ import java.nio.file.AccessDeniedException;
 import com.example.AutoDocX.model.repo.Model;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import org.eclipse.jgit.revwalk.RevCommit;
+import org.eclipse.jgit.api.errors.GitAPIException;
 
 @Service
 public class McpToolUtils {
@@ -40,6 +41,10 @@ public class McpToolUtils {
         this.repoHandler = repoHandler;
         this.model = model;
         this.documentHandlingService = documentHandlingService;
+    }
+
+    public GitService getGitService() {
+        return repoHandler.getGitService();
     }
 
     public String getCode(ClonedRepo repo, String nodeId) throws IOException, NodeNotFoundException {
@@ -353,10 +358,7 @@ public class McpToolUtils {
         List<Content> contents = List.of(Content.builder().role("user").parts(Part.builder().text(prompt).build()).build());
         SendMessageResult result = model.sendMessage(contents, List.of());
 
-        if (result.getModelFinishReason() != ModelFinishReason.FINAL || !result.getToolCalls().isEmpty())
-            throw new RuntimeException("Model failed to generate the edited document.");
-
-        String newContent = result.getText().orElse("");
+        String newContent = result.getText().orElseThrow(() -> new RuntimeException("Model failed to generate the edited document."));
         doc.setContent(newContent);
 
         return "OK: Applied intelligent edit to document '" + docKey + "'.";
@@ -391,5 +393,56 @@ public class McpToolUtils {
         DocumentationHandler docHandler = documentHandlingService.getDocumentHandler(session);
         docHandler.setExpandedCounter(key, countdown);
         return "OK: Document '" + key + "' will be expanded for the next " + countdown + " turns.";
+    }
+
+    public String getModifiedNodes(Graph graph, DocumentationHandler docHandler, String docKey, GitService gitService, Path repoPath) {
+        if (docKey == null || docKey.isBlank()) {
+            docKey = docHandler.getDefaultDocumentationKey();
+        }
+        if (docKey == null) {
+            return "Error: No documentation key provided and no default is set.";
+        }
+
+        Documentation doc = docHandler.get(docKey);
+        if (doc == null) {
+            return "Error: Documentation with key '" + docKey + "' not found.";
+        }
+
+        Date docLastModified = doc.getLastModified();
+        if (docLastModified == null) {
+            return "Warning: Documentation '" + docKey + "' has no modification date. Cannot determine modified nodes.";
+        }
+
+        try {
+            List<RevCommit> commits = gitService.getCommitsSince(repoPath, docLastModified);
+            if (commits.isEmpty()) {
+                return "No new commits since the documentation was last updated.";
+            }
+
+            StringBuilder result = new StringBuilder();
+            Set<String> allModifiedNodes = new LinkedHashSet<>();
+
+            for (RevCommit commit : commits) {
+                result.append(commit.getShortMessage()).append("\n");
+                List<String> modifiedFilesInCommit = gitService.getModifiedFilesInCommit(repoPath, commit.getName());
+
+                Set<String> nodesInCommit = modifiedFilesInCommit.stream()
+                        .flatMap(filePath -> graph.getNodes().stream()
+                                .filter(node -> node.getFilePath().endsWith(filePath.replace("/", java.io.File.separator))))
+                        .map(GraphNode::getId)
+                        .collect(Collectors.toSet());
+
+                result.append(String.join(" ", nodesInCommit)).append("\n\n");
+                allModifiedNodes.addAll(nodesInCommit);
+            }
+
+            result.append("ALL MODIFIED NODES:\n");
+            result.append(String.join("\n", allModifiedNodes));
+
+            return result.toString();
+
+        } catch (IOException | GitAPIException e) {
+            return "Error retrieving commit history: " + e.getMessage();
+        }
     }
 }

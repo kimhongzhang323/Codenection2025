@@ -14,16 +14,19 @@ import org.eclipse.jgit.treewalk.CanonicalTreeParser;
 import org.eclipse.jgit.diff.DiffEntry;
 import org.eclipse.jgit.diff.DiffFormatter;
 import org.eclipse.jgit.util.io.DisabledOutputStream;
-
+import org.eclipse.jgit.revwalk.filter.CommitTimeRevFilter;
 
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.nio.file.*;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import java.util.stream.StreamSupport;
 
 @Service
 public class GitService {
@@ -145,11 +148,11 @@ public class GitService {
     /**
      * Reads a specific range of lines from a file.
      */
-    public String readFileContent(String filePath, int startLine, int endLine) throws IOException {
+    public String readFileContent(String absolutePath, int startLine, int endLine) throws IOException {
         StringBuilder content = new StringBuilder();
-        Path path = Paths.get(filePath);
+        Path path = Paths.get(absolutePath);
         if (!Files.exists(path) || !Files.isRegularFile(path)) {
-            throw new FileNotFoundException("File not found or is not a regular file: " + filePath);
+            throw new FileNotFoundException("File not found or is not a regular file: " + absolutePath);
         }
 
         try (Stream<String> lines = Files.lines(path)) {
@@ -159,6 +162,18 @@ public class GitService {
             }
         }
         return content.toString();
+    }
+
+    public List<RevCommit> getCommitsSince(Path repoPath, Date sinceDate) throws GitAPIException, IOException {
+        List<RevCommit> commits = new ArrayList<>();
+        try (Git git = Git.open(repoPath.toFile())) {
+            LogCommand log = git.log().setRevFilter(CommitTimeRevFilter.after(sinceDate));
+            Iterable<RevCommit> logs = log.call();
+            logs.forEach(commits::add);
+        }
+        // The log is typically newest-to-oldest, let's reverse it to be chronological
+        Collections.reverse(commits);
+        return commits;
     }
 
     public Date getFileLastModified(Path repoPath, String filePath) throws GitAPIException, IOException {

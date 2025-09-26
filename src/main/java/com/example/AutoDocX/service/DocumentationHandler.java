@@ -1,6 +1,7 @@
 package com.example.AutoDocX.service;
 
 import com.example.AutoDocX.model.Documentation;
+import lombok.Getter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -23,6 +24,7 @@ public class DocumentationHandler {
 
     private static final Logger logger = LoggerFactory.getLogger(DocumentationHandler.class);
     private final Map<String, Documentation> documentationMap = new ConcurrentHashMap<>();
+    @Getter
     private String defaultDocumentationKey;
 
     public void loadFromDirectory(Path repoRoot, GitService gitService) {
@@ -134,10 +136,6 @@ public class DocumentationHandler {
 
     public void clear() {
         documentationMap.clear();
-    }
-
-    public String getDefaultDocumentationKey() {
-        return defaultDocumentationKey;
     }
 
     public boolean setDefaultDocumentationKey(String key) {
