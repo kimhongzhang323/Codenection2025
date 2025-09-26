@@ -290,23 +290,21 @@ public class McpToolKit {
                     // handled internally; nothing to store synchronously here
                     break;
                 case "update_understanding":
-                    context.getSession().getMemory().getSummary().replaceEntry("understanding", result);
-                    context.getSession().getMemory().getEpisodic().addEntry("model:tool_call:" + toolName + "(" + "..." + ")", "Success");
-                    return result;
-                default:
-                    System.out.println("WARNING: unknown tool: " + toolName + " (" + paramForMemory + ")");
-                    break;
-            }
-            context.getSession().getMemory().getEpisodic().addEntry("model:tool_call:" + toolName + "(" + paramForMemory + ")", "Success");
-        } catch (Exception e) {
-            result = e.getClass().getSimpleName() + ": " + e.getMessage();
-            System.err.println("DEBUG: Tool execution failed for " + toolName + " with param " + paramForMemory + ". Error: " + e.getMessage());
-            context.getSession().getMemory().getEpisodic().addEntry("tool_call:" + toolName + "(" + paramForMemory + ")", result);
-        }
-        return result;
+            context.getSession().getMemory().getSummary().replaceEntry("understanding", result);
+            context.getEpisodicMemory().addEntry("model:tool_call:" + toolName + "(" + "..." + ")", "Success");
+            return result;
+        default:
+            System.out.println("WARNING: unknown tool: " + toolName + " (" + paramForMemory + ")");
+            break;
     }
-
-    private String execute(String toolName, Map<String, Object> paramsMap, ToolExecutionContext context) throws Exception {
+    context.getEpisodicMemory().addEntry("model:tool_call:" + toolName + "(" + paramForMemory + ")", "Success");
+} catch (Exception e) {
+    result = e.getClass().getSimpleName() + ": " + e.getMessage();
+    System.err.println("DEBUG: Tool execution failed for " + toolName + " with param " + paramForMemory + ". Error: " + e.getMessage());
+    context.getSession().getMemory().getDocAgentLog().addEntry("tool_call:" + toolName + "(" + paramForMemory + ")", result);
+}
+return result;
+}    private String execute(String toolName, Map<String, Object> paramsMap, ToolExecutionContext context) throws Exception {
         switch (toolName) {
             case "get_code": {
                 String nodeId = (String) paramsMap.get("node_id");
