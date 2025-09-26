@@ -1,17 +1,23 @@
 import React, { useState, useRef, useEffect } from 'react'
 import { TldrIcon } from '../icons/tldr_icon'
 import type { TldrIconHandle } from '../icons/tldr_icon'
+import { agentApi } from '../../services/api'
+import Markdown from '../markdown'
 import './summarize_button.css'
 import './summarize_panel.css'
 
 interface SummarizeButtonProps {
-  content: string
+  repoUrl?: string
+  pageContent?: string
 }
 
-const SummarizeButton: React.FC<SummarizeButtonProps> = ({ content: _content }) => {
+const SummarizeButton: React.FC<SummarizeButtonProps> = ({ repoUrl, pageContent }) => {
   const [isSummarizing, setIsSummarizing] = useState(false)
   const [isPanelOpen, setIsPanelOpen] = useState(false)
   const [isFullScreen, setIsFullScreen] = useState(false)
+  const [summary, setSummary] = useState('')
+  const [selectedBranch, setSelectedBranch] = useState('master')
+  const [branches, setBranches] = useState<string[]>(['master'])
   const iconRef = useRef<TldrIconHandle>(null)
 
   const handleMouseEnter = () => {
@@ -26,13 +32,72 @@ const SummarizeButton: React.FC<SummarizeButtonProps> = ({ content: _content }) 
     }
   }
 
+  // Fetch available branches for the repository
+  const fetchBranches = async (gitUrl: string) => {
+    try {
+      // Extract owner and repo name from GitHub URL
+      const urlMatch = gitUrl.match(/github\.com\/([^/]+)\/([^/]+)/);
+      if (!urlMatch) return;
+      
+      const [, owner, repo] = urlMatch;
+      const repoName = repo.replace('.git', '');
+      
+      // Fetch branches from GitHub API
+      const response = await fetch(`https://api.github.com/repos/${owner}/${repoName}/branches`);
+      if (response.ok) {
+        const branchData = await response.json();
+        const branchNames = branchData.map((branch: { name: string }) => branch.name);
+        setBranches(branchNames);
+        
+        // Set default branch (prefer 'main' if available, otherwise 'master')
+        if (branchNames.includes('main')) {
+          setSelectedBranch('main');
+        } else if (branchNames.includes('master')) {
+          setSelectedBranch('master');
+        } else {
+          setSelectedBranch(branchNames[0] || 'master');
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching branches:', error);
+      // Keep default values
+    }
+  };
+
+  // Fetch branches when repository URL changes
+  useEffect(() => {
+    if (repoUrl && repoUrl !== '#') {
+      fetchBranches(repoUrl);
+    }
+  }, [repoUrl]);
+
   async function handleSummarize() {
     if (isSummarizing) return
+    
+    if (!repoUrl || repoUrl === '#') {
+      console.warn('No repository URL available for summarization')
+      return
+    }
+
     setIsSummarizing(true)
-    // Slide in our TL;DR panel; actual summarization can be wired later
+    setSummary('')
     setIsPanelOpen(true)
-    // Simulate generation time; in real integration, set to false when AI completes
-    setTimeout(() => setIsSummarizing(false), 2500)
+    
+    try {
+      // Call the backend summary agent API with selected branch and page content
+      const summaryResult = await agentApi.runSummary(repoUrl, selectedBranch, pageContent)
+      setSummary(summaryResult)
+    } catch (error) {
+      console.error('Error generating summary:', error)
+      setSummary(`### Error
+      
+Failed to generate summary. Please try again later.
+
+**Error Details:**
+${error instanceof Error ? error.message : 'Unknown error occurred'}`)
+    } finally {
+      setIsSummarizing(false)
+    }
   }
 
   // Close panel with ESC
@@ -122,40 +187,131 @@ const SummarizeButton: React.FC<SummarizeButtonProps> = ({ content: _content }) 
           </div>
         </div>
         {/* Title header below top bar */}
-        <div className="tldr-panel__titlebar">
+        <div className="tldr-panel__titlebar" style={{ 
+          display: 'flex', 
+          justifyContent: 'space-between', 
+          alignItems: 'center',
+          paddingRight: '12px',
+          minHeight: '40px',
+          paddingTop: '8px',
+          paddingBottom: '8px'
+        }}>
           <h2 className="tldr-panel__title">TL;DR</h2>
+          {/* Branch selection */}
+          <div style={{ 
+            display: 'flex', 
+            alignItems: 'center', 
+            gap: '8px',
+            fontSize: '13px',
+            opacity: 0.9
+          }}>
+            <span>Branch:</span>
+            <select
+              value={selectedBranch}
+              onChange={(e) => setSelectedBranch(e.target.value)}
+              disabled={isSummarizing}
+              style={{
+                background: 'var(--search-input-bg)',
+                border: '1px solid var(--bottom-dialog-border)',
+                borderRadius: '4px',
+                padding: '4px 8px',
+                fontSize: '12px',
+                color: 'var(--docs-normal-text)',
+                minWidth: '90px',
+                height: '26px',
+                cursor: isSummarizing ? 'not-allowed' : 'pointer'
+              }}
+            >
+              {branches.map(branch => (
+                <option key={branch} value={branch}>{branch}</option>
+              ))}
+            </select>
+          </div>
         </div>
         <div className="tldr-panel__content">
           {isSummarizing ? (
-            <div className="tldr-skeleton">
-              <div className="tldr-skel-line" style={{ width: '85%' }} />
-              <div className="tldr-skel-line" style={{ width: '96%' }} />
-              <div className="tldr-skel-line" style={{ width: '72%' }} />
-              <div className="tldr-skel-line" style={{ width: '90%' }} />
-              <div className="tldr-skel-line" style={{ width: '64%' }} />
-              <div className="tldr-skel-line" style={{ width: '93%' }} />
-              <div className="tldr-skel-line" style={{ width: '78%' }} />
-              <div className="tldr-skel-line" style={{ width: '88%' }} />
-              <div className="tldr-skel-line" style={{ width: '70%' }} />
-              <div className="tldr-skel-line" style={{ width: '40%' }} />
-              <div className="tldr-skel-line" style={{ width: '92%' }} />
-              <div className="tldr-skel-line" style={{ width: '68%' }} />
-              <div className="tldr-skel-line" style={{ width: '82%' }} />
-              <div className="tldr-skel-line" style={{ width: '58%' }} />
-              <div className="tldr-skel-line" style={{ width: '87%' }} />
-              <div className="tldr-skel-line" style={{ width: '73%' }} />
-              <div className="tldr-skel-line" style={{ width: '85%' }} />
-              <div className="tldr-skel-line" style={{ width: '96%' }} />
-              <div className="tldr-skel-line" style={{ width: '72%' }} />
-              <div className="tldr-skel-line" style={{ width: '90%' }} />
-              <div className="tldr-skel-line" style={{ width: '64%' }} />
-              <div className="tldr-skel-line" style={{ width: '93%' }} />
-              <div className="tldr-skel-line" style={{ width: '78%' }} />
-            </div>
+            <>
+              <div style={{ 
+                fontSize: '12px', 
+                opacity: 0.7, 
+                marginBottom: '16px',
+                textAlign: 'center'
+              }}>
+                Generating summary for branch: <strong>{selectedBranch}</strong>
+              </div>
+              <div className="tldr-skeleton">
+                <div className="tldr-skel-line" style={{ width: '85%' }} />
+                <div className="tldr-skel-line" style={{ width: '96%' }} />
+                <div className="tldr-skel-line" style={{ width: '72%' }} />
+                <div className="tldr-skel-line" style={{ width: '90%' }} />
+                <div className="tldr-skel-line" style={{ width: '64%' }} />
+                <div className="tldr-skel-line" style={{ width: '93%' }} />
+                <div className="tldr-skel-line" style={{ width: '78%' }} />
+                <div className="tldr-skel-line" style={{ width: '88%' }} />
+                <div className="tldr-skel-line" style={{ width: '70%' }} />
+                <div className="tldr-skel-line" style={{ width: '40%' }} />
+                <div className="tldr-skel-line" style={{ width: '92%' }} />
+                <div className="tldr-skel-line" style={{ width: '68%' }} />
+                <div className="tldr-skel-line" style={{ width: '82%' }} />
+                <div className="tldr-skel-line" style={{ width: '58%' }} />
+                <div className="tldr-skel-line" style={{ width: '87%' }} />
+                <div className="tldr-skel-line" style={{ width: '73%' }} />
+                <div className="tldr-skel-line" style={{ width: '85%' }} />
+                <div className="tldr-skel-line" style={{ width: '96%' }} />
+                <div className="tldr-skel-line" style={{ width: '72%' }} />
+                <div className="tldr-skel-line" style={{ width: '90%' }} />
+                <div className="tldr-skel-line" style={{ width: '64%' }} />
+                <div className="tldr-skel-line" style={{ width: '93%' }} />
+                <div className="tldr-skel-line" style={{ width: '78%' }} />
+              </div>
+            </>
+          ) : summary ? (
+            <>
+              <div style={{ 
+                fontSize: '12px', 
+                opacity: 0.7, 
+                marginBottom: '12px',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center'
+              }}>
+                <span>Summary for branch: <strong>{selectedBranch}</strong></span>
+                <button
+                  onClick={handleSummarize}
+                  style={{
+                    background: 'var(--search-input-bg)',
+                    border: '1px solid var(--bottom-dialog-border)',
+                    borderRadius: '6px',
+                    padding: '6px 10px',
+                    fontSize: '14px',
+                    color: 'var(--docs-normal-text)',
+                    cursor: 'pointer',
+                    opacity: 0.8,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '4px',
+                    transition: 'opacity 0.2s ease'
+                  }}
+                  onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
+                  onMouseLeave={(e) => e.currentTarget.style.opacity = '0.8'}
+                  title="Regenerate summary"
+                >
+                  🔄 <span style={{ fontSize: '11px' }}>Refresh</span>
+                </button>
+              </div>
+              <div 
+                style={{ 
+                  fontSize: '14px', 
+                  lineHeight: '1.6'
+                }}
+              >
+                <Markdown content={summary} />
+              </div>
+            </>
           ) : (
             <>
               <p style={{ margin: 0, opacity: 0.9 }}>Your summary will appear here.</p>
-              <p style={{ marginTop: 8, fontSize: 12, opacity: 0.6 }}>Coming soon: AI-generated TL;DR of the selected or current section.</p>
+              <p style={{ marginTop: 8, fontSize: 12, opacity: 0.6 }}>Select a branch above and click the TL;DR button to generate an AI-powered summary.</p>
             </>
           )}
         </div>

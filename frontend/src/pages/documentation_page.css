@@ -30,8 +30,8 @@
   --file-text: #6c7584;
   --file-hover-bg: #e9ecef;
   --file-hover-border: #dee2e6;
-  --file-active-bg: rgba(32, 56, 100, 0.1);
-  --file-active-text: #1a365d;
+  --file-active-bg: rgba(100, 108, 255, 0.12);
+  --file-active-text: #2563eb;
   --folder-bg: #f1f1f1;
   --folder-text: #6c7584;
   --folder-hover-bg: #e9ecef;
@@ -68,8 +68,8 @@
   --file-text: #a3a3a3;
   --file-hover-bg: #1c1c1c;
   --file-hover-border: #2a2a2a;
-  --file-active-bg: rgba(32, 56, 100, 0.28);
-  --file-active-text: #d6e1ff;
+  --file-active-bg: rgba(100, 108, 255, 0.2);
+  --file-active-text: #a8b3ff;
   --folder-bg: #191919;
   --folder-text: #a3a3a3;
   --folder-hover-bg: #1c1c1c;
@@ -294,22 +294,23 @@ html:not(.dark) .docs-sidebar__collapse-icon {
 
 /* Sidebar Section */
 .docs-sidebar__section {
-  margin-bottom: 16px;
+  margin-bottom: 20px;
 }
 
 .docs-sidebar__section-header {
   padding: 8px 16px;
-  border-bottom: 1px solid var(--docs-border);
-  margin-bottom: 8px;
+  border-bottom: 1px solid var(--sidebar-border);
+  margin-bottom: 12px;
 }
 
 .docs-sidebar__section-header h3 {
   margin: 0;
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  color: var(--docs-subtle-text);
+  color: var(--sidebar-text);
+  opacity: 0.7;
 }
 
 /* Navigation Section */
@@ -320,28 +321,54 @@ html:not(.dark) .docs-sidebar__collapse-icon {
 .docs-sidebar__nav-item {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   width: 100%;
-  padding: 8px 12px;
+  padding: 10px 12px;
   background: none;
   border: none;
-  color: var(--docs-text);
-  font-size: 14px;
+  color: var(--sidebar-text);
+  font-size: 16px;
   font-weight: 500;
-  border-radius: 6px;
+  border-radius: 8px;
   cursor: pointer;
   transition: all 0.2s ease;
   text-align: left;
-  margin-bottom: 4px;
+  margin-bottom: 6px;
+  position: relative;
+  border-left: 3px solid transparent;
 }
 
 .docs-sidebar__nav-item:hover {
-  background: var(--docs-hover-bg);
-  color: var(--docs-text);
+  background: var(--file-hover-bg);
+  color: var(--sidebar-text);
+  transform: translateX(1px);
 }
 
 .docs-sidebar__nav-item:active {
-  background: var(--docs-active-bg);
+  background: var(--file-active-bg);
+}
+
+/* Active state styling for sidebar navigation items */
+.docs-sidebar__nav-item.is-active {
+  background: var(--file-active-bg);
+  color: var(--file-active-text);
+  font-weight: 600;
+  border-left: 3px solid #646cff;
+  padding-left: 9px; /* Compensate for border width */
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  transform: translateX(2px);
+  transition: all 0.2s ease;
+}
+
+.docs-sidebar__nav-item.is-active:hover {
+  background: var(--file-active-bg);
+  color: var(--file-active-text);
+  transform: translateX(2px);
+}
+
+/* Dark mode active border color */
+:root.dark .docs-sidebar__nav-item.is-active {
+  border-left-color: #818cf8;
 }
 
 .docs-sidebar__nav-item span {
@@ -685,6 +712,55 @@ html:not(.dark) .docs-sidebar__collapse-icon {
 
 
 /* Lightbulb Button - Above AI Chat Button */
+/* Translation Button - Above Smart Suggestions */
+.docs-translate-button-container {
+  position: fixed;
+  bottom: 130px;
+  right: 24px;
+  z-index: 1000;
+}
+
+.docs-translate-button {
+  min-width: 40px;
+  height: 40px;
+  padding: 0 8px;
+  border-radius: 8px;
+  background: var(--collapsed-button-bg);
+  border: 1px solid var(--collapsed-button-border);
+  color: var(--collapsed-button-text);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  opacity: 0.9;
+}
+
+.docs-translate-button:hover {
+  background: var(--collapsed-button-hover-bg);
+  border-color: var(--collapsed-button-hover-border);
+  opacity: 1;
+}
+
+.docs-translate-button:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px var(--focus-ring);
+}
+
+.docs-translate-button.active {
+  background: #3b82f6;
+  border-color: #2563eb;
+  color: white;
+  opacity: 1;
+}
+
+.docs-translate-button-text {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
 .docs-lightbulb-button-container {
   position: fixed;
   bottom: 80px;
@@ -900,8 +976,96 @@ html:not(.dark) .docs-sidebar__collapse-icon {
   opacity: 0.85;
 }
 
+/* Export button styles */
+.docs-export-button-container {
+  position: fixed;
+  top: 20px;
+  right: 280px; /* positioned further left to avoid covering view code button */
+  z-index: 1000;
+}
+
+.docs-export-button {
+  display: inline-flex;
+  cursor: pointer;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 12px;
+  border: 1px solid #e5e5e5;
+  background: #f1f1f1;
+  padding: 12px 16px;
+  font-weight: 500;
+  color: #1a1a1a;
+  box-shadow: 0 2px 4px -1px rgba(0, 0, 0, 0.1), 0 1px 2px -1px rgba(0, 0, 0, 0.06);
+  transition: all 0.3s ease;
+  font-size: 13px;
+  font-family: inherit;
+}
+
+.docs-export-button:hover {
+  transform: none;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.15), 0 2px 4px -1px rgba(0, 0, 0, 0.1);
+  background: #e8e8e8;
+  border-color: #d1d1d1;
+}
+
+.docs-export-button:active {
+  transform: none;
+  box-shadow: 0 1px 2px -1px rgba(0, 0, 0, 0.1);
+  background: #e0e0e0;
+}
+
+.docs-export-button:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.docs-export-button span {
+  color: #1a1a1a;
+  opacity: 0.9;
+}
+
+/* Dark mode overrides for export button */
+:root.dark .docs-export-button {
+  background: #0a0a0a;
+  border-color: #52525b;
+  color: #e2e8f0;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+:root.dark .docs-export-button:hover {
+  background: #1a1a1a;
+  border-color: #71717a;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+:root.dark .docs-export-button:active {
+  background: #2a2a2a;
+  box-shadow: 0 1px 2px -1px rgba(0, 0, 0, 0.1);
+}
+
+:root.dark .docs-export-button span {
+  color: #e2e8f0;
+  opacity: 0.85;
+}
+
 /* Responsive adjustments */
 @media (max-width: 768px) {
+  .docs-translate-button-container {
+    bottom: 116px;
+    right: 16px;
+  }
+  
+  .docs-translate-button {
+    min-width: 36px;
+    height: 36px;
+    padding: 0 6px;
+  }
+
+  .docs-translate-button-text {
+    font-size: 11px;
+  }
+
   .docs-lightbulb-button-container {
     bottom: 72px;
     right: 16px;
@@ -933,6 +1097,17 @@ html:not(.dark) .docs-sidebar__collapse-icon {
     gap: 6px;
   }
 
+  .docs-export-button-container {
+    top: 16px;
+    right: 260px; /* positioned further left for tablet */
+  }
+
+  .docs-export-button {
+    padding: 8px 12px; /* compact tablet */
+    font-size: 12px;
+    gap: 6px;
+  }
+
   .docs-share-button-container {
     top: 16px;
     right: 16px;
@@ -943,9 +1118,35 @@ html:not(.dark) .docs-sidebar__collapse-icon {
     font-size: 12px;
     gap: 6px;
   }
+
+  .docs-export-button-container {
+    top: 16px;
+    right: 220px; /* adjusted for mobile */
+  }
+
+  .docs-export-button {
+    padding: 8px 12px; /* compact tablet */
+    font-size: 12px;
+    gap: 6px;
+  }
 }
 
 @media (max-width: 640px) {
+  .docs-translate-button-container {
+    bottom: 108px;
+    right: 12px;
+  }
+  
+  .docs-translate-button {
+    min-width: 32px;
+    height: 32px;
+    padding: 0 4px;
+  }
+
+  .docs-translate-button-text {
+    font-size: 10px;
+  }
+
   .docs-lightbulb-button-container {
     bottom: 68px;
     right: 12px;
@@ -987,9 +1188,35 @@ html:not(.dark) .docs-sidebar__collapse-icon {
     font-size: 11.5px;
     gap: 5px;
   }
+
+  .docs-export-button-container {
+    top: 12px;
+    right: 240px; /* positioned further left for smaller mobile */
+  }
+
+  .docs-export-button {
+    padding: 6px 10px; /* compact mobile */
+    font-size: 11.5px;
+    gap: 5px;
+  }
 }
 
 @media (max-width: 480px) {
+  .docs-translate-button-container {
+    bottom: 100px;
+    right: 8px;
+  }
+  
+  .docs-translate-button {
+    min-width: 30px;
+    height: 30px;
+    padding: 0 3px;
+  }
+
+  .docs-translate-button-text {
+    font-size: 9px;
+  }
+
   .docs-lightbulb-button-container {
     bottom: 64px;
     right: 8px;
@@ -1027,6 +1254,17 @@ html:not(.dark) .docs-sidebar__collapse-icon {
   }
 
   .docs-share-button {
+    padding: 5px 8px; /* compact small mobile */
+    font-size: 11px;
+    gap: 4px;
+  }
+
+  .docs-export-button-container {
+    top: 8px;
+    right: 220px; /* positioned further left for very small mobile */
+  }
+
+  .docs-export-button {
     padding: 5px 8px; /* compact small mobile */
     font-size: 11px;
     gap: 4px;

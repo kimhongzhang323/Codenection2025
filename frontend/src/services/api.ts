@@ -101,6 +101,20 @@ export interface DocAgentRequest extends AgentRequest {
   sections?: string[]
 }
 
+// Configuration types
+export interface DocumentConfig {
+  audience: string
+  tone: string
+  documentationTemplate: string
+  extra?: Record<string, any>
+}
+
+export interface ConfigResponse {
+  gitUrl: string
+  branch: string
+  config: DocumentConfig
+}
+
 // Documentation API Service
 export const documentationApi = {
   // Get all documentation for a repository
@@ -207,8 +221,8 @@ export const agentApi = {
   },
 
   // Run summary generation
-  async runSummary(gitUrl: string, branch?: string): Promise<string> {
-    const request: AgentRequest = { gitUrl, userPrompt: '', branch }
+  async runSummary(gitUrl: string, branch?: string, pageContent?: string): Promise<string> {
+    const request: AgentRequest = { gitUrl, userPrompt: pageContent || '', branch }
     
     const response = await fetch(`${API_BASE_URL}/agent/run-summary`, {
       method: 'POST',
@@ -539,6 +553,33 @@ export const changelogApi = {
       ...commits.slice(detailedCommits.length)
     ]
   },
+
+  // Get repository branches
+  async getBranches(gitUrl: string): Promise<string[]> {
+    const { owner, name } = parseGitUrl(gitUrl)
+    const accessToken = localStorage.getItem('github_access_token')
+    
+    if (!accessToken) {
+      throw new Error('No GitHub access token available')
+    }
+
+    const response = await fetch(
+      `https://api.github.com/repos/${owner}/${name}/branches`, 
+      {
+        headers: {
+          'Authorization': `token ${accessToken}`,
+          'Accept': 'application/vnd.github.v3+json',
+        },
+      }
+    )
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch branches: ${response.statusText}`)
+    }
+
+    const branches: Array<{ name: string }> = await response.json()
+    return branches.map(branch => branch.name)
+  },
 }
 
 // Utility function to parse GitHub URL
@@ -574,4 +615,65 @@ export function parseGitUrl(gitUrl: string): { owner: string; name: string } {
   }
   
   return { owner: owner.trim(), name: name.trim() }
+}
+
+// Configuration API Service
+export const configApi = {
+  // Get configuration for a repository
+  async get(gitUrl: string, branch: string = 'main'): Promise<ConfigResponse> {
+    const params = new URLSearchParams({ 
+      gitUrl, 
+      branch 
+    })
+    
+    const response = await fetch(`${API_BASE_URL}/config?${params}`, {
+      headers: getAuthHeaders(),
+    })
+    
+    if (!response.ok) {
+      throw new Error(`Failed to fetch configuration: ${response.statusText}`)
+    }
+    
+    return response.json()
+  },
+
+  // Set configuration for a repository
+  async set(gitUrl: string, branch: string = 'main', config: DocumentConfig): Promise<ConfigResponse> {
+    const params = new URLSearchParams({ 
+      gitUrl, 
+      branch 
+    })
+    
+    const response = await fetch(`${API_BASE_URL}/config?${params}`, {
+      method: 'POST',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(config),
+    })
+    
+    if (!response.ok) {
+      throw new Error(`Failed to set configuration: ${response.statusText}`)
+    }
+    
+    return response.json()
+  },
+
+  // Update partial configuration
+  async update(gitUrl: string, branch: string = 'main', partialConfig: Partial<DocumentConfig>): Promise<ConfigResponse> {
+    const params = new URLSearchParams({ 
+      gitUrl, 
+      branch 
+    })
+    
+    const response = await fetch(`${API_BASE_URL}/config?${params}`, {
+      method: 'PATCH',
+      headers: getAuthHeaders(),
+      body: JSON.stringify(partialConfig),
+    })
+    
+    if (!response.ok) {
+      throw new Error(`Failed to update configuration: ${response.statusText}`)
+    }
+    
+    return response.json()
+  }
 }

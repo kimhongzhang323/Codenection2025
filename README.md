@@ -29,30 +29,30 @@ This leads to **onboarding delays, wasted engineering time, and avoidable bugs**
 
 AutoDocX addresses **three key dimensions** of the documentation problem:
 
-#### 1. 📝 Simplify Writing
+#### 1. Simplify Writing
 
 * **Auto-generate starter docs** from code, git commits, or comments
 * **Templates and AI suggestions** to make writing faster
 * **Real-time writing assistants** and markdown validators
 * **AI-powered documentation generation** from GitHub repositories
 
-#### 2. 🔍 Speed Up Reading
+#### 2. Speed Up Reading
 
 * **Summarization tools** (TL;DR for long docs)
 * **Q\&A search**: Ask questions, get contextual answers (ChatGPT for docs)
 * **Visualizations**: Flow diagrams, API call graphs, changelogs
 * **Semantic search** for faster information discovery
 
-#### 3. 🔄 Make Maintenance Easy
+#### 3. Make Maintenance Easy
 
 * **Detect stale documentation** (doc drift vs. code)
 * **Notify users** when dependent components change
 * **Auto-suggest doc updates** from diffs or pull requests
 * **Documentation drift detection** and automated sync monitoring
 
-## ⚡ Technical Approach
+## ⚙️ Technical Approach
 
-### 🚀 Core Architecture
+### Core Architecture
 
 * **Graph-Driven Understanding**: The codebase is represented as a knowledge graph (nodes = classes/methods/fields, edges = dependencies/relations). Exploration and reasoning always start from graph navigation.
 
@@ -72,7 +72,7 @@ AutoDocX addresses **three key dimensions** of the documentation problem:
 
 ---
 
-## 🚀 Overview
+## 🔎 Overview
 
 AutoDocX is a **web-based documentation platform** that revolutionizes how developers create, maintain, and share software documentation. Unlike traditional CLI-driven tools, AutoDocX provides a **100% interface-driven experience** with AI-powered assistance for generating, editing, and maintaining documentation.
 
@@ -86,7 +86,7 @@ AutoDocX is a **web-based documentation platform** that revolutionizes how devel
 * **TL;DR Summarization** - Get quick summaries of complex documentation
 * **GitHub Integration** - Seamless OAuth authentication and repository access
 
-## 🏗️ Architecture
+## 👷🏼 Architecture
 
 ### System Overview
 <img src="static/system_architecture.png" alt="System Architecture" style="width: 100%; max-width: 800px; height: auto;"/>
@@ -99,7 +99,6 @@ AutoDocX is a **web-based documentation platform** that revolutionizes how devel
 * **TypeScript 5.8.3** - Type-safe development
 * **Vite** - Fast build tool and dev server
 * **Tailwind CSS** - Utility-first CSS framework
-* **Fumadocs** - Documentation framework with rich components
 * **React Router** - Client-side routing
 * **Framer Motion** - Smooth animations and transitions
 
@@ -198,7 +197,11 @@ AutoDocX/
 * **Sync Monitoring**: Track code-documentation alignment
 * **Update Suggestions**: AI-powered recommendations
 
----
+### 5. Permission Access and Sharable URL
+
+* **Flexible Access Control**: Configure documentation visibility with granular permission settings
+* **Public Link Generation**: Create shareable URLs with customizable access levels
+* **Anonymous Access**: Allow public viewing without requiring authentication
 
 ## 🎥 Demo & Resources
 
