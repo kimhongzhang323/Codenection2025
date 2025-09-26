@@ -19,9 +19,11 @@ import { HistoryIcon } from '../components/icons/history_icon'
 import { DiagramIcon } from '../components/icons/diagram_icon'
 import ShareDialog from '../components/ui/share_dialog'
 import ViewCodeDialog from '../components/ui/view_code_dialog'
+import ExportDialog from '../components/ui/export_dialog'
 import EmbeddedChangelog from '../components/embedded_changelog'
 import EmbeddedFlowchart from '../components/embedded_flowchart'
 import { documentationApi, type Documentation } from '../services/api'
+import { ExportIcon } from '../components/icons/export_icon'
 
 
 
@@ -109,6 +111,7 @@ function DocumentationPage() {
   })
   const [isShareDialogOpen, setIsShareDialogOpen] = useState(false)
   const [isViewCodeDialogOpen, setIsViewCodeDialogOpen] = useState(false)
+  const [isExportDialogOpen, setIsExportDialogOpen] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Determine encoded repo slug for routing back to repo root
@@ -572,6 +575,11 @@ function DocumentationPage() {
     setIsViewCodeDialogOpen(true)
   }
 
+  // Handle export functionality
+  const handleExport = () => {
+    setIsExportDialogOpen(true)
+  }
+
   // Sync document class with theme state
   useEffect(() => {
     if (isDarkSelected) {
@@ -683,6 +691,18 @@ function DocumentationPage() {
         >
           <GlobeIcon size={16} />
           <span>Share</span>
+        </button>
+      </div>
+
+      {/* Export Button - Top Right Corner */}
+      <div className="docs-export-button-container">
+        <button
+          className="docs-export-button"
+          onClick={handleExport}
+          aria-label="Export documentation"
+        >
+          <ExportIcon size={16} />
+          <span>Export</span>
         </button>
       </div>
 
@@ -1012,6 +1032,14 @@ function DocumentationPage() {
       <ShareDialog
         isOpen={isShareDialogOpen}
         onClose={() => setIsShareDialogOpen(false)}
+      />
+
+      {/* Export Dialog */}
+      <ExportDialog
+        isOpen={isExportDialogOpen}
+        onClose={() => setIsExportDialogOpen(false)}
+        markdownContent={markdownContent}
+        documentationData={documentationData}
       />
     </div>
   )
