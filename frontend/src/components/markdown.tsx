@@ -395,7 +395,9 @@ const Markdown: React.FC<MarkdownProps> = ({ content }) => {
                         }
                       }
                     }
-                  } catch {}
+                  } catch {
+                    // intentionally ignored
+                  }
                   return 'Code';
                 })()}
               </div>
@@ -409,7 +411,9 @@ const Markdown: React.FC<MarkdownProps> = ({ content }) => {
                   try {
                     iconRef.current?.startAnimation();
                     window.setTimeout(() => iconRef.current?.stopAnimation(), 600);
-                  } catch {}
+                  } catch {
+                    // intentionally ignored
+                  }
                 }}
               >
                 <CopyIcon ref={iconRef} size={16} />

@@ -14,7 +14,9 @@ import SuggestionPanel from '../components/ui/suggestion_panel'
 import ContextMenu from '../components/ui/context_menu'
 import FolderContextMenu from '../components/ui/folder_context_menu'
 import { GlobeIcon } from '../components/icons/globe_icon'
+import { CodeIcon } from '../components/icons/code_icon'
 import ShareDialog from '../components/ui/share_dialog'
+import ViewCodeDialog from '../components/ui/view_code_dialog'
 import { documentationApi, type Documentation } from '../services/api'
 
 type DocItem =
@@ -319,6 +321,7 @@ function DocumentationPage() {
     itemType: null
   })
   const [isShareDialogOpen, setIsShareDialogOpen] = useState(false)
+  const [isViewCodeDialogOpen, setIsViewCodeDialogOpen] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Determine encoded repo slug for routing back to repo root
@@ -589,6 +592,11 @@ function DocumentationPage() {
     setIsShareDialogOpen(true)
   }
 
+  // Handle view code functionality
+  const handleViewCode = () => {
+    setIsViewCodeDialogOpen(true)
+  }
+
   // Sync document class with theme state
   useEffect(() => {
     if (isDarkSelected) {
@@ -676,6 +684,18 @@ function DocumentationPage() {
           aria-label="Open AI chat"
         >
           <SparklesIcon size={18} />
+        </button>
+      </div>
+
+      {/* View Code Button - Top Right Corner */}
+      <div className="docs-view-code-button-container">
+        <button
+          className="docs-view-code-button"
+          onClick={handleViewCode}
+          aria-label="View code"
+        >
+          <CodeIcon size={16} />
+          <span>View Code</span>
         </button>
       </div>
 
@@ -851,6 +871,13 @@ function DocumentationPage() {
         style={{ display: 'none' }}
         onChange={handleFileUpload}
         accept="image/jpeg,image/jpg,image/png"
+      />
+
+      {/* View Code Dialog */}
+      <ViewCodeDialog
+        isOpen={isViewCodeDialogOpen}
+        onClose={() => setIsViewCodeDialogOpen(false)}
+        repoUrl={githubHref}
       />
 
       {/* Share Dialog */}

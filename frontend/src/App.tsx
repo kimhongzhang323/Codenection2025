@@ -1,8 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Routes, Route, useNavigate, useLocation, useParams } from 'react-router-dom'
 import { checkGithubUrlPublic, fetchGithubRepoDetails, type GithubRepoDetails } from './lib/utils'
-import { LinkIcon } from './components/icons/url_icon'
-import { SearchIcon } from './components/icons/search_icon'
 import { CheckIcon } from './components/icons/check_icon'
 import { XIcon } from './components/icons/close_icon'
 import { ArrowRightIcon } from './components/icons/arrow_icon'
@@ -123,31 +121,7 @@ function HomePage() {
 
 
 
-  async function submitCheck() {
-    if (!repoUrl) return
-    setIsSuccess(false)
-    setIsError(false)
-    setIsLoading(true)
-    const controller = new AbortController()
-    try {
-      const result = await checkGithubUrlPublic(repoUrl, controller.signal)
-      // For now, just log. Hook into your flow as needed.
-      if (result.valid) {
-        console.log('Public repository detected:', result.repo)
-        setIsSuccess(true)
-      } else {
-        console.warn(result.reason || 'Invalid repository URL')
-        setIsSuccess(false)
-        setIsError(true)
-      }
-    } catch (err) {
-      console.error('Validation error', err)
-      setIsSuccess(false)
-      setIsError(true)
-    } finally {
-      setIsLoading(false)
-    }
-  }
+
 
   function handleArrowClick() {
     if (repoData) {
@@ -158,9 +132,6 @@ function HomePage() {
     }
   }
 
-  function handleSignUpClick() {
-    navigate('/sign-up')
-  }
 
   function handleRepositorySelect(repository: GitHubRepository) {
     // When a repository is selected from autocomplete, automatically fetch its details
@@ -213,7 +184,6 @@ function HomePage() {
           placeholder="Search repositories or paste GitHub URL"
           className="home__input"
         />
-        <LinkIcon className="home__input-icon--left" size={16} />
         {isSuccess ? (
           <CheckIcon className="home__input-icon--right text-success" aria-label="Success" />
         ) : isError ? (
@@ -223,13 +193,7 @@ function HomePage() {
             <div className="home__input-icon home__input-icon--right" aria-label="Loading">
               <div className="spinner" />
             </div>
-          ) : (
-            <SearchIcon
-              className="home__input-icon--right home__input-icon-button"
-              onClick={submitCheck as unknown as React.MouseEventHandler<HTMLDivElement>}
-              aria-label="Submit URL"
-            />
-          )
+          ) : null
         )}
       </div>
       

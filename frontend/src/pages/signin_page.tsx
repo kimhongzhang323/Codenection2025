@@ -12,10 +12,16 @@ const SignIn: React.FC = () => {
   const location = useLocation();
   const { isAuthenticated } = useAuth();
 
+  type LocationState = {
+    from?: {
+      pathname?: string;
+    };
+  };
+
   // Redirect if already authenticated
   useEffect(() => {
     if (isAuthenticated) {
-      const from = (location.state as any)?.from?.pathname || '/';
+      const from = (location.state as LocationState)?.from?.pathname || '/';
       navigate(from, { replace: true });
     }
   }, [isAuthenticated, navigate, location]);
