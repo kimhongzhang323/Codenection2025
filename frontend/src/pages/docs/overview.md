@@ -1,39 +1,64 @@
 # Overview
 
------------------------------------------------------
+Welcome to AutoDocX - an intelligent documentation analysis and generation system that transforms how you explore, understand, and document codebases.
 
-## Overview of product
+## What is AutoDocX?
 
-It's common for developer tool related docs to version their docs, such as different docs for v1 and v2 of the same tool.
+AutoDocX is a comprehensive full-stack application that combines the power of AI with intuitive user interface design to provide:
 
-Fumadocs provide the primitives for you to implement versioning on your own way.
+- **Intelligent Code Analysis**: Deep analysis of repository structures and code patterns
+- **Interactive Documentation**: Dynamic, searchable documentation generation
+- **AI-Powered Insights**: Smart summaries and code explanations
+- **Export Capabilities**: Multiple format exports (Markdown, HTML, PDF, JSON)
+- **Real-time Collaboration**: Live editing and sharing features
+
+## System Architecture
 
 ```mermaid
 graph TD
-    A[Shared Process] --> B[ExtensionManagementService]
-    A --> C[FileSearchService]
-    A --> D[UserDataSyncService]
-
-    E[Main Process] --> F["CodeApplication<br/>(app.ts)"]
-    F --> G[WindowMainService]
-    F --> H[LifecycleMainService]
-    F --> I[SharedProcess]
-    F --> J[ElectronIPCServer]
-
-    K[Renderer Process] --> L["Workbench<br/>(workbench.ts)"]
-    L --> M["Layout<br/>(layout.ts)"]
-    M --> N[EditorPart]
-    M --> O[SidebarPart]
-    M --> P[PanelPart]
-    M --> Q[AuxiliaryBarPart]
-
-    R[Extension Host Process] --> S["RPC Protocol *"]
-    S --> T[ExtensionHostMain]
-    T --> U[ExHostAPIImplementation]
-    U --> V[Extensions]
-
-    I -.-> A 
+    A[Frontend React App] --> B[API Gateway]
+    B --> C[Spring Boot Backend]
+    C --> D[GitHub Integration]
+    C --> E[AI Summary Agent]
+    C --> F[Documentation Engine]
+    F --> G[Markdown Processor]
+    F --> H[Export Services]
+    E --> I[Content Analysis]
+    D --> J[Repository Data]
 ```
+
+## Key Features
+
+### 🚀 Smart Repository Analysis
+- Automatic file tree generation
+- Code structure analysis  
+- Dependency mapping
+- Architecture visualization
+
+### 🤖 AI-Powered Summaries
+- Branch-specific content analysis
+- Section-specific summaries
+- Intelligent code explanations
+- Context-aware recommendations
+
+### 📁 Interactive File Explorer
+- Hierarchical file navigation
+- Search and filtering capabilities
+- Code preview with syntax highlighting
+- Drag-and-drop organization
+
+### 📤 Multi-Format Export
+- **Markdown**: Clean, readable documentation
+- **HTML**: Styled web pages
+- **PDF**: Professional documents
+- **JSON**: Structured data export
+- **ZIP**: Complete documentation packages
+
+### 🎨 Modern User Interface
+- Dark/Light theme support
+- Responsive design
+- Intuitive navigation
+- Accessibility features
 
 ## Partial Versioning
 

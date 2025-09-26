@@ -1,9 +1,8 @@
-import { useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import './documentation_page.css'
 import { GithubIcon } from '../components/icons/github_icon'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
-import Markdown from '../components/markdown'
-import TableOfContents from '../components/ui/table_of_content'
+
 import { AnimatedThemeToggler } from '../components/theme'
 import { BottomMiniDialog } from '../components/ui/bottom_mini_dialog'
 import { SparklesIcon } from '../components/icons/sparkles_icon'
@@ -19,11 +18,16 @@ import { HistoryIcon } from '../components/icons/history_icon'
 import { DiagramIcon } from '../components/icons/diagram_icon'
 import ShareDialog from '../components/ui/share_dialog'
 import ViewCodeDialog from '../components/ui/view_code_dialog'
+import DocumentationSection from '../components/documentation_section'
 import ExportDialog from '../components/ui/export_dialog'
 import EmbeddedChangelog from '../components/embedded_changelog'
 import EmbeddedFlowchart from '../components/embedded_flowchart'
-import { documentationApi, type Documentation } from '../services/api'
+
 import { ExportIcon } from '../components/icons/export_icon'
+
+import TranslationDialog from '../components/ui/translation_dialog'
+import { useTranslation } from '../contexts/TranslationContext'
+import { usePageTranslation } from '../hooks/usePageTranslation'
 
 
 
@@ -56,13 +60,9 @@ function DocumentationPage() {
     return true // Default to dark mode
   })
   const [activeLabel, setActiveLabel] = useState<string | null>(null)
-  const [markdownContent, setMarkdownContent] = useState<string>('')
-  const [draftContent, setDraftContent] = useState<string>('')
   const [viewMode, setViewMode] = useState<'reading' | 'edit'>('reading')
   
-  // Documentation API state - only used for Documentation view
-  const [documentationData, setDocumentationData] = useState<Record<string, Documentation>>({})
-  const [isLoadingDocs, setIsLoadingDocs] = useState(false)
+
   
 
 
@@ -97,7 +97,7 @@ function DocumentationPage() {
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [isSuggestionPanelOpen, setIsSuggestionPanelOpen] = useState(false)
   const [showTOC, setShowTOC] = useState(true)
-  const textareaRef = useRef<HTMLTextAreaElement>(null)
+
   const [contextMenu, setContextMenu] = useState<{ isVisible: boolean; x: number; y: number }>({
     isVisible: false,
     x: 0,
@@ -112,7 +112,14 @@ function DocumentationPage() {
   const [isShareDialogOpen, setIsShareDialogOpen] = useState(false)
   const [isViewCodeDialogOpen, setIsViewCodeDialogOpen] = useState(false)
   const [isExportDialogOpen, setIsExportDialogOpen] = useState(false)
+  const [isTranslationDialogOpen, setIsTranslationDialogOpen] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  
+  // Translation context
+  const { isTranslationActive, currentLanguageCode } = useTranslation()
+  
+  // Enable page translation
+  usePageTranslation()
 
   // Determine encoded repo slug for routing back to repo root
   const repoSlug = (() => {
@@ -192,284 +199,39 @@ function DocumentationPage() {
         setActiveLabel('System Diagrams')
         return
       } else if (targetSlug === 'documentation') {
-        console.log('Setting activeLabel to Documentation')
-        setActiveLabel('Documentation')
+        console.log('Setting activeLabel to Main Documentation')
+        setActiveLabel('Main Documentation')
+        return
+      } else if (targetSlug === 'docs') {
+        // Handle docs sub-routes
+        const pathParts = location.pathname.split('/')
+        const docsIndex = pathParts.indexOf('docs')
+        const subSection = pathParts[docsIndex + 1]
+        
+        if (subSection === 'overview') {
+          console.log('Setting activeLabel to Overview')
+          setActiveLabel('Overview')
+        } else if (subSection === 'quickstart') {
+          console.log('Setting activeLabel to Quick Start')
+          setActiveLabel('Quick Start')
+        } else if (subSection === 'requirements') {
+          console.log('Setting activeLabel to Requirements')
+          setActiveLabel('Requirements')
+        }
         return
       }
     }
   }, [location.pathname, repoSlug, subpage, activeLabel])
 
-  // Load documentation when Documentation view is active
-  useEffect(() => {
-    if (activeLabel === 'Documentation' && githubHref && githubHref !== '#') {
-      setIsLoadingDocs(true)
-      
-      const loadDocs = async () => {
-        try {
-          const docs = await documentationApi.getAll(githubHref)
-          setDocumentationData(docs)
-          
-          // Helper function to detect language from file extension
-          const getLanguageFromExtension = (filename: string): string => {
-            const ext = filename.toLowerCase().split('.').pop() || ''
-            const languageMap: Record<string, string> = {
-              'js': 'javascript',
-              'jsx': 'jsx',
-              'ts': 'typescript',
-              'tsx': 'tsx',
-              'py': 'python',
-              'java': 'java',
-              'cpp': 'cpp',
-              'c': 'c',
-              'cs': 'csharp',
-              'php': 'php',
-              'rb': 'ruby',
-              'go': 'go',
-              'rs': 'rust',
-              'kt': 'kotlin',
-              'swift': 'swift',
-              'scala': 'scala',
-              'sh': 'bash',
-              'bash': 'bash',
-              'zsh': 'zsh',
-              'fish': 'fish',
-              'ps1': 'powershell',
-              'sql': 'sql',
-              'html': 'html',
-              'htm': 'html',
-              'xml': 'xml',
-              'css': 'css',
-              'scss': 'scss',
-              'sass': 'sass',
-              'less': 'less',
-              'json': 'json',
-              'yaml': 'yaml',
-              'yml': 'yaml',
-              'toml': 'toml',
-              'ini': 'ini',
-              'cfg': 'ini',
-              'conf': 'ini',
-              'properties': 'properties',
-              'dockerfile': 'dockerfile',
-              'md': 'markdown',
-              'mdx': 'mdx',
-              'tex': 'latex',
-              'r': 'r',
-              'matlab': 'matlab',
-              'm': 'matlab',
-              'pl': 'perl',
-              'lua': 'lua',
-              'vim': 'vim',
-              'diff': 'diff',
-              'patch': 'diff',
-              'log': 'log',
-              'txt': 'text'
-            }
-            return languageMap[ext] || 'text'
-          }
 
-          // Helper function to format file title
-          const formatFileTitle = (key: string): string => {
-            return key
-              .replace(/\.(md|txt)$/i, '') // Remove common doc extensions
-              .split(/[-_]/)
-              .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-              .join(' ')
-          }
 
-          // Helper function to get file type info with icons
-          const getFileTypeInfo = (filename: string): { category: string; icon: string; language: string } => {
-            const ext = filename.toLowerCase().split('.').pop() || ''
-            const name = filename.toLowerCase()
-            
-            // Special files
-            if (name.includes('readme')) return { category: 'documentation', icon: '📖', language: 'markdown' }
-            if (name.includes('license')) return { category: 'documentation', icon: '📄', language: 'text' }
-            if (name.includes('changelog')) return { category: 'documentation', icon: '📝', language: 'markdown' }
-            if (name.includes('dockerfile') || name === 'dockerfile') return { category: 'configuration', icon: '🐳', language: 'dockerfile' }
-            if (name.includes('makefile') || name === 'makefile') return { category: 'configuration', icon: '🔧', language: 'makefile' }
-            if (name.includes('package.json')) return { category: 'configuration', icon: '📦', language: 'json' }
-            if (name.includes('requirements.txt')) return { category: 'configuration', icon: '🐍', language: 'text' }
-            if (name.includes('pom.xml')) return { category: 'configuration', icon: '☕', language: 'xml' }
-            if (name.includes('build.gradle')) return { category: 'configuration', icon: '🐘', language: 'groovy' }
-            
-            const fileTypes: Record<string, { category: string; icon: string; language: string }> = {
-              // Programming languages
-              'js': { category: 'source', icon: '🟨', language: 'javascript' },
-              'jsx': { category: 'source', icon: '⚛️', language: 'jsx' },
-              'ts': { category: 'source', icon: '🔷', language: 'typescript' },
-              'tsx': { category: 'source', icon: '⚛️', language: 'tsx' },
-              'py': { category: 'source', icon: '🐍', language: 'python' },
-              'java': { category: 'source', icon: '☕', language: 'java' },
-              'cpp': { category: 'source', icon: '⚙️', language: 'cpp' },
-              'c': { category: 'source', icon: '⚙️', language: 'c' },
-              'cs': { category: 'source', icon: '🔷', language: 'csharp' },
-              'php': { category: 'source', icon: '🐘', language: 'php' },
-              'rb': { category: 'source', icon: '💎', language: 'ruby' },
-              'go': { category: 'source', icon: '🐹', language: 'go' },
-              'rs': { category: 'source', icon: '🦀', language: 'rust' },
-              'kt': { category: 'source', icon: '🟣', language: 'kotlin' },
-              'swift': { category: 'source', icon: '🦉', language: 'swift' },
-              'scala': { category: 'source', icon: '🔴', language: 'scala' },
-              'dart': { category: 'source', icon: '🎯', language: 'dart' },
-              
-              // Web technologies
-              'html': { category: 'source', icon: '🌐', language: 'html' },
-              'css': { category: 'source', icon: '🎨', language: 'css' },
-              'scss': { category: 'source', icon: '🎨', language: 'scss' },
-              'sass': { category: 'source', icon: '🎨', language: 'sass' },
-              'less': { category: 'source', icon: '🎨', language: 'less' },
-              
-              // Data formats
-              'json': { category: 'configuration', icon: '📋', language: 'json' },
-              'yaml': { category: 'configuration', icon: '📋', language: 'yaml' },
-              'yml': { category: 'configuration', icon: '📋', language: 'yaml' },
-              'xml': { category: 'configuration', icon: '📋', language: 'xml' },
-              'toml': { category: 'configuration', icon: '📋', language: 'toml' },
-              'ini': { category: 'configuration', icon: '⚙️', language: 'ini' },
-              'cfg': { category: 'configuration', icon: '⚙️', language: 'ini' },
-              'conf': { category: 'configuration', icon: '⚙️', language: 'ini' },
-              'properties': { category: 'configuration', icon: '⚙️', language: 'properties' },
-              
-              // Documentation
-              'md': { category: 'documentation', icon: '📝', language: 'markdown' },
-              'txt': { category: 'documentation', icon: '📄', language: 'text' },
-              'rst': { category: 'documentation', icon: '📝', language: 'rest' },
-              'adoc': { category: 'documentation', icon: '📝', language: 'asciidoc' },
-              
-              // Scripts
-              'sh': { category: 'source', icon: '🐚', language: 'bash' },
-              'bash': { category: 'source', icon: '🐚', language: 'bash' },
-              'ps1': { category: 'source', icon: '💠', language: 'powershell' },
-              'bat': { category: 'source', icon: '⬛', language: 'batch' },
-              'cmd': { category: 'source', icon: '⬛', language: 'batch' },
-              
-              // Database
-              'sql': { category: 'source', icon: '🗃️', language: 'sql' },
-              
-              // Others
-              'log': { category: 'other', icon: '📊', language: 'log' },
-              'csv': { category: 'other', icon: '📊', language: 'csv' },
-              'env': { category: 'configuration', icon: '🔐', language: 'bash' }
-            }
-            
-            return fileTypes[ext] || { category: 'other', icon: '📄', language: 'text' }
-          }
 
-          // Separate files by category for better organization
-          const categorizeFiles = (docs: Record<string, Documentation>) => {
-            const categories = {
-              readme: [] as Array<[string, Documentation]>,
-              documentation: [] as Array<[string, Documentation]>,
-              configuration: [] as Array<[string, Documentation]>,
-              source: [] as Array<[string, Documentation]>,
-              other: [] as Array<[string, Documentation]>
-            }
 
-            Object.entries(docs).forEach(([key, doc]) => {
-              const lower = key.toLowerCase()
-              if (lower.includes('readme')) {
-                categories.readme.push([key, doc])
-              } else if (lower.match(/\.(md|txt|rst|adoc)$/)) {
-                categories.documentation.push([key, doc])
-              } else if (lower.match(/\.(json|yaml|yml|toml|ini|cfg|conf|properties|xml)$/)) {
-                categories.configuration.push([key, doc])
-              } else if (lower.match(/\.(js|jsx|ts|tsx|py|java|cpp|c|cs|php|rb|go|rs|kt|swift|scala|html|css|scss|sass)$/)) {
-                categories.source.push([key, doc])
-              } else {
-                categories.other.push([key, doc])
-              }
-            })
-
-            return categories
-          }
-
-          const categories = categorizeFiles(docs)
-          const sections: string[] = []
-
-          // Generate README section
-          if (categories.readme.length > 0) {
-            sections.push('# 📖 README')
-            categories.readme.forEach(([key, doc]) => {
-              const title = formatFileTitle(key)
-              sections.push(`## ${title}\n\n${doc.content}`)
-            })
-          }
-
-          // Generate Documentation section
-          if (categories.documentation.length > 0) {
-            sections.push('# 📚 Documentation Files')
-            categories.documentation.forEach(([key, doc]) => {
-              const title = formatFileTitle(key)
-              sections.push(`## 📝 ${title}\n\n${doc.content}`)
-            })
-          }
-
-          // Generate Configuration section
-          if (categories.configuration.length > 0) {
-            sections.push('# ⚙️ Configuration Files')
-            categories.configuration.forEach(([key, doc]) => {
-              const title = formatFileTitle(key)
-              const language = getLanguageFromExtension(key)
-              const fileIcon = getFileTypeInfo(key).icon
-              sections.push(`## ${fileIcon} ${title}\n\n\`\`\`${language} title="${key}"\n${doc.content}\n\`\`\``)
-            })
-          }
-
-          // Generate Source Code section
-          if (categories.source.length > 0) {
-            sections.push('# 💻 Source Code')
-            categories.source.forEach(([key, doc]) => {
-              const title = formatFileTitle(key)
-              const language = getLanguageFromExtension(key)
-              const fileIcon = getFileTypeInfo(key).icon
-              sections.push(`## ${fileIcon} ${title}\n\n\`\`\`${language} title="${key}"\n${doc.content}\n\`\`\``)
-            })
-          }
-
-          // Generate Other Files section
-          if (categories.other.length > 0) {
-            sections.push('# 📄 Other Files')
-            categories.other.forEach(([key, doc]) => {
-              const title = formatFileTitle(key)
-              const language = getLanguageFromExtension(key)
-              const fileIcon = getFileTypeInfo(key).icon
-              sections.push(`## ${fileIcon} ${title}\n\n\`\`\`${language} title="${key}"\n${doc.content}\n\`\`\``)
-            })
-          }
-
-          const allContent = sections.join('\n\n---\n\n')
-          
-          setMarkdownContent(allContent)
-          setDraftContent(allContent)
-        } catch (error) {
-          console.error('Failed to load documentation:', error)
-          const errorContent = `# Documentation\n\nFailed to load documentation content. Please try again later.`
-          setMarkdownContent(errorContent)
-          setDraftContent(errorContent)
-        } finally {
-          setIsLoadingDocs(false)
-        }
-      }
-
-      loadDocs()
-    }
-  }, [activeLabel, githubHref])
-
-  // Auto-resize textarea when content changes or view mode changes
-  useEffect(() => {
-    if (viewMode === 'edit' && textareaRef.current) {
-      const textarea = textareaRef.current
-      textarea.style.height = 'auto'
-      textarea.style.height = textarea.scrollHeight + 'px'
-    }
-  }, [draftContent, viewMode])
-
-  const handleSidebarToggle = () => {
+  const handleSidebarToggle = useCallback(() => {
     const newState = !isSidebarCollapsed
     setIsSidebarCollapsed(newState)
     localStorage.setItem('sidebarCollapsed', JSON.stringify(newState))
-  }
+  }, [isSidebarCollapsed])
 
   // Handle clicking on overlay to close sidebar on smaller screens
   const handleOverlayClick = () => {
@@ -624,6 +386,19 @@ function DocumentationPage() {
     return () => window.removeEventListener('resize', handleResize)
   }, [isSidebarCollapsed])
 
+  // Keyboard shortcut for toggling sidebar (Ctrl+B)
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      // Check for Ctrl+B (or Cmd+B on Mac)
+      if ((event.ctrlKey || event.metaKey) && event.key === 'b') {
+        event.preventDefault() // Prevent default browser behavior
+        handleSidebarToggle()
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [handleSidebarToggle])
 
   return (
     <div className="documentation-page">
@@ -647,6 +422,17 @@ function DocumentationPage() {
           </button>
         </div>
       )}
+
+      {/* Translation Button - Above Smart Suggestions */}
+      <div className="docs-translate-button-container">
+        <button 
+          className={`docs-translate-button ${isTranslationActive ? 'active' : ''}`}
+          onClick={() => setIsTranslationDialogOpen(true)}
+          aria-label={`Current language: ${currentLanguageCode}. Click to change language`}
+        >
+          <span className="docs-translate-button-text">{currentLanguageCode}</span>
+        </button>
+      </div>
 
       {/* Lightbulb Button - Above AI Chat Button */}
       <div className="docs-lightbulb-button-container">
@@ -755,7 +541,7 @@ function DocumentationPage() {
             </div>
             <div className="docs-sidebar__nav">
               <button 
-                className="docs-sidebar__nav-item"
+                className={`docs-sidebar__nav-item ${activeLabel === 'Changelog' ? 'is-active' : ''}`}
                 onClick={() => {
                   const repoPath = window.location.pathname.split('/')[1]
                   navigate(`/${repoPath}/changelog`, {
@@ -769,7 +555,7 @@ function DocumentationPage() {
               </button>
               
               <button 
-                className="docs-sidebar__nav-item"
+                className={`docs-sidebar__nav-item ${activeLabel === 'System Diagrams' ? 'is-active' : ''}`}
                 onClick={() => {
                   const repoPath = window.location.pathname.split('/')[1]
                   navigate(`/${repoPath}/flowchart`, {
@@ -791,17 +577,55 @@ function DocumentationPage() {
             </div>
             <div className="docs-sidebar__nav">
               <button 
-                className="docs-sidebar__nav-item"
+                className={`docs-sidebar__nav-item ${activeLabel === 'Overview' ? 'is-active' : ''}`}
+                onClick={() => {
+                  const repoPath = window.location.pathname.split('/')[1]
+                  navigate(`/${repoPath}/docs/overview`, {
+                    state: location.state
+                  })
+                }}
+                aria-label="View Overview"
+              >
+                <span>Overview</span>
+              </button>
+              
+              <button 
+                className={`docs-sidebar__nav-item ${activeLabel === 'Quick Start' ? 'is-active' : ''}`}
+                onClick={() => {
+                  const repoPath = window.location.pathname.split('/')[1]
+                  navigate(`/${repoPath}/docs/quickstart`, {
+                    state: location.state
+                  })
+                }}
+                aria-label="View Quick Start"
+              >
+                <span>Quick Start</span>
+              </button>
+              
+              <button 
+                className={`docs-sidebar__nav-item ${activeLabel === 'Requirements' ? 'is-active' : ''}`}
+                onClick={() => {
+                  const repoPath = window.location.pathname.split('/')[1]
+                  navigate(`/${repoPath}/docs/requirements`, {
+                    state: location.state
+                  })
+                }}
+                aria-label="View Requirements"
+              >
+                <span>Requirements</span>
+              </button>
+              
+              <button 
+                className={`docs-sidebar__nav-item ${activeLabel === 'Main Documentation' ? 'is-active' : ''}`}
                 onClick={() => {
                   const repoPath = window.location.pathname.split('/')[1]
                   navigate(`/${repoPath}/documentation`, {
                     state: location.state
                   })
                 }}
-                aria-label="View Documentation"
+                aria-label="View Full Documentation"
               >
-                <span>📚</span>
-                <span>Main Documentation</span>
+                <span>Full README</span>
               </button>
             </div>
           </div>
@@ -819,36 +643,7 @@ function DocumentationPage() {
         </aside>
         <main className={`docs-main ${isSidebarCollapsed ? 'is-collapsed' : ''}`}>
           <div className="docs-main__container">
-            {viewMode === 'edit' ? (
-              <textarea
-                ref={textareaRef}
-                className="docs-edit-textarea"
-                value={draftContent}
-                onChange={(e) => {
-                  setDraftContent(e.target.value)
-                  // Auto-resize textarea to fit content
-                  e.target.style.height = 'auto'
-                  e.target.style.height = e.target.scrollHeight + 'px'
-                }}
-                style={{
-                  width: '110%',
-                  minHeight: '100vh',
-                  height: 'auto',
-                  padding: '12px',
-                  fontFamily: 'ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace',
-                  fontSize: '14px',
-                  lineHeight: 1.5,
-                  color: 'var(--docs-normal-text)',
-                  background: 'var(--docs-bg)',
-                  border: 'none',
-                  borderRadius: 8,
-                  outline: 'none',
-                  resize: 'none',
-                  overflow: 'hidden'
-                }}
-              />
-            ) : (
-              <>
+
                 {activeLabel === 'Changelog' ? (
                   <EmbeddedChangelog 
                     repo={repo} 
@@ -859,28 +654,30 @@ function DocumentationPage() {
                   <EmbeddedFlowchart 
                     className="flowchart-main"
                   />
-                ) : activeLabel === 'Documentation' ? (
-                  <div className="documentation-main">
-                    {isLoadingDocs ? (
-                      <div style={{ 
-                        display: 'flex', 
-                        justifyContent: 'center', 
-                        alignItems: 'center', 
-                        minHeight: '200px',
-                        color: 'var(--docs-normal-text)' 
-                      }}>
-                        <div>
-                          <div className="spinner" style={{ margin: '0 auto 16px auto' }} />
-                          <p>Loading documentation...</p>
-                        </div>
-                      </div>
-                    ) : (
-                      <>
-                        <Markdown content={draftContent || markdownContent} />
-                        {showTOC && <TableOfContents content={draftContent || markdownContent} />}
-                      </>
-                    )}
-                  </div>
+                ) : activeLabel === 'Main Documentation' ? (
+                  <DocumentationSection 
+                    section="fullreadme" 
+                    githubHref={githubHref}
+                    showTOC={showTOC}
+                  />
+                ) : activeLabel === 'Overview' ? (
+                  <DocumentationSection 
+                    section="overview" 
+                    githubHref={githubHref}
+                    showTOC={showTOC}
+                  />
+                ) : activeLabel === 'Quick Start' ? (
+                  <DocumentationSection 
+                    section="quickstart" 
+                    githubHref={githubHref}
+                    showTOC={showTOC}
+                  />
+                ) : activeLabel === 'Requirements' ? (
+                  <DocumentationSection 
+                    section="requirements" 
+                    githubHref={githubHref}
+                    showTOC={showTOC}
+                  />
                 ) : (
                   <div style={{ 
                     padding: '60px 40px', 
@@ -969,15 +766,13 @@ function DocumentationPage() {
                     </div>
                   </div>
                 )}
-              </>
-            )}
           </div>
         </main>
       </div>
       
       {/* Bottom Mini Dialog */}
       <BottomMiniDialog
-        content={viewMode === 'edit' ? draftContent : markdownContent}
+        content=""
         mode={viewMode}
         onModeChange={(m) => setViewMode(m)}
       />
@@ -1038,8 +833,14 @@ function DocumentationPage() {
       <ExportDialog
         isOpen={isExportDialogOpen}
         onClose={() => setIsExportDialogOpen(false)}
-        markdownContent={markdownContent}
-        documentationData={documentationData}
+        markdownContent=""
+        documentationData={{}}
+      />
+
+      {/* Translation Dialog */}
+      <TranslationDialog
+        isOpen={isTranslationDialogOpen}
+        onClose={() => setIsTranslationDialogOpen(false)}
       />
     </div>
   )
