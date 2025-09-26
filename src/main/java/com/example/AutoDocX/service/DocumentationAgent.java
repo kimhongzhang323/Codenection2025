@@ -124,6 +124,7 @@ public class DocumentationAgent {
                                 String planResult = executePlanInternal(session, repo, graph);
                                 Documentation doc = new Documentation(planResult);
                                 docHandler.save(key, doc);
+                                docHandler.setExpandedCounter(key, 3);
                                 System.out.println("Plan execution finished. Result stored in '" + key + "'.");
 
                                 // Safely log the tool call, handling null args and empty results
@@ -232,7 +233,7 @@ STEPS:
 
                     context.append("- ").append(key).append(" ");
                     context.append("(hidden, ").append(lineCount).append(" Lines), ");
-                    context.append("Preview[:5]: ");
+                    context.append("Sections[:5]: ");
                     if (sectionPreview.isEmpty()) {
                         context.append("No sections found");
                     } else {
