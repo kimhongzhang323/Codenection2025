@@ -8,54 +8,20 @@ import { GlobeIcon } from '../icons/globe_icon'
 import { SparklesIcon } from '../icons/sparkles_icon'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useAIChat } from '../../contexts/AIChatContext'
+import { agentApi, type DocAgentRequest } from '../../services/api'
+import ReactMarkdown from 'react-markdown'
 
 interface Message {
   id: string
   content: string
   sender: 'user' | 'ai'
   timestamp: Date
-  isTyping?: boolean
 }
 
-// Typing animation component for AI messages
-const TypingMessage: React.FC<{ content: string; onComplete?: () => void; onTextChange?: (text: string) => void }> = ({ content, onComplete, onTextChange }) => {
-  const [displayedText, setDisplayedText] = useState('')
-  const [currentIndex, setCurrentIndex] = useState(0)
 
-  useEffect(() => {
-    if (currentIndex < content.length) {
-      const timer = setTimeout(() => {
-        const newText = displayedText + content[currentIndex]
-        setDisplayedText(newText)
-        setCurrentIndex(prev => prev + 1)
-        
-        // Notify parent component about text change for auto-scroll
-        if (onTextChange) {
-          onTextChange(newText)
-        }
-      }, 10) // Faster typing speed (10ms per character)
-
-      return () => clearTimeout(timer)
-    } else if (onComplete) {
-      onComplete()
-    }
-  }, [currentIndex, content, onComplete, displayedText, onTextChange])
-
-  // Reset when content changes
-  useEffect(() => {
-    setDisplayedText('')
-    setCurrentIndex(0)
-  }, [content])
-
-  return (
-    <div className="message-content">
-      {displayedText}
-    </div>
-  )
-}
 
 export const AIChatPanel: React.FC = () => {
-  const { isOpen, closeChat, initialMessage, clearInitialMessage } = useAIChat()
+  const { isOpen, closeChat, initialMessage, clearInitialMessage, repositoryInfo } = useAIChat()
   const [messages, setMessages] = useState<Message[]>([])
   const [inputValue, setInputValue] = useState('')
   const [isTyping, setIsTyping] = useState(false)
@@ -76,13 +42,7 @@ export const AIChatPanel: React.FC = () => {
     scrollToBottom()
   }, [messages])
 
-  // Handle text changes during typing animation
-  const handleTypingTextChange = () => {
-    // Use requestAnimationFrame to ensure DOM is updated before scrolling
-    requestAnimationFrame(() => {
-      requestAnimationFrame(scrollToBottom)
-    })
-  }
+
 
   useEffect(() => {
     if (isOpen && inputRef.current) {
@@ -104,24 +64,54 @@ export const AIChatPanel: React.FC = () => {
       setMessages(prev => [...prev, userMessage])
       setIsTyping(true)
 
-      // Simulate AI response with typing animation
-      setTimeout(() => {
-        const searchText = showSearch ? ' (with web search)' : ''
-        const aiMessage: Message = {
-          id: (Date.now() + 1).toString(),
-          content: `I understand you're asking about "${initialMessage}"${searchText}. This is a simulated response from the AI assistant. In a real implementation, this would connect to your AI service${showSearch ? ' and search the web for current information' : ''}.`,
-          sender: 'ai',
-          timestamp: new Date(),
-          isTyping: true
+      // Process initial message with actual API
+      const processInitialMessage = async () => {
+        try {
+          // Get repository info from context
+          if (!repositoryInfo?.gitUrl) {
+            throw new Error('No repository information available. Please make sure you have selected a repository.')
+          }
+
+          // Prepare the request
+          const request: DocAgentRequest = {
+            gitUrl: repositoryInfo.gitUrl,
+            userPrompt: initialMessage,
+            branch: repositoryInfo.branch,
+            audience: 'developers',
+            tone: 'professional',
+            format: 'markdown'
+          }
+
+          // Call the actual API using the service
+          const content = await agentApi.runDocumentation(request)
+
+          const aiMessage: Message = {
+            id: (Date.now() + 1).toString(),
+            content,
+            sender: 'ai',
+            timestamp: new Date()
+          }
+          setMessages(prev => [...prev, aiMessage])
+          setIsTyping(false)
+        } catch (error) {
+          console.error('Error processing initial message:', error)
+          const errorMessage: Message = {
+            id: (Date.now() + 1).toString(),
+            content: `Sorry, I encountered an error while processing your request: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again.`,
+            sender: 'ai',
+            timestamp: new Date()
+          }
+          setMessages(prev => [...prev, errorMessage])
+          setIsTyping(false)
         }
-        setMessages(prev => [...prev, aiMessage])
-        setIsTyping(false)
-      }, 1500)
+      }
+
+      processInitialMessage()
 
       // Clear the initial message after sending
       clearInitialMessage()
     }
-  }, [initialMessage, isOpen, showSearch, clearInitialMessage])
+  }, [initialMessage, isOpen, clearInitialMessage, repositoryInfo])
 
   const handleSendMessage = async () => {
     if (!inputValue.trim()) return
@@ -137,19 +127,44 @@ export const AIChatPanel: React.FC = () => {
     setInputValue('')
     setIsTyping(true)
 
-    // Simulate AI response with typing animation
-    setTimeout(() => {
-      const searchText = showSearch ? ' (with web search)' : ''
+    try {
+      // Get repository info from context
+      if (!repositoryInfo?.gitUrl) {
+        throw new Error('No repository information available. Please make sure you have selected a repository.')
+      }
+
+      // Prepare the request
+      const request: DocAgentRequest = {
+        gitUrl: repositoryInfo.gitUrl,
+        userPrompt: userMessage.content,
+        branch: repositoryInfo.branch,
+        audience: 'developers',
+        tone: 'professional',
+        format: 'markdown'
+      }
+
+      // Call the actual API using the service
+      const content = await agentApi.runDocumentation(request)
+
       const aiMessage: Message = {
         id: (Date.now() + 1).toString(),
-        content: `I understand you're asking about "${userMessage.content}"${searchText}. This is a simulated response from the AI assistant. In a real implementation, this would connect to your AI service${showSearch ? ' and search the web for current information' : ''}.`,
+        content,
         sender: 'ai',
-        timestamp: new Date(),
-        isTyping: true
+        timestamp: new Date()
       }
       setMessages(prev => [...prev, aiMessage])
       setIsTyping(false)
-    }, 1500)
+    } catch (error) {
+      console.error('Error calling AI API:', error)
+      const errorMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        content: `Sorry, I encountered an error while processing your request: ${error instanceof Error ? error.message : 'Unknown error'}. Please try again.`,
+        sender: 'ai',
+        timestamp: new Date()
+      }
+      setMessages(prev => [...prev, errorMessage])
+      setIsTyping(false)
+    }
   }
 
   const handleModeToggle = () => {
@@ -160,11 +175,7 @@ export const AIChatPanel: React.FC = () => {
     setShowSearch(!showSearch)
   }
 
-  const handleTypingComplete = (messageId: string) => {
-    setMessages(prev => prev.map(msg => 
-      msg.id === messageId ? { ...msg, isTyping: false } : msg
-    ))
-  }
+
 
   return (
     <>
@@ -204,17 +215,13 @@ export const AIChatPanel: React.FC = () => {
                 key={message.id} 
                 className={`ai-chat-message ${message.sender === 'user' ? 'user-message' : 'ai-message'}`}
               >
-                {message.sender === 'ai' && message.isTyping ? (
-                  <TypingMessage 
-                    content={message.content} 
-                    onComplete={() => handleTypingComplete(message.id)}
-                    onTextChange={handleTypingTextChange}
-                  />
-                ) : (
-                  <div className="message-content">
-                    {message.content}
-                  </div>
-                )}
+                <div className="message-content">
+                  {message.sender === 'ai' ? (
+                    <ReactMarkdown>{message.content}</ReactMarkdown>
+                  ) : (
+                    message.content
+                  )}
+                </div>
               </div>
             ))
           )}

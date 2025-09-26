@@ -1,3 +1,30 @@
+/* Backdrop overlay similar to Discord panel */
+.tldr-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  z-index: 99998; /* Just below the panel */
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+  animation: fadeInOverlay 0.25s ease-out;
+}
+
+@keyframes fadeInOverlay {
+  from {
+    opacity: 0;
+    backdrop-filter: blur(0px);
+    -webkit-backdrop-filter: blur(0px);
+  }
+  to {
+    opacity: 1;
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+  }
+}
+
 .tldr-panel {
   position: fixed;
   top: 0;
@@ -13,9 +40,10 @@
   opacity: 0;
   visibility: hidden;
   transition: transform 0.25s ease-out, opacity 0.25s ease-out, visibility 0.25s ease-out;
-  z-index: 1200;
+  z-index: 99999; /* Maximum z-index to appear above all other elements */
   display: flex;
   flex-direction: column;
+  overflow-x: hidden; /* Remove horizontal scrollbar */
 }
 
 .tldr-panel.is-open {
@@ -70,6 +98,9 @@
 .tldr-panel__content {
   padding: 16px 16px 16px 26px; /* increased left padding matching header */
   overflow-y: auto;
+  overflow-x: hidden; /* Remove horizontal scrollbar */
+  word-wrap: break-word; /* Break long words to prevent horizontal overflow */
+  word-break: break-word; /* Ensure long words break properly */
 }
 
 .tldr-skeleton { display: flex; flex-direction: column; gap: 12px; }
@@ -107,8 +138,40 @@ html:not(.dark) .tldr-skel-line {
   margin-right: auto;
 }
 
+/* Ensure all content within the panel respects the width limits */
+.tldr-panel * {
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.tldr-panel pre {
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+.tldr-panel code {
+  word-break: break-all;
+  white-space: pre-wrap;
+}
+
+.tldr-panel table {
+  width: 100%;
+  table-layout: fixed;
+  word-wrap: break-word;
+}
+
+.tldr-panel img {
+  max-width: 100%;
+  height: auto;
+}
+
 @media (max-width: 640px) {
   .tldr-panel {
     width: 100vw;
+  }
+  
+  .tldr-overlay {
+    display: none; /* Remove overlay on mobile to save space */
   }
 }

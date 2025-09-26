@@ -714,10 +714,7 @@ html:not(.dark) .docs-sidebar__collapse-icon {
 /* Lightbulb Button - Above AI Chat Button */
 /* Translation Button - Above Smart Suggestions */
 .docs-translate-button-container {
-  position: fixed;
-  bottom: 310px;
-  right: 24px;
-  z-index: 1000;
+  display: none; /* Hidden - now in tools dropdown */
 }
 
 .docs-translate-button {
@@ -761,11 +758,16 @@ html:not(.dark) .docs-sidebar__collapse-icon {
   text-transform: uppercase;
 }
 
-.docs-lightbulb-button-container {
+/* Tools Dropdown - Between Translation and Lightbulb */
+.docs-tools-dropdown-container {
   position: fixed;
-  bottom: 70px;
+  bottom: 24px;
   right: 24px;
   z-index: 1000;
+}
+
+.docs-lightbulb-button-container {
+  display: none; /* Hidden - now in tools dropdown */
 }
 
 .docs-lightbulb-button {
@@ -797,10 +799,7 @@ html:not(.dark) .docs-sidebar__collapse-icon {
 
 /* Discord Notification Button - Bottom Right Corner */
 .docs-discord-button-container {
-  position: fixed;
-  bottom: 130px;
-  right: 24px;
-  z-index: 1000;
+  display: none; /* Hidden - now in tools dropdown */
 }
 
 .docs-discord-button {
@@ -887,10 +886,7 @@ html:not(.dark) .docs-sidebar__collapse-icon {
 
 /* Auto-Update Button - Above GitHub Bot Button */
 .docs-auto-update-button-container {
-  position: fixed;
-  bottom: 250px;
-  right: 24px;
-  z-index: 1000;
+  display: none; /* Hidden - now in tools dropdown */
 }
 
 .docs-auto-update-button {
@@ -1039,10 +1035,7 @@ html:not(.dark) .docs-sidebar__collapse-icon {
 
 /* GitHub Bot Button - Above Discord Button */
 .docs-github-bot-button-container {
-  position: fixed;
-  bottom: 190px;
-  right: 24px;
-  z-index: 1000;
+  display: none; /* Hidden - now in tools dropdown */
 }
 
 .docs-github-bot-button {
@@ -1149,10 +1142,7 @@ html:not(.dark) .docs-sidebar__collapse-icon {
 
 /* AI Chat Button - Bottom Right Corner */
 .docs-ai-chat-button-container {
-  position: fixed;
-  bottom: 24px;
-  right: 24px;
-  z-index: 1000;
+  display: none; /* Hidden - now in tools dropdown */
 }
 
 .docs-ai-chat-button {
@@ -1187,7 +1177,7 @@ html:not(.dark) .docs-sidebar__collapse-icon {
   position: fixed;
   top: 20px;
   right: 140px; /* positioned to the left of share button */
-  z-index: 1000;
+  z-index: 900;
 }
 
 .docs-view-code-button {
@@ -1236,7 +1226,7 @@ html:not(.dark) .docs-sidebar__collapse-icon {
   position: fixed;
   top: 20px;
   right: 24px; /* align with suggestion panel button */
-  z-index: 1000;
+  z-index: 900;
 }
 
 .docs-share-button {
@@ -1333,7 +1323,7 @@ html:not(.dark) .docs-sidebar__collapse-icon {
   position: fixed;
   top: 20px;
   right: 280px; /* positioned further left to avoid covering view code button */
-  z-index: 1000;
+  z-index: 900;
 }
 
 .docs-export-button {
@@ -1452,6 +1442,11 @@ html:not(.dark) .docs-sidebar__collapse-icon {
     padding: 1px 4px;
   }
 
+  .docs-tools-dropdown-container {
+    bottom: 116px;
+    right: 16px;
+  }
+
   .docs-github-bot-button-container {
     bottom: 164px;
     right: 16px;
@@ -1466,7 +1461,7 @@ html:not(.dark) .docs-sidebar__collapse-icon {
 
 
   .docs-discord-button-container {
-    bottom: 116px;
+    bottom: 68px;
     right: 16px;
   }
   
@@ -1479,7 +1474,7 @@ html:not(.dark) .docs-sidebar__collapse-icon {
 
 
   .docs-ai-chat-button-container {
-    bottom: 16px;
+    bottom: 20px;
     right: 16px;
   }
   

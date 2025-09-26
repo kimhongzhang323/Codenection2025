@@ -5,9 +5,8 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom'
 
 import { AnimatedThemeToggler } from '../components/theme'
 import { BottomMiniDialog } from '../components/ui/bottom_mini_dialog'
-import { SparklesIcon } from '../components/icons/sparkles_icon'
-import { LightbulbIcon } from '../components/icons/lightbulb_icon'
 import { useAIChat } from '../contexts/AIChatContext'
+import ToolsDropdown from '../components/ui/tools_dropdown'
 import SearchDialog from '../components/ui/search_dialog'
 import SuggestionPanel from '../components/ui/suggestion_panel'
 import ContextMenu from '../components/ui/context_menu'
@@ -30,7 +29,6 @@ import TranslationDialog from '../components/ui/translation_dialog'
 import { useTranslation } from '../contexts/TranslationContext'
 import { usePageTranslation } from '../hooks/usePageTranslation'
 import DiscordNotificationConfig from '../components/ui/discord_notification_config'
-import DiscordIcon from '../components/icons/discord_icon'
 import { useAutoUpdate } from '../hooks/useAutoUpdate'
 import AutoUpdateNotification from '../components/ui/auto_update_notification'
 import type { GitHubCommit } from '../services/api'
@@ -54,6 +52,16 @@ function DocumentationPage() {
   // Construct GitHub URL from repo parameter if available
   const repoBasedUrl = repo ? `https://github.com/${decodeURIComponent(repo)}` : undefined
   const githubHref = repoUrl || fallbackUrl || repoBasedUrl || '#'
+  
+  // Debug GitHub URL construction
+  console.log('[DocumentationPage] GitHub URL construction:', {
+    repoUrl,
+    fallbackUrl,
+    repoBasedUrl,
+    repo,
+    githubHref,
+    locationState: locationState?.repoData
+  })
 
   const [isDarkSelected, setIsDarkSelected] = useState(() => {
     // Check localStorage first, then document class, default to dark
@@ -99,7 +107,7 @@ function DocumentationPage() {
     // On larger screens, use saved preference or default to open
     return saved ? JSON.parse(saved) : false
   })
-  const { toggleChat } = useAIChat()
+  const { toggleChat, setRepositoryInfo } = useAIChat()
 
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [isSuggestionPanelOpen, setIsSuggestionPanelOpen] = useState(false)
@@ -202,6 +210,13 @@ function DocumentationPage() {
       }
     }
   }, [githubHref])
+
+  // Set repository info for AI chat
+  useEffect(() => {
+    if (githubHref && githubHref !== '#') {
+      setRepositoryInfo(githubHref, 'main')
+    }
+  }, [githubHref, setRepositoryInfo])
   
   // Translation context
   const { isTranslationActive, currentLanguageCode } = useTranslation()
@@ -263,6 +278,7 @@ function DocumentationPage() {
     if (repoPart && !filePart) {
       console.log('Setting activeLabel to Welcome (root path)')
       setActiveLabel('Welcome')
+      setRefreshKey(prev => prev + 1) // Force refresh
       return
     }
 
@@ -281,14 +297,17 @@ function DocumentationPage() {
       if (targetSlug === 'changelog') {
         console.log('Setting activeLabel to Changelog')
         setActiveLabel('Changelog')
+        setRefreshKey(prev => prev + 1) // Force refresh
         return
       } else if (targetSlug === 'flowchart') {
         console.log('Setting activeLabel to System Diagrams')
         setActiveLabel('System Diagrams')
+        setRefreshKey(prev => prev + 1) // Force refresh
         return
       } else if (targetSlug === 'documentation') {
         console.log('Setting activeLabel to Main Documentation')
         setActiveLabel('Main Documentation')
+        setRefreshKey(prev => prev + 1) // Force refresh
         return
       } else if (targetSlug === 'docs') {
         // Handle docs sub-routes
@@ -299,17 +318,20 @@ function DocumentationPage() {
         if (subSection === 'overview') {
           console.log('Setting activeLabel to Overview')
           setActiveLabel('Overview')
+          setRefreshKey(prev => prev + 1) // Force refresh
         } else if (subSection === 'quickstart') {
           console.log('Setting activeLabel to Quick Start')
           setActiveLabel('Quick Start')
+          setRefreshKey(prev => prev + 1) // Force refresh
         } else if (subSection === 'requirements') {
           console.log('Setting activeLabel to Requirements')
           setActiveLabel('Requirements')
+          setRefreshKey(prev => prev + 1) // Force refresh
         }
         return
       }
     }
-  }, [location.pathname, repoSlug, subpage, activeLabel])
+  }, [location.pathname, repoSlug, subpage]) // eslint-disable-line react-hooks/exhaustive-deps
 
 
 
@@ -515,59 +537,26 @@ function DocumentationPage() {
         </div>
       )}
 
-      {/* Translation Button - Above Smart Suggestions */}
-      <div className="docs-translate-button-container">
-        <button 
-          className={`docs-translate-button ${isTranslationActive ? 'active' : ''}`}
-          onClick={() => setIsTranslationDialogOpen(true)}
-          aria-label={`Current language: ${currentLanguageCode}. Click to change language`}
-        >
-          <span className="docs-translate-button-text">{currentLanguageCode}</span>
-        </button>
-      </div>
-
-      {/* Lightbulb Button - Above Discord Button */}
-      <div className="docs-lightbulb-button-container">
-        <button 
-          className="docs-lightbulb-button"
-          onClick={() => setIsSuggestionPanelOpen(prev => !prev)}
-          aria-label="Open suggestions"
-        >
-          <LightbulbIcon size={18} />
-        </button>
-      </div>
-
-      {/* Auto-Update Control Button - Above GitHub Bot Button */}
-      <div className="docs-auto-update-button-container">
-        <button 
-          className={`docs-auto-update-button ${isMonitoring ? 'active' : ''}`}
-          onClick={() => {
+      {/* Tools Dropdown - Contains all tools */}
+      <div className="docs-tools-dropdown-container">
+        <ToolsDropdown 
+          githubHref={githubHref}
+          pageContent={`Current page: ${activeLabel}`}
+          isTranslationActive={isTranslationActive}
+          currentLanguageCode={currentLanguageCode}
+          onOpenTranslation={() => setIsTranslationDialogOpen(true)}
+          onToggleSuggestions={() => setIsSuggestionPanelOpen(prev => !prev)}
+          isMonitoring={isMonitoring}
+          newCommitsCount={newCommitsCount}
+          onToggleAutoUpdate={() => {
             if (isMonitoring) {
               stopMonitoring()
             } else {
               startMonitoring()
             }
           }}
-          aria-label={isMonitoring ? 'Disable auto-update' : 'Enable auto-update'}
-          title={isMonitoring ? 'Auto-update is ON (main) - Click to disable' : 'Auto-update is OFF (main) - Click to enable'}
-        >
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38" />
-          </svg>
-          {/* Show commit count if there are new commits */}
-          {newCommitsCount > 0 && (
-            <span className="docs-auto-update-badge">{newCommitsCount}</span>
-          )}
-        </button>
-        
-
-      </div>
-
-      {/* GitHub Bot Control Button - Above Discord Button */}
-      <div className="docs-github-bot-button-container">
-        <button 
-          className={`docs-github-bot-button ${isGitHubBotEnabled ? 'active' : ''}`}
-          onClick={() => {
+          isGitHubBotEnabled={isGitHubBotEnabled}
+          onToggleGitHubBot={() => {
             if (isGitHubBotEnabled) {
               gitHubWebhookService.stopWebhookSimulation()
               setIsGitHubBotEnabled(false)
@@ -578,36 +567,10 @@ function DocumentationPage() {
               }
             }
           }}
-          aria-label={isGitHubBotEnabled ? 'Disable GitHub bot' : 'Enable GitHub bot'}
-          title={isGitHubBotEnabled ? 'GitHub bot is ON - Simulating push notifications' : 'GitHub bot is OFF - Click to enable Discord push notifications'}
-        >
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22" />
-          </svg>
-        </button>
-      </div>
-
-      {/* Discord Notification Button - Above AI Chat Button */}
-      <div className="docs-discord-button-container">
-        <button 
-          className={`docs-discord-button ${isDiscordMonitoringActive ? 'active' : ''}`}
-          onClick={() => setIsDiscordConfigOpen(true)}
-          aria-label="Configure Discord notifications"
-          title="Configure Discord notifications for component changes"
-        >
-          <DiscordIcon size={28} />
-        </button>
-      </div>
-
-      {/* AI Chat Button - Top Right Corner */}
-      <div className="docs-ai-chat-button-container">
-        <button 
-          className="docs-ai-chat-button"
-          onClick={toggleChat}
-          aria-label="Open AI chat"
-        >
-          <SparklesIcon size={18} />
-        </button>
+          isDiscordMonitoringActive={isDiscordMonitoringActive}
+          onOpenDiscordConfig={() => setIsDiscordConfigOpen(true)}
+          onToggleAIChat={toggleChat}
+        />
       </div>
 
       {/* View Code Button - Top Right Corner */}
@@ -701,6 +664,7 @@ function DocumentationPage() {
                   navigate(`/${repoPath}/changelog`, {
                     state: location.state
                   })
+                  setTimeout(() => window.location.reload(), 100)
                 }}
                 aria-label="View Changelog"
               >
@@ -715,6 +679,7 @@ function DocumentationPage() {
                   navigate(`/${repoPath}/flowchart`, {
                     state: location.state
                   })
+                  setTimeout(() => window.location.reload(), 100)
                 }}
                 aria-label="View System Diagrams"
               >
@@ -737,6 +702,7 @@ function DocumentationPage() {
                   navigate(`/${repoPath}/docs/overview`, {
                     state: location.state
                   })
+                  setTimeout(() => window.location.reload(), 100)
                 }}
                 aria-label="View Overview"
               >
@@ -750,6 +716,7 @@ function DocumentationPage() {
                   navigate(`/${repoPath}/docs/quickstart`, {
                     state: location.state
                   })
+                  setTimeout(() => window.location.reload(), 100)
                 }}
                 aria-label="View Quick Start"
               >
@@ -763,6 +730,7 @@ function DocumentationPage() {
                   navigate(`/${repoPath}/docs/requirements`, {
                     state: location.state
                   })
+                  setTimeout(() => window.location.reload(), 100)
                 }}
                 aria-label="View Requirements"
               >
@@ -776,6 +744,7 @@ function DocumentationPage() {
                   navigate(`/${repoPath}/documentation`, {
                     state: location.state
                   })
+                  setTimeout(() => window.location.reload(), 100)
                 }}
                 aria-label="View Full Documentation"
               >
@@ -810,24 +779,28 @@ function DocumentationPage() {
                   />
                 ) : activeLabel === 'Main Documentation' ? (
                   <DocumentationSection 
+                    key={`fullreadme-${refreshKey}`}
                     section="fullreadme" 
                     githubHref={githubHref}
                     showTOC={showTOC}
                   />
                 ) : activeLabel === 'Overview' ? (
                   <DocumentationSection 
+                    key={`overview-${refreshKey}`}
                     section="overview" 
                     githubHref={githubHref}
                     showTOC={showTOC}
                   />
                 ) : activeLabel === 'Quick Start' ? (
                   <DocumentationSection 
+                    key={`quickstart-${refreshKey}`}
                     section="quickstart" 
                     githubHref={githubHref}
                     showTOC={showTOC}
                   />
                 ) : activeLabel === 'Requirements' ? (
                   <DocumentationSection 
+                    key={`requirements-${refreshKey}`}
                     section="requirements" 
                     githubHref={githubHref}
                     showTOC={showTOC}
@@ -864,6 +837,7 @@ function DocumentationPage() {
                         onClick={() => {
                           const repoPath = window.location.pathname.split('/')[1]
                           navigate(`/${repoPath}/changelog`, { state: location.state })
+                          setTimeout(() => window.location.reload(), 100)
                         }}
                         style={{
                           padding: '12px 24px',
@@ -883,6 +857,7 @@ function DocumentationPage() {
                         onClick={() => {
                           const repoPath = window.location.pathname.split('/')[1]
                           navigate(`/${repoPath}/flowchart`, { state: location.state })
+                          setTimeout(() => window.location.reload(), 100)
                         }}
                         style={{
                           padding: '12px 24px',
@@ -902,6 +877,7 @@ function DocumentationPage() {
                         onClick={() => {
                           const repoPath = window.location.pathname.split('/')[1]
                           navigate(`/${repoPath}/documentation`, { state: location.state })
+                          setTimeout(() => window.location.reload(), 100)
                         }}
                         style={{
                           padding: '12px 24px',

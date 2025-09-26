@@ -10,10 +10,34 @@ const CopyMarkdownButton: React.FC<CopyMarkdownButtonProps> = ({ content }) => {
 
   async function handleCopy() {
     try {
+      console.log('[CopyMarkdownButton] Copying content:', content?.substring(0, 100) + '...')
+      
+      if (!content || content.trim() === '') {
+        console.warn('[CopyMarkdownButton] No content to copy')
+        return
+      }
+      
       await navigator.clipboard.writeText(content)
       setCopied(true)
+      console.log('[CopyMarkdownButton] Content copied successfully')
       window.setTimeout(() => setCopied(false), 1500)
-    } catch {}
+    } catch (error) {
+      console.error('[CopyMarkdownButton] Failed to copy content:', error)
+      // Try fallback method
+      try {
+        const textArea = document.createElement('textarea')
+        textArea.value = content
+        document.body.appendChild(textArea)
+        textArea.select()
+        document.execCommand('copy')
+        document.body.removeChild(textArea)
+        setCopied(true)
+        window.setTimeout(() => setCopied(false), 1500)
+        console.log('[CopyMarkdownButton] Content copied using fallback method')
+      } catch (fallbackError) {
+        console.error('[CopyMarkdownButton] Fallback copy method also failed:', fallbackError)
+      }
+    }
   }
 
   return (
