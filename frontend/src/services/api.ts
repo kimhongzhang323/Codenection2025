@@ -207,8 +207,8 @@ export const agentApi = {
   },
 
   // Run summary generation
-  async runSummary(gitUrl: string, branch?: string): Promise<string> {
-    const request: AgentRequest = { gitUrl, userPrompt: '', branch }
+  async runSummary(gitUrl: string, branch?: string, pageContent?: string): Promise<string> {
+    const request: AgentRequest = { gitUrl, userPrompt: pageContent || '', branch }
     
     const response = await fetch(`${API_BASE_URL}/agent/run-summary`, {
       method: 'POST',
