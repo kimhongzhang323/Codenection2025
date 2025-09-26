@@ -17,8 +17,7 @@ public class Session {
     private final AgentConfig agentConfig;
     @Setter
     private boolean initialStructureLogged = false;
-    @Setter
-    private boolean documentationLoaded = false;
+
 
     public Session(String gitUrl, String branch) {
         this.gitUrl = gitUrl;
@@ -26,14 +25,6 @@ public class Session {
         this.memory = new Memory();
         this.documentationHandler = new DocumentationHandler();
         this.agentConfig = new AgentConfig();
-    }
-
-    public Map<String, Documentation> getDocumentation() {
-        return documentationHandler.getAll();
-    }
-
-    public void setDocumentation(Map<String, Documentation> documentation) {
-        documentation.forEach(documentationHandler::save);
     }
 
 }

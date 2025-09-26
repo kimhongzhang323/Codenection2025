@@ -30,6 +30,7 @@ public class DocumentationAgent {
     private final Model model;
     private final GeneralSummaryAgent generalSummaryAgent;
     private final SummaryAgent summaryAgent;
+    private final DocumentHandlingService documentHandlingService;
     private final ObjectMapper objectMapper = new ObjectMapper();
     private static final int DEFAULT_MAX_ITERATIONS = 5;
 
@@ -40,7 +41,8 @@ public class DocumentationAgent {
             McpToolKit mcpToolKit,
             @Qualifier("geminiCentral") Model model,
             GeneralSummaryAgent generalSummaryAgent,
-            SummaryAgent summaryAgent
+            SummaryAgent summaryAgent,
+            DocumentHandlingService documentHandlingService
     ) {
         this.repoHandler = repoHandler;
         this.sessionManager = sessionManager;
@@ -48,6 +50,7 @@ public class DocumentationAgent {
         this.model = model;
         this.generalSummaryAgent = generalSummaryAgent;
         this.summaryAgent = summaryAgent;
+        this.documentHandlingService = documentHandlingService;
     }
 
     public String run(String gitUrl, String branch, String userPrompt) {
@@ -59,12 +62,8 @@ public class DocumentationAgent {
         ClonedRepo repo = repoHandler.getRepo(gitUrl, branch);
         if (repo == null) return "Repository unavailable.";
 
-        session.getDocumentationHandler().decrementAllExpandedCounters();
-
-        if (!session.isDocumentationLoaded()) {
-            session.getDocumentationHandler().loadFromDirectory(repo.getClonedPath());
-            session.setDocumentationLoaded(true);
-        }
+        DocumentationHandler docHandler = documentHandlingService.getDocumentHandler(session);
+        docHandler.decrementAllExpandedCounters();
 
         Graph graph;
         try { graph = repoHandler.getGraph(repo); } catch (Exception e) { return "Graph load failed: " + e.getMessage(); }
@@ -75,7 +74,7 @@ public class DocumentationAgent {
         int maxIterations = (iterationLimit == null || iterationLimit <= 0) ? DEFAULT_MAX_ITERATIONS : iterationLimit;
         while (iterations++ < maxIterations) {
             List<Tool> tools = mcpToolKit.getDocumentationAgentTools();
-            List<Content> contents = buildLoopContent(session, userPrompt);
+            List<Content> contents = buildLoopContent(session, docHandler, userPrompt);
 
             SendMessageResult result;
             try {
@@ -124,7 +123,7 @@ public class DocumentationAgent {
                                 }
                                 String planResult = executePlanInternal(session, repo, graph);
                                 Documentation doc = new Documentation(planResult);
-                                session.getDocumentationHandler().save(key, doc);
+                                docHandler.save(key, doc);
                                 System.out.println("Plan execution finished. Result stored in '" + key + "'.");
 
                                 // Safely log the tool call, handling null args and empty results
@@ -173,7 +172,7 @@ public class DocumentationAgent {
         try { return objectMapper.writeValueAsString(p); } catch (Exception e) { return "{}"; }
     }
 
-    private List<Content> buildLoopContent(Session session, String userPrompt) {
+    private List<Content> buildLoopContent(Session session, DocumentationHandler docHandler, String userPrompt) {
         List<Content> contents = new ArrayList<>();
         String systemInstruction = """
 You are a documentation agent. Your task is to produce excellent project documentation or answer the user's request using tools.
@@ -211,12 +210,12 @@ STEPS:
 
         context.append("CONFIG:\n").append(session.getAgentConfig()).append("\n\n");
 
-        String defaultDocKey = session.getDocumentationHandler().getDefaultDocumentationKey();
+        String defaultDocKey = docHandler.getDefaultDocumentationKey();
         if (defaultDocKey != null) {
             context.append("DEFAULT_DOCUMENTATION_KEY: ").append(defaultDocKey).append("\n\n");
         }
 
-        Map<String, Documentation> currentDocs = session.getDocumentation();
+        Map<String, Documentation> currentDocs = docHandler.getAll();
         if (currentDocs != null && !currentDocs.isEmpty()) {
             context.append("CURRENT_DOCUMENTATION:\n");
             for (Map.Entry<String, Documentation> entry : currentDocs.entrySet()) {
@@ -228,7 +227,7 @@ STEPS:
                     String key = entry.getKey();
                     Documentation doc = entry.getValue();
                     long lineCount = doc.getContent() != null ? doc.getContent().lines().count() : 0;
-                    List<String> sections = session.getDocumentationHandler().listSections(key);
+                    List<String> sections = docHandler.listSections(key);
                     List<String> sectionPreview = sections.stream().limit(5).collect(Collectors.toList());
 
                     context.append("- ").append(key).append(" ");

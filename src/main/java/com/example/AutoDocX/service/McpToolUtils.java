@@ -32,11 +32,13 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 public class McpToolUtils {
     private final RepoHandler repoHandler;
     private final Model model;
+    private final DocumentHandlingService documentHandlingService;
     private final ObjectMapper mapper = new ObjectMapper();
 
-    public McpToolUtils(RepoHandler repoHandler, @Qualifier("geminiCentral") Model model) {
+    public McpToolUtils(RepoHandler repoHandler, @Qualifier("geminiCentral") Model model, DocumentHandlingService documentHandlingService) {
         this.repoHandler = repoHandler;
         this.model = model;
+        this.documentHandlingService = documentHandlingService;
     }
 
     public String getCode(ClonedRepo repo, String nodeId) throws IOException, NodeNotFoundException {
@@ -320,22 +322,24 @@ public class McpToolUtils {
     }
 
     public String replaceStringInDoc(Session session, String docKey, String oldString, String newString) {
-        DocumentationHandler docHandler = session.getDocumentationHandler();
-        String content = docHandler.get(docKey).getContent();
-        if (content == null) {
+        DocumentationHandler docHandler = documentHandlingService.getDocumentHandler(session);
+        Documentation doc = docHandler.get(docKey);
+        if (doc == null) {
             return "Error: Document with key '" + docKey + "' not found.";
         }
+        String content = doc.getContent();
         String newContent = content.replace(oldString, newString);
         docHandler.save(docKey, new Documentation(newContent));
         return "OK: Replaced string in document '" + docKey + "'.";
     }
 
     public String insertIntoDoc(Session session, String docKey, String contentToInsert, String afterString) {
-        DocumentationHandler docHandler = session.getDocumentationHandler();
-        String content = docHandler.get(docKey).getContent();
-        if (content == null) {
+        DocumentationHandler docHandler = documentHandlingService.getDocumentHandler(session);
+        Documentation doc = docHandler.get(docKey);
+        if (doc == null) {
             return "Error: Document with key '" + docKey + "' not found.";
         }
+        String content = doc.getContent();
 
         String newContent;
         if (afterString == null || afterString.isEmpty()) {
@@ -353,7 +357,7 @@ public class McpToolUtils {
     }
 
     public String readDoc(Session session, String key, int countdown) {
-        DocumentationHandler docHandler = session.getDocumentationHandler();
+        DocumentationHandler docHandler = documentHandlingService.getDocumentHandler(session);
         docHandler.setExpandedCounter(key, countdown);
         return "OK: Document '" + key + "' will be expanded for the next " + countdown + " turns.";
     }

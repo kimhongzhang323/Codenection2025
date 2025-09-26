@@ -1,6 +1,7 @@
 package com.example.AutoDocX.controller;
 
 import com.example.AutoDocX.model.Documentation;
+import com.example.AutoDocX.service.DocumentHandlingService;
 import com.example.AutoDocX.service.DocumentationHandler;
 import com.example.AutoDocX.service.Session;
 import com.example.AutoDocX.service.SessionManager;
@@ -15,10 +16,12 @@ import java.util.Map;
 public class DocumentationController {
 
     private final SessionManager sessionManager;
+    private final DocumentHandlingService documentHandlingService;
 
     @Autowired
-    public DocumentationController(SessionManager sessionManager) {
+    public DocumentationController(SessionManager sessionManager, DocumentHandlingService documentHandlingService) {
         this.sessionManager = sessionManager;
+        this.documentHandlingService = documentHandlingService;
     }
 
     @GetMapping
@@ -27,10 +30,8 @@ public class DocumentationController {
             @RequestParam(required = false) String branch
     ) {
         Session session = sessionManager.getSession(gitUrl, branch);
-        if (session != null && session.getDocumentation() != null) {
-            return ResponseEntity.ok(session.getDocumentation());
-        }
-        return ResponseEntity.notFound().build();
+        DocumentationHandler handler = documentHandlingService.getDocumentHandler(session);
+        return ResponseEntity.ok(handler.getAll());
     }
 
     @GetMapping("/sections")
@@ -40,11 +41,9 @@ public class DocumentationController {
             @RequestParam String key
     ) {
         Session session = sessionManager.getSession(gitUrl, branch);
-        if (session != null && session.getDocumentationHandler() != null) {
-            java.util.List<String> sections = session.getDocumentationHandler().listSections(key);
-            return ResponseEntity.ok(sections);
-        }
-        return ResponseEntity.notFound().build();
+        DocumentationHandler handler = documentHandlingService.getDocumentHandler(session);
+        java.util.List<String> sections = handler.listSections(key);
+        return ResponseEntity.ok(sections);
     }
 
     @GetMapping("/section")
@@ -55,11 +54,10 @@ public class DocumentationController {
             @RequestParam String sectionPath
     ) {
         Session session = sessionManager.getSession(gitUrl, branch);
-        if (session != null && session.getDocumentationHandler() != null) {
-            String sectionContent = session.getDocumentationHandler().getSection(key, sectionPath);
-            if (sectionContent != null) {
-                return ResponseEntity.ok(sectionContent);
-            }
+        DocumentationHandler handler = documentHandlingService.getDocumentHandler(session);
+        String sectionContent = handler.getSection(key, sectionPath);
+        if (sectionContent != null) {
+            return ResponseEntity.ok(sectionContent);
         }
         return ResponseEntity.notFound().build();
     }
@@ -71,11 +69,10 @@ public class DocumentationController {
             @RequestParam String key
     ) {
         Session session = sessionManager.getSession(gitUrl, branch);
-        if (session != null && session.getDocumentationHandler() != null) {
-            Documentation doc = session.getDocumentationHandler().get(key);
-            if (doc != null) {
-                return ResponseEntity.ok(doc);
-            }
+        DocumentationHandler handler = documentHandlingService.getDocumentHandler(session);
+        Documentation doc = handler.get(key);
+        if (doc != null) {
+            return ResponseEntity.ok(doc);
         }
         return ResponseEntity.notFound().build();
     }
@@ -88,11 +85,9 @@ public class DocumentationController {
             @RequestBody String content
     ) {
         Session session = sessionManager.getSession(gitUrl, branch);
-        if (session != null && session.getDocumentationHandler() != null) {
-            session.getDocumentationHandler().save(key, new Documentation(content));
-            return ResponseEntity.ok().build();
-        }
-        return ResponseEntity.badRequest().build();
+        DocumentationHandler handler = documentHandlingService.getDocumentHandler(session);
+        handler.save(key, new Documentation(content));
+        return ResponseEntity.ok().build();
     }
 
     @PutMapping("/single")
@@ -103,17 +98,15 @@ public class DocumentationController {
             @RequestBody String content
     ) {
         Session session = sessionManager.getSession(gitUrl, branch);
-        if (session != null && session.getDocumentationHandler() != null) {
-            Documentation doc = session.getDocumentationHandler().get(key);
-            if (doc != null) {
-                doc.setContent(content);
-                session.getDocumentationHandler().save(key, doc);
-                return ResponseEntity.ok().build();
-            } else {
-                return ResponseEntity.notFound().build();
-            }
+        DocumentationHandler handler = documentHandlingService.getDocumentHandler(session);
+        Documentation doc = handler.get(key);
+        if (doc != null) {
+            doc.setContent(content);
+            handler.save(key, doc);
+            return ResponseEntity.ok().build();
+        } else {
+            return ResponseEntity.notFound().build();
         }
-        return ResponseEntity.badRequest().build();
     }
 
     @DeleteMapping("/single")
@@ -123,11 +116,9 @@ public class DocumentationController {
             @RequestParam String key
     ) {
         Session session = sessionManager.getSession(gitUrl, branch);
-        if (session != null && session.getDocumentationHandler() != null) {
-            session.getDocumentationHandler().delete(key);
-            return ResponseEntity.ok().build();
-        }
-        return ResponseEntity.badRequest().build();
+        DocumentationHandler handler = documentHandlingService.getDocumentHandler(session);
+        handler.delete(key);
+        return ResponseEntity.ok().build();
     }
 
     @PostMapping("/default")
@@ -137,13 +128,11 @@ public class DocumentationController {
             @RequestParam String key
     ) {
         Session session = sessionManager.getSession(gitUrl, branch);
-        if (session != null && session.getDocumentationHandler() != null) {
-            if (session.getDocumentationHandler().setDefaultDocumentationKey(key)) {
-                return ResponseEntity.ok().build();
-            } else {
-                return ResponseEntity.notFound().build();
-            }
+        DocumentationHandler handler = documentHandlingService.getDocumentHandler(session);
+        if (handler.setDefaultDocumentationKey(key)) {
+            return ResponseEntity.ok().build();
+        } else {
+            return ResponseEntity.notFound().build();
         }
-        return ResponseEntity.badRequest().build();
     }
 }
