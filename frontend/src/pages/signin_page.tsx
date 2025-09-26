@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { useAuth } from '../services/auth';
 import Magnet from '../components/magnet';
 import './signup_page.css';
 
@@ -8,25 +9,32 @@ const SignIn: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const navigate = useNavigate();
+  const location = useLocation();
+  const { isAuthenticated } = useAuth();
+
+  type LocationState = {
+    from?: {
+      pathname?: string;
+    };
+  };
+
+  // Redirect if already authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      const from = (location.state as LocationState)?.from?.pathname || '/';
+      navigate(from, { replace: true });
+    }
+  }, [isAuthenticated, navigate, location]);
 
   const handleGitHubAuth = async () => {
     setIsLoading(true);
     
     try {
-      // GitHub OAuth URL with required scopes
-      const clientId = 'your_github_client_id';
+      // Redirect to Spring Boot OAuth2 authorization endpoint
       const redirectUri = encodeURIComponent(`${window.location.origin}/auth/callback`);
-      const scopes = encodeURIComponent('read:user repo');
+      const oauthUrl = `http://localhost:8081/oauth2/authorization/github?redirect_uri=${redirectUri}`;
       
-      const githubAuthUrl = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&scope=${scopes}&state=random_string`;
-      
-      // For demo purposes, navigate to dashboard after delay
-      setTimeout(() => {
-        setIsLoading(false);
-        navigate('/dashboard');
-      }, 2000);
-      
-      console.log('GitHub OAuth URL:', githubAuthUrl);
+      window.location.href = oauthUrl;
     } catch (error) {
       setIsLoading(false);
       console.error('Authentication failed:', error);

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useEffect, useRef } from 'react'
 import './context_menu.css'
 import { SquarePenIcon } from '../icons/new_note_icon'
 import { FoldersIcon } from '../icons/new_folder_icon'

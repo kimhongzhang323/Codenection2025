@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useEffect, useRef } from 'react'
 import './context_menu.css'
 import { UploadIcon } from '../icons/upload_icon'
 

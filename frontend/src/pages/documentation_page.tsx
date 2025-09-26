@@ -14,199 +14,33 @@ import SuggestionPanel from '../components/ui/suggestion_panel'
 import ContextMenu from '../components/ui/context_menu'
 import FolderContextMenu from '../components/ui/folder_context_menu'
 import { GlobeIcon } from '../components/icons/globe_icon'
+import { CodeIcon } from '../components/icons/code_icon'
+import { HistoryIcon } from '../components/icons/history_icon'
+import { DiagramIcon } from '../components/icons/diagram_icon'
 import ShareDialog from '../components/ui/share_dialog'
+import ViewCodeDialog from '../components/ui/view_code_dialog'
+import EmbeddedChangelog from '../components/embedded_changelog'
+import EmbeddedFlowchart from '../components/embedded_flowchart'
+import { documentationApi, type Documentation } from '../services/api'
 
-type DocItem =
-  | { type: 'separator'; label: string }
-  | { type: 'file'; label: string; href?: string }
-  | { type: 'folder'; label: string; children: DocItem[] }
 
-// Load all markdown files under docs once; reuse for routing and content loading
-const MD_MODULES = import.meta.glob('./docs/*.md', { as: 'raw' }) as Record<string, () => Promise<string>>
 
-function Collapsible({ label, children, defaultOpen = false, storageKey, onRightClick }: { label: string; children: React.ReactNode; defaultOpen?: boolean; storageKey: string; onRightClick?: (e: React.MouseEvent) => void }) {
-  const initialOpen = (() => {
-    try {
-      const saved = localStorage.getItem(`docsSidebarFolder:${storageKey}`)
-      if (saved === 'open') return true
-      if (saved === 'closed') return false
-    } catch {}
-    return defaultOpen
-  })()
-  const [open, setOpen] = useState(initialOpen)
-  const contentRef = useRef<HTMLDivElement>(null)
-  const [maxHeight, setMaxHeight] = useState<string>(initialOpen ? 'none' : '0px')
-  const [allowTransitions, setAllowTransitions] = useState(false)
 
-  // Enable transitions after initial render to prevent animation on page refresh
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setAllowTransitions(true)
-    }, 50) // Small delay to ensure DOM is ready
-    return () => clearTimeout(timer)
-  }, [])
 
-  useEffect(() => {
-    // Skip animation if transitions are not allowed yet
-    if (!allowTransitions) {
-      return
-    }
-
-    const el = contentRef.current
-    if (!el) return
-    if (open) {
-      const height = el.scrollHeight
-      // Set to pixel height first, then to 'none' after transition to allow dynamic content
-      setMaxHeight(height + 'px')
-      const id = window.setTimeout(() => setMaxHeight('none'), 240)
-      return () => window.clearTimeout(id)
-    } else {
-      const height = el.scrollHeight
-      // Force current height before collapsing to enable transition
-      setMaxHeight(height + 'px')
-      // Ensure the style is committed before transitioning to 0px
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => setMaxHeight('0px'))
-      })
-    }
-  }, [open])
-
-  useEffect(() => {
-    try {
-      localStorage.setItem(`docsSidebarFolder:${storageKey}`, open ? 'open' : 'closed')
-    } catch {}
-  }, [open, storageKey])
-
-  return (
-    <div className="docs-folder">
-      <button 
-        className={`docs-folder__button ${open ? 'is-open' : ''}`} 
-        aria-expanded={open} 
-        onClick={() => setOpen((v) => !v)}
-        onContextMenu={onRightClick}
-      >
-        <span>{label}</span>
-        <span className="docs-folder__chevron" aria-hidden>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <polyline points="9 18 15 12 9 6" />
-          </svg>
-        </span>
-      </button>
-      <div
-        ref={contentRef}
-        className={`docs-folder__children ${!allowTransitions ? 'no-transition' : ''}`}
-        style={{ maxHeight, overflow: 'hidden' }}
-        aria-hidden={!open}
-      >
-        {children}
-      </div>
-    </div>
-  )
-}
-
-const MOCK_TREE: DocItem[] = [
-  { type: 'separator', label: 'Introduction' },
-  { type: 'file', label: 'Overview' },
-  { type: 'file', label: 'Quick Start' },
-  { type: 'separator', label: 'Setup' },
-  {
-    type: 'folder',
-    label: 'Installation',
-    children: [
-      { type: 'file', label: 'Requirements' },
-      { type: 'file', label: 'Using Vite' },
-      { type: 'file', label: 'Using Next.js' },
-    ],
-  },
-  {
-    type: 'folder',
-    label: 'Configuration',
-    children: [
-      { type: 'file', label: 'Project Structure' },
-      { type: 'file', label: 'Environments' },
-    ],
-  },
-  { type: 'separator', label: 'Writing' },
-  {
-    type: 'folder',
-    label: 'Content',
-    children: [
-      { type: 'file', label: 'Markdown' },
-      { type: 'file', label: 'Components' },
-      { type: 'file', label: 'Navigation' },
-    ],
-  },
-  { type: 'separator', label: 'Reference' },
-  { type: 'file', label: 'API' },
-  { type: 'file', label: 'CLI' },
-  { type: 'file', label: 'Multiagent' },
-  { type: 'file', label: 'Class' },
-  { type: 'file', label: 'Versioning' },
-  { type: 'file', label: 'UI Layout' },
-]
-
-function slugify(label: string) {
-  return label.trim().toLowerCase().replace(/[^a-z0-9\s-]/g, '').replace(/\s+/g, '-').replace(/-+/g, '-')
-}
-
-function basenameFromPath(path: string) {
-  const m = path.match(/\/docs\/([^/]+)\.md$/)
-  return m ? m[1] : null
-}
-
-function normalizeKey(s: string) {
-  return s.toLowerCase().replace(/[^a-z0-9]/g, '')
-}
-
-function renderItem(item: DocItem, idx: number, onFileClick: (label: string) => void, activeLabel: string | null, parentPath: string[] = [], onFolderItemRightClick?: (e: React.MouseEvent, itemType: 'file' | 'folder') => void) {
-  if (item.type === 'separator') {
-    return (
-      <div key={`sep-${idx}`} className="docs-separator">
-        {item.label}
-      </div>
-    )
-  }
-  if (item.type === 'file') {
-    const isActive = activeLabel === item.label
-    return (
-      <button
-        key={`file-${idx}`}
-        className={`docs-file ${isActive ? 'is-active' : ''}`}
-        type="button"
-        onClick={() => onFileClick(item.label)}
-        onContextMenu={(e) => onFolderItemRightClick?.(e, 'file')}
-      >
-        {item.label}
-      </button>
-    )
-  }
-  // folder
-  const folderPath = [...parentPath, item.label]
-  const storageKey = folderPath.map((s) => s.toLowerCase().replace(/[^a-z0-9]+/g, '-')).join('/')
-  return (
-    <Collapsible 
-      key={`folder-${idx}`} 
-      label={item.label} 
-      defaultOpen={item.label === 'Installation'} 
-      storageKey={storageKey}
-      onRightClick={(e) => onFolderItemRightClick?.(e, 'folder')}
-    >
-      {item.children.map((child, i) => (
-        <div key={`child-${idx}-${i}`}>{renderItem(child, i, onFileClick, activeLabel, folderPath, onFolderItemRightClick)}</div>
-      ))}
-    </Collapsible>
-  )
-}
 
 function DocumentationPage() {
-  const location = useLocation() as { state?: { repoUrl?: string; repoData?: { name?: string; fullName?: string } } }
+  const location = useLocation()
   const navigate = useNavigate()
-  const { repo } = useParams<{ repo: string }>()
-  const repoUrl = location.state?.repoUrl
-  const fallbackUrl = location.state?.repoData?.name
-    ? `https://github.com/${location.state.repoData.name.replace(/\s*\/\s*/, '/')}`
+  const { repo, subpage } = useParams<{ repo: string; subpage?: string }>()
+  const locationState = location.state as { repoUrl?: string; repoData?: { name?: string; fullName?: string } } | undefined
+  const repoUrl = locationState?.repoUrl
+  const fallbackUrl = locationState?.repoData?.name
+    ? `https://github.com/${locationState.repoData.name.replace(/\s*\/\s*/, '/')}`
     : undefined
-  const githubHref = repoUrl || fallbackUrl || '#'
+  
+  // Construct GitHub URL from repo parameter if available
+  const repoBasedUrl = repo ? `https://github.com/${decodeURIComponent(repo)}` : undefined
+  const githubHref = repoUrl || fallbackUrl || repoBasedUrl || '#'
 
   const [isDarkSelected, setIsDarkSelected] = useState(() => {
     // Check localStorage first, then document class, default to dark
@@ -223,7 +57,15 @@ function DocumentationPage() {
   const [markdownContent, setMarkdownContent] = useState<string>('')
   const [draftContent, setDraftContent] = useState<string>('')
   const [viewMode, setViewMode] = useState<'reading' | 'edit'>('reading')
-  const [isScrolling, setIsScrolling] = useState(false)
+  
+  // Documentation API state - only used for Documentation view
+  const [documentationData, setDocumentationData] = useState<Record<string, Documentation>>({})
+  const [isLoadingDocs, setIsLoadingDocs] = useState(false)
+  
+
+
+
+
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
     if (typeof window === 'undefined') return false
     
@@ -249,8 +91,7 @@ function DocumentationPage() {
     return saved ? JSON.parse(saved) : false
   })
   const { toggleChat } = useAIChat()
-  const scrollTimeoutRef = useRef<number | null>(null)
-  const treeRef = useRef<HTMLElement>(null)
+
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [isSuggestionPanelOpen, setIsSuggestionPanelOpen] = useState(false)
   const [showTOC, setShowTOC] = useState(true)
@@ -267,143 +108,350 @@ function DocumentationPage() {
     itemType: null
   })
   const [isShareDialogOpen, setIsShareDialogOpen] = useState(false)
+  const [isViewCodeDialogOpen, setIsViewCodeDialogOpen] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Determine encoded repo slug for routing back to repo root
   const repoSlug = (() => {
     if (repo) return repo
-    const fullName = location.state?.repoData?.fullName
+    const fullName = locationState?.repoData?.fullName
     if (fullName) return encodeURIComponent(fullName.toLowerCase())
     if (repoUrl) {
       try {
         const url = new URL(repoUrl)
         const path = url.pathname.replace(/^\//, '')
         return encodeURIComponent(path.toLowerCase())
-      } catch {}
+      } catch {
+        console.log('Invalid repo URL')
+      }
     }
     return ''
   })()
 
-  // Derive sidebar title: prefer fullName from state (case-preserved); fallback to owner/repo from repoUrl
+  // Derive sidebar title: prefer repo name only (without owner) from state or repoUrl
   let sidebarTitle = 'Docs'
-  if (location.state?.repoData?.fullName) {
-    sidebarTitle = location.state.repoData.fullName
+  if (locationState?.repoData?.fullName) {
+    // Extract just the repo name (part after the slash)
+    sidebarTitle = locationState.repoData.fullName.split('/')[1] || locationState.repoData.fullName
   } else if (repoUrl) {
     try {
       const url = new URL(repoUrl)
-      sidebarTitle = url.pathname.replace(/^\//, '') || 'Docs'
+      const fullPath = url.pathname.replace(/^\//, '') || 'Docs'
+      // Extract just the repo name if it's in owner/repo format
+      sidebarTitle = fullPath.split('/')[1] || fullPath
     } catch {
       // ignore parse errors and keep default
     }
   }
 
-  function handleFileClick(label: string) {
-    setActiveLabel(label)
-    const isOverview = label.trim().toLowerCase() === 'overview'
-    // Prefer matching actual filenames over slug to support quickstart.md vs "Quick Start"
-    let next = isOverview ? 'overview' : slugify(label)
-    const basenames = Object.keys(MD_MODULES).map(basenameFromPath).filter(Boolean) as string[]
-    const normalizedLabel = normalizeKey(label)
-    const matched = basenames.find((b) => normalizeKey(b) === normalizedLabel)
-    if (matched) next = matched
-    const path = `/${repoSlug}/${next}`
-    navigate(path, { state: location.state })
-  }
+
 
   // On first load or URL changes, ensure we are at /:repo/:file and sync active label
   useEffect(() => {
-    const pathname = window.location.pathname.replace(/\/+$/, '')
+    const pathname = location.pathname.replace(/\/+$/, '')
     const parts = pathname.split('/').filter(Boolean)
     // parts example: [repo, file]
     const repoPart = parts[0] || repoSlug
     const filePart = parts[1]
 
-    // Redirect /:repo -> /:repo/overview
+    console.log('DocumentationPage - Route change detected:', { 
+      pathname: location.pathname,
+      filePart, 
+      repoPart,
+      currentActiveLabel: activeLabel
+    })
+
+    // Handle root repo path - show welcome screen
     if (repoPart && !filePart) {
-      navigate(`/${repoPart}/overview`, { replace: true, state: location.state })
-      setActiveLabel('Overview')
+      console.log('Setting activeLabel to Welcome (root path)')
+      setActiveLabel('Welcome')
       return
     }
 
     // Sync active label from slug in URL
     if (filePart) {
       const targetSlug = filePart.toLowerCase()
-      const normTarget = normalizeKey(targetSlug)
-      // find matching label in tree (robust to hyphens/spaces)
-      const collectLabels = (items: DocItem[], acc: string[] = []): string[] => {
-        for (const it of items) {
-          if (it.type === 'file') acc.push(it.label)
-          if (it.type === 'folder') collectLabels(it.children, acc)
-        }
-        return acc
-      }
-      const allLabels = collectLabels(MOCK_TREE)
-      const matched = allLabels.find((l) => {
-        const slug = slugify(l)
-        return slug === targetSlug || normalizeKey(slug) === normTarget || normalizeKey(l) === normTarget
-      })
-      setActiveLabel(matched || 'Overview')
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [repoSlug])
-
-  // Load markdown file content for current slug; UI can render later
-  useEffect(() => {
-    const pathname = window.location.pathname.replace(/\/+$/, '')
-    const parts = pathname.split('/').filter(Boolean)
-    const filePart = parts[1] || 'overview'
-    const basenames = Object.keys(MD_MODULES).map(basenameFromPath).filter(Boolean) as string[]
-    // Try exact, then normalized (to handle quick-start vs quickstart)
-    let targetBase = filePart
-    if (!basenames.includes(targetBase)) {
-      const normalized = normalizeKey(filePart)
-      const alt = basenames.find((b) => normalizeKey(b) === normalized)
-      if (alt) targetBase = alt
-    }
-    const key = Object.keys(MD_MODULES).find((k) => k.endsWith(`/docs/${targetBase}.md`))
-    if (key) {
-      MD_MODULES[key]().then((raw) => {
-        setMarkdownContent(raw)
-        setDraftContent(raw)
-      }).catch(() => {
-        setMarkdownContent('')
-        setDraftContent('')
-      })
-    } else {
-      setMarkdownContent('')
-      setDraftContent('')
-    }
-  }, [activeLabel])
-
-  // Handle scroll events
-  const handleScroll = () => {
-    setIsScrolling(true)
-    
-    // Clear existing timeout
-    if (scrollTimeoutRef.current) {
-      clearTimeout(scrollTimeoutRef.current)
-    }
-    
-    // Set new timeout to hide scrollbar after 2 seconds
-    scrollTimeoutRef.current = window.setTimeout(() => {
-      setIsScrolling(false)
-    }, 2000)
-  }
-
-  // Set up scroll event listener
-  useEffect(() => {
-    const treeElement = treeRef.current
-    if (treeElement) {
-      treeElement.addEventListener('scroll', handleScroll)
       
-      return () => {
-        treeElement.removeEventListener('scroll', handleScroll)
-        if (scrollTimeoutRef.current) {
-          clearTimeout(scrollTimeoutRef.current)
-        }
+      console.log('DocumentationPage - URL parsing:', { 
+        filePart, 
+        targetSlug, 
+        subpage, 
+        currentPath: location.pathname 
+      })
+      
+      // Handle special routes directly (changelog, flowchart, documentation)
+      if (targetSlug === 'changelog') {
+        console.log('Setting activeLabel to Changelog')
+        setActiveLabel('Changelog')
+        return
+      } else if (targetSlug === 'flowchart') {
+        console.log('Setting activeLabel to System Diagrams')
+        setActiveLabel('System Diagrams')
+        return
+      } else if (targetSlug === 'documentation') {
+        console.log('Setting activeLabel to Documentation')
+        setActiveLabel('Documentation')
+        return
       }
     }
-  }, [])
+  }, [location.pathname, repoSlug, subpage, activeLabel])
+
+  // Load documentation when Documentation view is active
+  useEffect(() => {
+    if (activeLabel === 'Documentation' && githubHref && githubHref !== '#') {
+      setIsLoadingDocs(true)
+      
+      const loadDocs = async () => {
+        try {
+          const docs = await documentationApi.getAll(githubHref)
+          setDocumentationData(docs)
+          
+          // Helper function to detect language from file extension
+          const getLanguageFromExtension = (filename: string): string => {
+            const ext = filename.toLowerCase().split('.').pop() || ''
+            const languageMap: Record<string, string> = {
+              'js': 'javascript',
+              'jsx': 'jsx',
+              'ts': 'typescript',
+              'tsx': 'tsx',
+              'py': 'python',
+              'java': 'java',
+              'cpp': 'cpp',
+              'c': 'c',
+              'cs': 'csharp',
+              'php': 'php',
+              'rb': 'ruby',
+              'go': 'go',
+              'rs': 'rust',
+              'kt': 'kotlin',
+              'swift': 'swift',
+              'scala': 'scala',
+              'sh': 'bash',
+              'bash': 'bash',
+              'zsh': 'zsh',
+              'fish': 'fish',
+              'ps1': 'powershell',
+              'sql': 'sql',
+              'html': 'html',
+              'htm': 'html',
+              'xml': 'xml',
+              'css': 'css',
+              'scss': 'scss',
+              'sass': 'sass',
+              'less': 'less',
+              'json': 'json',
+              'yaml': 'yaml',
+              'yml': 'yaml',
+              'toml': 'toml',
+              'ini': 'ini',
+              'cfg': 'ini',
+              'conf': 'ini',
+              'properties': 'properties',
+              'dockerfile': 'dockerfile',
+              'md': 'markdown',
+              'mdx': 'mdx',
+              'tex': 'latex',
+              'r': 'r',
+              'matlab': 'matlab',
+              'm': 'matlab',
+              'pl': 'perl',
+              'lua': 'lua',
+              'vim': 'vim',
+              'diff': 'diff',
+              'patch': 'diff',
+              'log': 'log',
+              'txt': 'text'
+            }
+            return languageMap[ext] || 'text'
+          }
+
+          // Helper function to format file title
+          const formatFileTitle = (key: string): string => {
+            return key
+              .replace(/\.(md|txt)$/i, '') // Remove common doc extensions
+              .split(/[-_]/)
+              .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+              .join(' ')
+          }
+
+          // Helper function to get file type info with icons
+          const getFileTypeInfo = (filename: string): { category: string; icon: string; language: string } => {
+            const ext = filename.toLowerCase().split('.').pop() || ''
+            const name = filename.toLowerCase()
+            
+            // Special files
+            if (name.includes('readme')) return { category: 'documentation', icon: '📖', language: 'markdown' }
+            if (name.includes('license')) return { category: 'documentation', icon: '📄', language: 'text' }
+            if (name.includes('changelog')) return { category: 'documentation', icon: '📝', language: 'markdown' }
+            if (name.includes('dockerfile') || name === 'dockerfile') return { category: 'configuration', icon: '🐳', language: 'dockerfile' }
+            if (name.includes('makefile') || name === 'makefile') return { category: 'configuration', icon: '🔧', language: 'makefile' }
+            if (name.includes('package.json')) return { category: 'configuration', icon: '📦', language: 'json' }
+            if (name.includes('requirements.txt')) return { category: 'configuration', icon: '🐍', language: 'text' }
+            if (name.includes('pom.xml')) return { category: 'configuration', icon: '☕', language: 'xml' }
+            if (name.includes('build.gradle')) return { category: 'configuration', icon: '🐘', language: 'groovy' }
+            
+            const fileTypes: Record<string, { category: string; icon: string; language: string }> = {
+              // Programming languages
+              'js': { category: 'source', icon: '🟨', language: 'javascript' },
+              'jsx': { category: 'source', icon: '⚛️', language: 'jsx' },
+              'ts': { category: 'source', icon: '🔷', language: 'typescript' },
+              'tsx': { category: 'source', icon: '⚛️', language: 'tsx' },
+              'py': { category: 'source', icon: '🐍', language: 'python' },
+              'java': { category: 'source', icon: '☕', language: 'java' },
+              'cpp': { category: 'source', icon: '⚙️', language: 'cpp' },
+              'c': { category: 'source', icon: '⚙️', language: 'c' },
+              'cs': { category: 'source', icon: '🔷', language: 'csharp' },
+              'php': { category: 'source', icon: '🐘', language: 'php' },
+              'rb': { category: 'source', icon: '💎', language: 'ruby' },
+              'go': { category: 'source', icon: '🐹', language: 'go' },
+              'rs': { category: 'source', icon: '🦀', language: 'rust' },
+              'kt': { category: 'source', icon: '🟣', language: 'kotlin' },
+              'swift': { category: 'source', icon: '🦉', language: 'swift' },
+              'scala': { category: 'source', icon: '🔴', language: 'scala' },
+              'dart': { category: 'source', icon: '🎯', language: 'dart' },
+              
+              // Web technologies
+              'html': { category: 'source', icon: '🌐', language: 'html' },
+              'css': { category: 'source', icon: '🎨', language: 'css' },
+              'scss': { category: 'source', icon: '🎨', language: 'scss' },
+              'sass': { category: 'source', icon: '🎨', language: 'sass' },
+              'less': { category: 'source', icon: '🎨', language: 'less' },
+              
+              // Data formats
+              'json': { category: 'configuration', icon: '📋', language: 'json' },
+              'yaml': { category: 'configuration', icon: '📋', language: 'yaml' },
+              'yml': { category: 'configuration', icon: '📋', language: 'yaml' },
+              'xml': { category: 'configuration', icon: '📋', language: 'xml' },
+              'toml': { category: 'configuration', icon: '📋', language: 'toml' },
+              'ini': { category: 'configuration', icon: '⚙️', language: 'ini' },
+              'cfg': { category: 'configuration', icon: '⚙️', language: 'ini' },
+              'conf': { category: 'configuration', icon: '⚙️', language: 'ini' },
+              'properties': { category: 'configuration', icon: '⚙️', language: 'properties' },
+              
+              // Documentation
+              'md': { category: 'documentation', icon: '📝', language: 'markdown' },
+              'txt': { category: 'documentation', icon: '📄', language: 'text' },
+              'rst': { category: 'documentation', icon: '📝', language: 'rest' },
+              'adoc': { category: 'documentation', icon: '📝', language: 'asciidoc' },
+              
+              // Scripts
+              'sh': { category: 'source', icon: '🐚', language: 'bash' },
+              'bash': { category: 'source', icon: '🐚', language: 'bash' },
+              'ps1': { category: 'source', icon: '💠', language: 'powershell' },
+              'bat': { category: 'source', icon: '⬛', language: 'batch' },
+              'cmd': { category: 'source', icon: '⬛', language: 'batch' },
+              
+              // Database
+              'sql': { category: 'source', icon: '🗃️', language: 'sql' },
+              
+              // Others
+              'log': { category: 'other', icon: '📊', language: 'log' },
+              'csv': { category: 'other', icon: '📊', language: 'csv' },
+              'env': { category: 'configuration', icon: '🔐', language: 'bash' }
+            }
+            
+            return fileTypes[ext] || { category: 'other', icon: '📄', language: 'text' }
+          }
+
+          // Separate files by category for better organization
+          const categorizeFiles = (docs: Record<string, Documentation>) => {
+            const categories = {
+              readme: [] as Array<[string, Documentation]>,
+              documentation: [] as Array<[string, Documentation]>,
+              configuration: [] as Array<[string, Documentation]>,
+              source: [] as Array<[string, Documentation]>,
+              other: [] as Array<[string, Documentation]>
+            }
+
+            Object.entries(docs).forEach(([key, doc]) => {
+              const lower = key.toLowerCase()
+              if (lower.includes('readme')) {
+                categories.readme.push([key, doc])
+              } else if (lower.match(/\.(md|txt|rst|adoc)$/)) {
+                categories.documentation.push([key, doc])
+              } else if (lower.match(/\.(json|yaml|yml|toml|ini|cfg|conf|properties|xml)$/)) {
+                categories.configuration.push([key, doc])
+              } else if (lower.match(/\.(js|jsx|ts|tsx|py|java|cpp|c|cs|php|rb|go|rs|kt|swift|scala|html|css|scss|sass)$/)) {
+                categories.source.push([key, doc])
+              } else {
+                categories.other.push([key, doc])
+              }
+            })
+
+            return categories
+          }
+
+          const categories = categorizeFiles(docs)
+          const sections: string[] = []
+
+          // Generate README section
+          if (categories.readme.length > 0) {
+            sections.push('# 📖 README')
+            categories.readme.forEach(([key, doc]) => {
+              const title = formatFileTitle(key)
+              sections.push(`## ${title}\n\n${doc.content}`)
+            })
+          }
+
+          // Generate Documentation section
+          if (categories.documentation.length > 0) {
+            sections.push('# 📚 Documentation Files')
+            categories.documentation.forEach(([key, doc]) => {
+              const title = formatFileTitle(key)
+              sections.push(`## 📝 ${title}\n\n${doc.content}`)
+            })
+          }
+
+          // Generate Configuration section
+          if (categories.configuration.length > 0) {
+            sections.push('# ⚙️ Configuration Files')
+            categories.configuration.forEach(([key, doc]) => {
+              const title = formatFileTitle(key)
+              const language = getLanguageFromExtension(key)
+              const fileIcon = getFileTypeInfo(key).icon
+              sections.push(`## ${fileIcon} ${title}\n\n\`\`\`${language} title="${key}"\n${doc.content}\n\`\`\``)
+            })
+          }
+
+          // Generate Source Code section
+          if (categories.source.length > 0) {
+            sections.push('# 💻 Source Code')
+            categories.source.forEach(([key, doc]) => {
+              const title = formatFileTitle(key)
+              const language = getLanguageFromExtension(key)
+              const fileIcon = getFileTypeInfo(key).icon
+              sections.push(`## ${fileIcon} ${title}\n\n\`\`\`${language} title="${key}"\n${doc.content}\n\`\`\``)
+            })
+          }
+
+          // Generate Other Files section
+          if (categories.other.length > 0) {
+            sections.push('# 📄 Other Files')
+            categories.other.forEach(([key, doc]) => {
+              const title = formatFileTitle(key)
+              const language = getLanguageFromExtension(key)
+              const fileIcon = getFileTypeInfo(key).icon
+              sections.push(`## ${fileIcon} ${title}\n\n\`\`\`${language} title="${key}"\n${doc.content}\n\`\`\``)
+            })
+          }
+
+          const allContent = sections.join('\n\n---\n\n')
+          
+          setMarkdownContent(allContent)
+          setDraftContent(allContent)
+        } catch (error) {
+          console.error('Failed to load documentation:', error)
+          const errorContent = `# Documentation\n\nFailed to load documentation content. Please try again later.`
+          setMarkdownContent(errorContent)
+          setDraftContent(errorContent)
+        } finally {
+          setIsLoadingDocs(false)
+        }
+      }
+
+      loadDocs()
+    }
+  }, [activeLabel, githubHref])
 
   // Auto-resize textarea when content changes or view mode changes
   useEffect(() => {
@@ -468,15 +516,7 @@ function DocumentationPage() {
     }
   }
 
-  const handleFolderItemRightClick = (e: React.MouseEvent, itemType: 'file' | 'folder') => {
-    e.preventDefault()
-    setFolderContextMenu({
-      isVisible: true,
-      x: e.clientX,
-      y: e.clientY,
-      itemType
-    })
-  }
+
 
   const handleFolderContextMenuClose = () => {
     setFolderContextMenu({ isVisible: false, x: 0, y: 0, itemType: null })
@@ -525,6 +565,11 @@ function DocumentationPage() {
   // Handle share functionality
   const handleShare = () => {
     setIsShareDialogOpen(true)
+  }
+
+  // Handle view code functionality
+  const handleViewCode = () => {
+    setIsViewCodeDialogOpen(true)
   }
 
   // Sync document class with theme state
@@ -617,6 +662,18 @@ function DocumentationPage() {
         </button>
       </div>
 
+      {/* View Code Button - Top Right Corner */}
+      <div className="docs-view-code-button-container">
+        <button
+          className="docs-view-code-button"
+          onClick={handleViewCode}
+          aria-label="View code"
+        >
+          <CodeIcon size={16} />
+          <span>View Code</span>
+        </button>
+      </div>
+
       {/* Share Button - Top Right Corner */}
       <div className="docs-share-button-container">
         <button
@@ -670,15 +727,65 @@ function DocumentationPage() {
               </div>
             </div>
           </div>
-          <nav 
-            ref={treeRef}
-            className={`docs-tree ${isScrolling ? 'is-scrolling' : ''}`} 
-            aria-label="Documentation navigation"
-          >
-            <div className="docs-tree__content">
-              {MOCK_TREE.map((it, i) => renderItem(it, i, handleFileClick, activeLabel, [], handleFolderItemRightClick))}
+          
+          {/* Special Pages Navigation */}
+          <div className="docs-sidebar__section">
+            <div className="docs-sidebar__section-header">
+              <h3>Repository Overview</h3>
             </div>
-          </nav>
+            <div className="docs-sidebar__nav">
+              <button 
+                className="docs-sidebar__nav-item"
+                onClick={() => {
+                  const repoPath = window.location.pathname.split('/')[1]
+                  navigate(`/${repoPath}/changelog`, {
+                    state: location.state
+                  })
+                }}
+                aria-label="View Changelog"
+              >
+                <HistoryIcon size={16} />
+                <span>Changelog</span>
+              </button>
+              
+              <button 
+                className="docs-sidebar__nav-item"
+                onClick={() => {
+                  const repoPath = window.location.pathname.split('/')[1]
+                  navigate(`/${repoPath}/flowchart`, {
+                    state: location.state
+                  })
+                }}
+                aria-label="View System Diagrams"
+              >
+                <DiagramIcon size={16} />
+                <span>System Diagrams</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Documentation Tree Section */}
+          <div className="docs-sidebar__section">
+            <div className="docs-sidebar__section-header">
+              <h3>Documentation</h3>
+            </div>
+            <div className="docs-sidebar__nav">
+              <button 
+                className="docs-sidebar__nav-item"
+                onClick={() => {
+                  const repoPath = window.location.pathname.split('/')[1]
+                  navigate(`/${repoPath}/documentation`, {
+                    state: location.state
+                  })
+                }}
+                aria-label="View Documentation"
+              >
+                <span>📚</span>
+                <span>Main Documentation</span>
+              </button>
+            </div>
+          </div>
+          
           <div className="docs-sidebar__footer">
             <a className="docs-footer__gh" href={githubHref} target="_blank" rel="noreferrer" aria-label="GitHub">
               <GithubIcon />
@@ -722,8 +829,126 @@ function DocumentationPage() {
               />
             ) : (
               <>
-                <Markdown content={draftContent || markdownContent} />
-                {showTOC && <TableOfContents content={draftContent || markdownContent} />}
+                {activeLabel === 'Changelog' ? (
+                  <EmbeddedChangelog 
+                    repo={repo} 
+                    repoUrl={githubHref}
+                    className="changelog-main"
+                  />
+                ) : activeLabel === 'System Diagrams' ? (
+                  <EmbeddedFlowchart 
+                    className="flowchart-main"
+                  />
+                ) : activeLabel === 'Documentation' ? (
+                  <div className="documentation-main">
+                    {isLoadingDocs ? (
+                      <div style={{ 
+                        display: 'flex', 
+                        justifyContent: 'center', 
+                        alignItems: 'center', 
+                        minHeight: '200px',
+                        color: 'var(--docs-normal-text)' 
+                      }}>
+                        <div>
+                          <div className="spinner" style={{ margin: '0 auto 16px auto' }} />
+                          <p>Loading documentation...</p>
+                        </div>
+                      </div>
+                    ) : (
+                      <>
+                        <Markdown content={draftContent || markdownContent} />
+                        {showTOC && <TableOfContents content={draftContent || markdownContent} />}
+                      </>
+                    )}
+                  </div>
+                ) : (
+                  <div style={{ 
+                    padding: '60px 40px', 
+                    textAlign: 'center', 
+                    color: 'var(--docs-normal-text)' 
+                  }}>
+                    <h2 style={{ 
+                      fontSize: '24px', 
+                      fontWeight: '600', 
+                      marginBottom: '16px',
+                      color: 'var(--docs-header-text)' 
+                    }}>
+                      Welcome to the Repository
+                    </h2>
+                    <p style={{ 
+                      fontSize: '16px', 
+                      lineHeight: '1.6', 
+                      maxWidth: '600px', 
+                      margin: '0 auto 24px auto' 
+                    }}>
+                      Select an option from the sidebar to view changelog, system diagrams, or documentation.
+                    </p>
+                    <div style={{ 
+                      display: 'flex', 
+                      gap: '16px', 
+                      justifyContent: 'center',
+                      flexWrap: 'wrap'
+                    }}>
+                      <button 
+                        onClick={() => {
+                          const repoPath = window.location.pathname.split('/')[1]
+                          navigate(`/${repoPath}/changelog`, { state: location.state })
+                        }}
+                        style={{
+                          padding: '12px 24px',
+                          border: '1px solid var(--sidebar-border)',
+                          borderRadius: '8px',
+                          background: 'var(--docs-bg)',
+                          color: 'var(--docs-text)',
+                          cursor: 'pointer',
+                          fontSize: '14px',
+                          fontWeight: '500',
+                          transition: 'all 0.2s ease'
+                        }}
+                      >
+                        📋 View Changelog
+                      </button>
+                      <button 
+                        onClick={() => {
+                          const repoPath = window.location.pathname.split('/')[1]
+                          navigate(`/${repoPath}/flowchart`, { state: location.state })
+                        }}
+                        style={{
+                          padding: '12px 24px',
+                          border: '1px solid var(--sidebar-border)',
+                          borderRadius: '8px',
+                          background: 'var(--docs-bg)',
+                          color: 'var(--docs-text)',
+                          cursor: 'pointer',
+                          fontSize: '14px',
+                          fontWeight: '500',
+                          transition: 'all 0.2s ease'
+                        }}
+                      >
+                        📊 View Diagrams
+                      </button>
+                      <button 
+                        onClick={() => {
+                          const repoPath = window.location.pathname.split('/')[1]
+                          navigate(`/${repoPath}/documentation`, { state: location.state })
+                        }}
+                        style={{
+                          padding: '12px 24px',
+                          border: '1px solid var(--sidebar-border)',
+                          borderRadius: '8px',
+                          background: 'var(--docs-bg)',
+                          color: 'var(--docs-text)',
+                          cursor: 'pointer',
+                          fontSize: '14px',
+                          fontWeight: '500',
+                          transition: 'all 0.2s ease'
+                        }}
+                      >
+                        📚 View Documentation
+                      </button>
+                    </div>
+                  </div>
+                )}
               </>
             )}
           </div>
@@ -774,6 +999,13 @@ function DocumentationPage() {
         style={{ display: 'none' }}
         onChange={handleFileUpload}
         accept="image/jpeg,image/jpg,image/png"
+      />
+
+      {/* View Code Dialog */}
+      <ViewCodeDialog
+        isOpen={isViewCodeDialogOpen}
+        onClose={() => setIsViewCodeDialogOpen(false)}
+        repoUrl={githubHref}
       />
 
       {/* Share Dialog */}
