@@ -13,6 +13,7 @@ interface DiscordNotificationConfigProps {
   repoUrl: string
   repoName: string
   changelogUrl: string
+  onMonitoringStateChange?: (isActive: boolean) => void
 }
 
 const DiscordNotificationConfig: React.FC<DiscordNotificationConfigProps> = ({
@@ -20,7 +21,8 @@ const DiscordNotificationConfig: React.FC<DiscordNotificationConfigProps> = ({
   onClose,
   repoUrl,
   repoName,
-  changelogUrl
+  changelogUrl,
+  onMonitoringStateChange
 }) => {
   const [webhookUrl, setWebhookUrl] = useState('')
   const [branch, setBranch] = useState('main')
@@ -66,6 +68,7 @@ const DiscordNotificationConfig: React.FC<DiscordNotificationConfigProps> = ({
 
       const isCurrentlyMonitoring = componentChangeMonitor.isMonitoring(repoUrl)
       setIsMonitoringActive(isCurrentlyMonitoring)
+      onMonitoringStateChange?.(isCurrentlyMonitoring)
 
       if (isCurrentlyMonitoring) {
         const configs = componentChangeMonitor.getMonitoringConfigs()
@@ -80,7 +83,7 @@ const DiscordNotificationConfig: React.FC<DiscordNotificationConfigProps> = ({
       // Load available branches
       loadBranches()
     }
-  }, [isOpen, repoUrl, loadBranches])
+  }, [isOpen, repoUrl, loadBranches, onMonitoringStateChange])
 
   const handleTestConnection = async () => {
     if (!webhookUrl.trim()) {
@@ -168,12 +171,14 @@ const DiscordNotificationConfig: React.FC<DiscordNotificationConfigProps> = ({
     })
 
     setIsMonitoringActive(true)
+    onMonitoringStateChange?.(true)
     onClose()
   }
 
   const handleStopMonitoring = () => {
     componentChangeMonitor.removeMonitoring(repoUrl)
     setIsMonitoringActive(false)
+    onMonitoringStateChange?.(false)
   }
 
   const handleForceCheck = async () => {

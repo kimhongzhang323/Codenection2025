@@ -28,13 +28,12 @@
 }
 
 .discord-config-dialog {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 16px;
+  background: #36393f;
+  border: 1px solid #40444b;
+  border-radius: 8px;
   box-shadow: 
-    0 20px 25px -5px rgba(0, 0, 0, 0.1),
-    0 10px 10px -5px rgba(0, 0, 0, 0.04),
-    0 0 0 1px rgba(255, 255, 255, 0.05);
+    0 8px 16px rgba(0, 0, 0, 0.24),
+    0 0 0 1px rgba(32, 34, 37, 0.6);
   width: 92%;
   max-width: 680px;
   max-height: 90vh;
@@ -56,8 +55,8 @@
 
 .discord-config-header {
   padding: 28px 32px 20px;
-  background: linear-gradient(135deg, var(--card) 0%, var(--muted) 100%);
-  border-bottom: 1px solid var(--border);
+  background: #202225;
+  border-bottom: 1px solid #40444b;
   position: relative;
   overflow: hidden;
 }
@@ -74,7 +73,7 @@
 
 .discord-config-header h2 {
   margin: 0 0 12px 0;
-  color: var(--foreground);
+  color: #ffffff;
   font-size: 24px;
   font-weight: 700;
   letter-spacing: -0.025em;
@@ -91,7 +90,7 @@
 
 .discord-config-header p {
   margin: 0;
-  color: var(--muted-foreground);
+  color: #b9bbbe;
   font-size: 15px;
   line-height: 1.5;
   font-weight: 400;
@@ -135,7 +134,8 @@
   max-height: calc(90vh - 160px);
   overflow-y: auto;
   scrollbar-width: thin;
-  scrollbar-color: var(--muted-foreground) transparent;
+  scrollbar-color: #4f545c transparent;
+  background: #36393f;
 }
 
 .discord-config-content::-webkit-scrollbar {
@@ -159,16 +159,16 @@
 .discord-config-section {
   margin-bottom: 32px;
   padding: 20px;
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 12px;
+  background: #40444b;
+  border: 1px solid #4f545c;
+  border-radius: 8px;
   transition: all 0.2s ease;
   position: relative;
 }
 
 .discord-config-section:hover {
-  border-color: var(--primary);
-  box-shadow: 0 0 0 1px rgba(99, 102, 241, 0.1);
+  border-color: #5865f2;
+  box-shadow: 0 0 0 1px rgba(88, 101, 242, 0.2);
 }
 
 .discord-config-section:last-child {
@@ -179,7 +179,7 @@
   display: flex;
   align-items: center;
   margin-bottom: 12px;
-  color: var(--foreground);
+  color: #dcddde;
   font-size: 15px;
   font-weight: 600;
   letter-spacing: -0.01em;
@@ -202,14 +202,14 @@
 .discord-config-textarea {
   width: 100%;
   padding: 14px 16px;
-  border: 2px solid var(--border);
-  border-radius: 10px;
-  background: var(--background);
-  color: var(--foreground);
+  border: 1px solid #4f545c;
+  border-radius: 4px;
+  background: #202225;
+  color: #dcddde;
   font-size: 14px;
   font-weight: 400;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.1);
 }
 
 .discord-config-input:focus,
@@ -217,10 +217,7 @@
 .discord-config-textarea:focus {
   outline: none;
   border-color: #5865f2;
-  box-shadow: 
-    0 0 0 3px rgba(88, 101, 242, 0.1),
-    0 4px 12px rgba(0, 0, 0, 0.15);
-  transform: translateY(-1px);
+  box-shadow: 0 0 0 2px rgba(88, 101, 242, 0.3);
 }
 
 .discord-config-input:hover:not(:focus),
@@ -618,15 +615,13 @@
 
 .discord-config-footer {
   padding: 20px 32px 24px;
-  border-top: 1px solid var(--border);
-  background: var(--muted);
+  border-top: 1px solid #40444b;
+  background: #2f3136;
   display: flex;
   justify-content: flex-end;
   gap: 16px;
   position: sticky;
   bottom: 0;
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
 }
 
 /* Dark mode adjustments */

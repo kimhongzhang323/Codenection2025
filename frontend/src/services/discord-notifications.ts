@@ -219,6 +219,11 @@ class DiscordNotificationService {
 
     return await this.sendNotification(testPayload)
   }
+
+  // Send a raw webhook message (used by GitHub webhook service)
+  async sendWebhookMessage(payload: DiscordWebhookPayload): Promise<boolean> {
+    return await this.sendNotification(payload)
+  }
 }
 
 export const discordNotificationService = DiscordNotificationService.getInstance()

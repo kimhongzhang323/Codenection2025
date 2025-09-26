@@ -19,6 +19,7 @@ import { DiagramIcon } from '../components/icons/diagram_icon'
 import ShareDialog from '../components/ui/share_dialog'
 import ViewCodeDialog from '../components/ui/view_code_dialog'
 import DocumentationSection from '../components/documentation_section'
+
 import ExportDialog from '../components/ui/export_dialog'
 import EmbeddedChangelog from '../components/embedded_changelog'
 import EmbeddedFlowchart from '../components/embedded_flowchart'
@@ -29,7 +30,11 @@ import TranslationDialog from '../components/ui/translation_dialog'
 import { useTranslation } from '../contexts/TranslationContext'
 import { usePageTranslation } from '../hooks/usePageTranslation'
 import DiscordNotificationConfig from '../components/ui/discord_notification_config'
-import NotificationIcon from '../components/icons/notification_icon'
+import DiscordIcon from '../components/icons/discord_icon'
+import { useAutoUpdate } from '../hooks/useAutoUpdate'
+import AutoUpdateNotification from '../components/ui/auto_update_notification'
+import type { GitHubCommit } from '../services/api'
+import { gitHubWebhookService } from '../services/github-webhook-service'
 
 
 
@@ -116,7 +121,87 @@ function DocumentationPage() {
   const [isExportDialogOpen, setIsExportDialogOpen] = useState(false)
   const [isTranslationDialogOpen, setIsTranslationDialogOpen] = useState(false)
   const [isDiscordConfigOpen, setIsDiscordConfigOpen] = useState(false)
+  const [isDiscordMonitoringActive, setIsDiscordMonitoringActive] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  
+  // Auto-update functionality
+  const [refreshKey, setRefreshKey] = useState(0)
+  const [lastContentUpdate, setLastContentUpdate] = useState<Date | null>(null)
+  
+
+  
+  const {
+    isMonitoring,
+    lastUpdate,
+    newCommitsCount,
+    latestCommits,
+    startMonitoring,
+    stopMonitoring,
+    forceCheck,
+    clearNotifications
+  } = useAutoUpdate({
+    repoUrl: githubHref !== '#' ? githubHref : undefined,
+    branch: 'main', // You can make this dynamic based on branch selector
+    checkInterval: 2, // Check every 2 minutes
+    autoStart: true,
+    onNewCommits: (commits: GitHubCommit[]) => {
+      console.log('New commits detected:', commits)
+      // You can add additional logic here like showing toast notifications
+    },
+    onContentUpdate: () => {
+      console.log('Content update triggered')
+      setLastContentUpdate(new Date())
+      // This will trigger re-rendering of documentation content
+      setRefreshKey(prev => prev + 1)
+    },
+    onError: (error: Error) => {
+      console.error('Auto-update error:', error)
+    }
+  })
+
+
+  // GitHub webhook integration
+  const [isGitHubBotEnabled, setIsGitHubBotEnabled] = useState(false)
+  
+
+
+  useEffect(() => {
+    // Set up GitHub webhook integration when repo URL is available
+    if (githubHref !== '#') {
+      // Subscribe to GitHub webhook events for Discord notifications
+      gitHubWebhookService.subscribeToRepository(githubHref, {
+        componentMappings: {
+          'Frontend Components': ['src/components/**/*.tsx', 'src/components/**/*.ts'],
+          'Documentation': ['README.md', 'docs/**/*.md', '*.md'],
+          'Styles': ['src/**/*.css', 'src/**/*.scss'],
+          'API Services': ['src/services/**/*.ts', 'src/api/**/*.ts'],
+          'Configuration': ['package.json', 'tsconfig.json', 'vite.config.ts', '*.config.*']
+        }
+      })
+      
+      // Enable GitHub bot simulation for demo purposes
+      setIsGitHubBotEnabled(true)
+      
+      // Start webhook simulation (for demo - in production this would be real webhooks)
+      gitHubWebhookService.startWebhookSimulation(githubHref, 3) // Every 3 minutes
+      
+      // Listen for GitHub push events to refresh content
+      const handleGitHubPush = (event: CustomEvent) => {
+        if (event.detail.repoUrl === githubHref) {
+          console.log('GitHub push detected, refreshing content...')
+          setRefreshKey(prev => prev + 1)
+          setLastContentUpdate(new Date())
+        }
+      }
+      
+      window.addEventListener('github-push-refresh', handleGitHubPush as EventListener)
+      
+      return () => {
+        window.removeEventListener('github-push-refresh', handleGitHubPush as EventListener)
+        gitHubWebhookService.stopWebhookSimulation()
+      }
+    }
+  }, [githubHref])
   
   // Translation context
   const { isTranslationActive, currentLanguageCode } = useTranslation()
@@ -235,6 +320,10 @@ function DocumentationPage() {
     setIsSidebarCollapsed(newState)
     localStorage.setItem('sidebarCollapsed', JSON.stringify(newState))
   }, [isSidebarCollapsed])
+
+  const handleDiscordMonitoringStateChange = useCallback((isActive: boolean) => {
+    setIsDiscordMonitoringActive(isActive)
+  }, [])
 
   // Handle clicking on overlay to close sidebar on smaller screens
   const handleOverlayClick = () => {
@@ -448,17 +537,65 @@ function DocumentationPage() {
         </button>
       </div>
 
+      {/* Auto-Update Control Button - Above GitHub Bot Button */}
+      <div className="docs-auto-update-button-container">
+        <button 
+          className={`docs-auto-update-button ${isMonitoring ? 'active' : ''}`}
+          onClick={() => {
+            if (isMonitoring) {
+              stopMonitoring()
+            } else {
+              startMonitoring()
+            }
+          }}
+          aria-label={isMonitoring ? 'Disable auto-update' : 'Enable auto-update'}
+          title={isMonitoring ? 'Auto-update is ON (main) - Click to disable' : 'Auto-update is OFF (main) - Click to enable'}
+        >
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.57-8.38" />
+          </svg>
+          {/* Show commit count if there are new commits */}
+          {newCommitsCount > 0 && (
+            <span className="docs-auto-update-badge">{newCommitsCount}</span>
+          )}
+        </button>
+        
+
+      </div>
+
+      {/* GitHub Bot Control Button - Above Discord Button */}
+      <div className="docs-github-bot-button-container">
+        <button 
+          className={`docs-github-bot-button ${isGitHubBotEnabled ? 'active' : ''}`}
+          onClick={() => {
+            if (isGitHubBotEnabled) {
+              gitHubWebhookService.stopWebhookSimulation()
+              setIsGitHubBotEnabled(false)
+            } else {
+              if (githubHref !== '#') {
+                gitHubWebhookService.startWebhookSimulation(githubHref, 3)
+                setIsGitHubBotEnabled(true)
+              }
+            }
+          }}
+          aria-label={isGitHubBotEnabled ? 'Disable GitHub bot' : 'Enable GitHub bot'}
+          title={isGitHubBotEnabled ? 'GitHub bot is ON - Simulating push notifications' : 'GitHub bot is OFF - Click to enable Discord push notifications'}
+        >
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22" />
+          </svg>
+        </button>
+      </div>
+
       {/* Discord Notification Button - Above AI Chat Button */}
       <div className="docs-discord-button-container">
         <button 
-          className="docs-discord-button"
+          className={`docs-discord-button ${isDiscordMonitoringActive ? 'active' : ''}`}
           onClick={() => setIsDiscordConfigOpen(true)}
           aria-label="Configure Discord notifications"
           title="Configure Discord notifications for component changes"
         >
-          <NotificationIcon />
-          {/* Status indicator dot if monitoring is active */}
-          <span className="docs-discord-status-dot" />
+          <DiscordIcon size={28} />
         </button>
       </div>
 
@@ -867,6 +1004,26 @@ function DocumentationPage() {
         repoUrl={githubHref}
         repoName={repo || 'Repository'}
         changelogUrl={`${window.location.origin}/changelog/${encodeURIComponent(githubHref)}`}
+        onMonitoringStateChange={handleDiscordMonitoringStateChange}
+      />
+
+      {/* Auto Update Notification */}
+      <AutoUpdateNotification
+        newCommitsCount={newCommitsCount}
+        latestCommits={latestCommits}
+        lastUpdate={lastUpdate}
+        onRefresh={async () => {
+          try {
+            await forceCheck()
+            // Trigger content refresh
+            setRefreshKey(prev => prev + 1)
+            window.location.reload() // Force full page refresh to get latest content
+          } catch (error) {
+            console.error('Failed to refresh content:', error)
+          }
+        }}
+        onDismiss={clearNotifications}
+        repoUrl={githubHref !== '#' ? githubHref : undefined}
       />
     </div>
   )

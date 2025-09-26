@@ -715,7 +715,7 @@ html:not(.dark) .docs-sidebar__collapse-icon {
 /* Translation Button - Above Smart Suggestions */
 .docs-translate-button-container {
   position: fixed;
-  bottom: 180px;
+  bottom: 310px;
   right: 24px;
   z-index: 1000;
 }
@@ -763,7 +763,7 @@ html:not(.dark) .docs-sidebar__collapse-icon {
 
 .docs-lightbulb-button-container {
   position: fixed;
-  bottom: 80px;
+  bottom: 70px;
   right: 24px;
   z-index: 1000;
 }
@@ -806,20 +806,22 @@ html:not(.dark) .docs-sidebar__collapse-icon {
 .docs-discord-button {
   width: 48px;
   height: 48px;
-  border-radius: 12px;
-  background: linear-gradient(135deg, #5865f2 0%, #7289da 100%);
-  border: 2px solid rgba(88, 101, 242, 0.3);
+  border-radius: 4px;
+  background: #5865f2;
+  border: none;
   color: white;
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.2s ease;
   position: relative;
   overflow: hidden;
+  font-size: 20px;
+  font-weight: 600;
   box-shadow: 
-    0 4px 14px rgba(88, 101, 242, 0.3),
-    0 2px 4px rgba(0, 0, 0, 0.1);
+    0 2px 8px rgba(88, 101, 242, 0.5),
+    0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
 .docs-discord-button::before {
@@ -838,58 +840,29 @@ html:not(.dark) .docs-sidebar__collapse-icon {
 }
 
 .docs-discord-button:hover {
-  background: linear-gradient(135deg, #4752c4 0%, #5b6ecd 100%);
-  border-color: rgba(71, 82, 196, 0.5);
-  transform: translateY(-2px) scale(1.02);
+  background: #4752c4;
+  transform: translateY(-1px);
   box-shadow: 
-    0 8px 25px rgba(88, 101, 242, 0.4),
-    0 4px 8px rgba(0, 0, 0, 0.15);
+    0 4px 12px rgba(88, 101, 242, 0.6),
+    0 2px 6px rgba(0, 0, 0, 0.25);
 }
 
 .docs-discord-button:active {
-  transform: translateY(0) scale(1);
+  transform: translateY(0);
+  background: #3c45a5;
   box-shadow: 
-    0 4px 14px rgba(88, 101, 242, 0.3),
-    0 2px 4px rgba(0, 0, 0, 0.1);
+    0 1px 4px rgba(88, 101, 242, 0.4),
+    0 1px 2px rgba(0, 0, 0, 0.15);
 }
 
 .docs-discord-button:focus {
   outline: none;
   box-shadow: 
-    0 4px 14px rgba(88, 101, 242, 0.3),
-    0 0 0 3px rgba(88, 101, 242, 0.2);
+    0 2px 8px rgba(88, 101, 242, 0.5),
+    0 0 0 2px rgba(88, 101, 242, 0.3);
 }
 
-.docs-discord-status-dot {
-  position: absolute;
-  top: -2px;
-  right: -2px;
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
-  border: 2px solid white;
-  opacity: 0;
-  transition: all 0.3s ease;
-  box-shadow: 0 2px 4px rgba(34, 197, 94, 0.3);
-  animation: pulse-dot 2s infinite;
-}
 
-@keyframes pulse-dot {
-  0%, 100% {
-    transform: scale(1);
-    opacity: 0;
-  }
-  50% {
-    transform: scale(1.1);
-    opacity: 1;
-  }
-}
-
-.docs-discord-button[data-monitoring="true"] .docs-discord-status-dot {
-  opacity: 1;
-  animation: pulse-dot 2s infinite;
-}
 
 /* Dark mode adjustments for Discord button */
 [data-theme="dark"] .docs-discord-button {
@@ -910,10 +883,269 @@ html:not(.dark) .docs-sidebar__collapse-icon {
     0 0 0 3px rgba(88, 101, 242, 0.3);
 }
 
-[data-theme="dark"] .docs-discord-status-dot {
-  border-color: var(--background);
-  box-shadow: 0 2px 4px rgba(34, 197, 94, 0.4);
+
+
+/* Auto-Update Button - Above GitHub Bot Button */
+.docs-auto-update-button-container {
+  position: fixed;
+  bottom: 250px;
+  right: 24px;
+  z-index: 1000;
 }
+
+.docs-auto-update-button {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #64748b 0%, #475569 100%);
+  border: 2px solid rgba(100, 116, 139, 0.3);
+  color: white;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+  box-shadow: 
+    0 4px 14px rgba(100, 116, 139, 0.3),
+    0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.docs-auto-update-button.active {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  border-color: rgba(16, 185, 129, 0.3);
+  box-shadow: 
+    0 4px 14px rgba(16, 185, 129, 0.3),
+    0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.docs-auto-update-button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.6s;
+}
+
+.docs-auto-update-button:hover::before {
+  left: 100%;
+}
+
+.docs-auto-update-button:hover {
+  transform: translateY(-2px) scale(1.02);
+}
+
+.docs-auto-update-button:not(.active):hover {
+  background: linear-gradient(135deg, #475569 0%, #334155 100%);
+  border-color: rgba(71, 85, 105, 0.5);
+  box-shadow: 
+    0 8px 25px rgba(100, 116, 139, 0.4),
+    0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.docs-auto-update-button.active:hover {
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+  border-color: rgba(5, 150, 105, 0.5);
+  box-shadow: 
+    0 8px 25px rgba(16, 185, 129, 0.4),
+    0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.docs-auto-update-button:active {
+  transform: translateY(-1px) scale(0.98);
+}
+
+.docs-auto-update-button:focus {
+  outline: none;
+  box-shadow: 
+    0 4px 14px rgba(100, 116, 139, 0.3),
+    0 2px 4px rgba(0, 0, 0, 0.1),
+    0 0 0 3px rgba(100, 116, 139, 0.3);
+}
+
+.docs-auto-update-button.active:focus {
+  box-shadow: 
+    0 4px 14px rgba(16, 185, 129, 0.3),
+    0 2px 4px rgba(0, 0, 0, 0.1),
+    0 0 0 3px rgba(16, 185, 129, 0.3);
+}
+
+
+
+.docs-auto-update-badge {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  background: #ef4444;
+  color: white;
+  border-radius: 10px;
+  padding: 2px 6px;
+  font-size: 10px;
+  font-weight: 600;
+  min-width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid white;
+  box-shadow: 0 2px 4px rgba(239, 68, 68, 0.3);
+  animation: bounce-badge 0.6s ease-out;
+}
+
+@keyframes bounce-badge {
+  0% {
+    transform: scale(0);
+  }
+  60% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+  }
+}
+
+/* Branch Selector Styling */
+
+
+/* Dark mode adjustments for auto-update button */
+[data-theme="dark"] .docs-auto-update-button:not(.active) {
+  background: linear-gradient(135deg, #334155 0%, #1e293b 100%);
+  border-color: rgba(51, 65, 85, 0.3);
+  box-shadow: 
+    0 4px 14px rgba(51, 65, 85, 0.3),
+    0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="dark"] .docs-auto-update-button:not(.active):hover {
+  background: linear-gradient(135deg, #475569 0%, #334155 100%);
+  border-color: rgba(71, 85, 105, 0.5);
+  box-shadow: 
+    0 8px 25px rgba(51, 65, 85, 0.4),
+    0 4px 8px rgba(0, 0, 0, 0.3);
+}
+
+[data-theme="dark"] .docs-auto-update-button:not(.active):focus {
+  box-shadow: 
+    0 4px 14px rgba(51, 65, 85, 0.3),
+    0 2px 4px rgba(0, 0, 0, 0.3),
+    0 0 0 3px rgba(51, 65, 85, 0.3);
+}
+
+
+
+/* GitHub Bot Button - Above Discord Button */
+.docs-github-bot-button-container {
+  position: fixed;
+  bottom: 190px;
+  right: 24px;
+  z-index: 1000;
+}
+
+.docs-github-bot-button {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #24292f 0%, #1b1f23 100%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #f0f6fc;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 
+    0 8px 25px rgba(36, 41, 47, 0.2),
+    0 4px 10px rgba(0, 0, 0, 0.1);
+  position: relative;
+  overflow: hidden;
+}
+
+.docs-github-bot-button.active {
+  background: linear-gradient(135deg, #238636 0%, #196c2e 100%);
+  border-color: rgba(35, 134, 54, 0.3);
+  box-shadow: 
+    0 8px 25px rgba(35, 134, 54, 0.3),
+    0 4px 10px rgba(0, 0, 0, 0.2);
+}
+
+.docs-github-bot-button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
+  transition: left 0.5s;
+}
+
+.docs-github-bot-button:hover::before {
+  left: 100%;
+}
+
+.docs-github-bot-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 
+    0 12px 35px rgba(36, 41, 47, 0.25),
+    0 6px 15px rgba(0, 0, 0, 0.12);
+}
+
+.docs-github-bot-button:not(.active):hover {
+  background: linear-gradient(135deg, #32383f 0%, #24292f 100%);
+  border-color: rgba(255, 255, 255, 0.15);
+}
+
+.docs-github-bot-button.active:hover {
+  background: linear-gradient(135deg, #2ea043 0%, #238636 100%);
+  border-color: rgba(46, 160, 67, 0.4);
+  box-shadow: 
+    0 12px 35px rgba(35, 134, 54, 0.4),
+    0 6px 15px rgba(0, 0, 0, 0.15);
+}
+
+.docs-github-bot-button:active {
+  transform: translateY(0px);
+}
+
+.docs-github-bot-button:focus {
+  outline: none;
+  box-shadow: 
+    0 8px 25px rgba(36, 41, 47, 0.2),
+    0 4px 10px rgba(0, 0, 0, 0.1),
+    0 0 0 3px rgba(36, 41, 47, 0.3);
+}
+
+
+
+/* Dark mode adjustments for GitHub bot button */
+[data-theme="dark"] .docs-github-bot-button:not(.active) {
+  background: linear-gradient(135deg, #24292f 0%, #1b1f23 100%);
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: 
+    0 8px 25px rgba(36, 41, 47, 0.3),
+    0 4px 10px rgba(0, 0, 0, 0.2);
+}
+
+[data-theme="dark"] .docs-github-bot-button:not(.active):hover {
+  background: linear-gradient(135deg, #32383f 0%, #24292f 100%);
+  border-color: rgba(255, 255, 255, 0.12);
+  box-shadow: 
+    0 12px 35px rgba(36, 41, 47, 0.4),
+    0 6px 15px rgba(0, 0, 0, 0.25);
+}
+
+[data-theme="dark"] .docs-github-bot-button:not(.active):focus {
+  box-shadow: 
+    0 8px 25px rgba(36, 41, 47, 0.3),
+    0 4px 10px rgba(0, 0, 0, 0.2),
+    0 0 0 3px rgba(36, 41, 47, 0.4);
+}
+
+
 
 /* AI Chat Button - Bottom Right Corner */
 .docs-ai-chat-button-container {
@@ -1172,7 +1404,7 @@ html:not(.dark) .docs-sidebar__collapse-icon {
 /* Responsive adjustments */
 @media (max-width: 768px) {
   .docs-translate-button-container {
-    bottom: 160px;
+    bottom: 260px;
     right: 16px;
   }
   
@@ -1187,14 +1419,51 @@ html:not(.dark) .docs-sidebar__collapse-icon {
   }
 
   .docs-lightbulb-button-container {
-    bottom: 72px;
-    right: 16px;
+    bottom: 20px;
+    right: 60px;
   }
   
   .docs-lightbulb-button {
     width: 36px;
     height: 36px;
   }
+
+  .docs-auto-update-button-container {
+    bottom: 212px;
+    right: 16px;
+  }
+  
+
+  
+  .docs-auto-update-button {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+  }
+  
+
+  
+  .docs-auto-update-badge {
+    top: -4px;
+    right: -4px;
+    font-size: 9px;
+    min-width: 16px;
+    height: 16px;
+    padding: 1px 4px;
+  }
+
+  .docs-github-bot-button-container {
+    bottom: 164px;
+    right: 16px;
+  }
+  
+  .docs-github-bot-button {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+  }
+  
+
 
   .docs-discord-button-container {
     bottom: 116px;
@@ -1207,10 +1476,7 @@ html:not(.dark) .docs-sidebar__collapse-icon {
     border-radius: 10px;
   }
   
-  .docs-discord-status-dot {
-    width: 10px;
-    height: 10px;
-  }
+
 
   .docs-ai-chat-button-container {
     bottom: 16px;
