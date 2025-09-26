@@ -8,11 +8,7 @@ import org.slf4j.LoggerFactory;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Date;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -177,5 +173,13 @@ public class DocumentationHandler {
             sb.append("\n");
         }
         return sb.toString();
+    }
+
+    public String getMostRecentDocumentationKey() {
+        return documentationMap.entrySet().stream()
+                .filter(entry -> entry.getValue().getLastModified() != null)
+                .max(Map.Entry.comparingByValue(Comparator.comparing(Documentation::getLastModified)))
+                .map(Map.Entry::getKey)
+                .orElse(null);
     }
 }

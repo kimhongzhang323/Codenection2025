@@ -400,7 +400,7 @@ public class McpToolUtils {
             docKey = docHandler.getDefaultDocumentationKey();
         }
         if (docKey == null) {
-            return "Error: No documentation key provided and no default is set.";
+            docKey = docHandler.getMostRecentDocumentationKey();
         }
 
         Documentation doc = docHandler.get(docKey);
