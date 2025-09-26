@@ -136,6 +136,10 @@ function DocumentationPage() {
   const [refreshKey, setRefreshKey] = useState(0)
   const [lastContentUpdate, setLastContentUpdate] = useState<Date | null>(null)
   
+  // Export functionality - store current content for export
+  const [currentMarkdownContent, setCurrentMarkdownContent] = useState('')
+  const [currentDocumentationData, setCurrentDocumentationData] = useState<Record<string, unknown>>({})
+  
 
   
   const {
@@ -449,6 +453,12 @@ function DocumentationPage() {
   // Handle view code functionality
   const handleViewCode = () => {
     setIsViewCodeDialogOpen(true)
+  }
+
+  // Handle content loaded from DocumentationSection for export
+  const handleContentLoaded = (content: string, metadata: Record<string, unknown>) => {
+    setCurrentMarkdownContent(content)
+    setCurrentDocumentationData(metadata)
   }
 
   // Handle export functionality
@@ -783,6 +793,7 @@ function DocumentationPage() {
                     section="fullreadme" 
                     githubHref={githubHref}
                     showTOC={showTOC}
+                    onContentLoaded={handleContentLoaded}
                   />
                 ) : activeLabel === 'Overview' ? (
                   <DocumentationSection 
@@ -790,6 +801,7 @@ function DocumentationPage() {
                     section="overview" 
                     githubHref={githubHref}
                     showTOC={showTOC}
+                    onContentLoaded={handleContentLoaded}
                   />
                 ) : activeLabel === 'Quick Start' ? (
                   <DocumentationSection 
@@ -797,6 +809,7 @@ function DocumentationPage() {
                     section="quickstart" 
                     githubHref={githubHref}
                     showTOC={showTOC}
+                    onContentLoaded={handleContentLoaded}
                   />
                 ) : activeLabel === 'Requirements' ? (
                   <DocumentationSection 
@@ -804,6 +817,7 @@ function DocumentationPage() {
                     section="requirements" 
                     githubHref={githubHref}
                     showTOC={showTOC}
+                    onContentLoaded={handleContentLoaded}
                   />
                 ) : (
                   <div style={{ 
@@ -963,8 +977,8 @@ function DocumentationPage() {
       <ExportDialog
         isOpen={isExportDialogOpen}
         onClose={() => setIsExportDialogOpen(false)}
-        markdownContent=""
-        documentationData={{}}
+        markdownContent={currentMarkdownContent}
+        documentationData={currentDocumentationData}
       />
 
       {/* Translation Dialog */}
