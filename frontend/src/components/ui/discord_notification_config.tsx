@@ -1,6 +1,8 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import { discordNotificationService } from '../../services/discord-notifications'
 import { componentChangeMonitor, type DependencyMap } from '../../services/component-monitor'
+import { changelogApi } from '../../services/api'
+import BranchIcon from '../icons/branch_icon'
 import './discord_notification_config.css'
 
 type FrameworkType = 'react' | 'vue' | 'angular' | 'svelte' | 'custom'
@@ -22,6 +24,8 @@ const DiscordNotificationConfig: React.FC<DiscordNotificationConfigProps> = ({
 }) => {
   const [webhookUrl, setWebhookUrl] = useState('')
   const [branch, setBranch] = useState('main')
+  const [availableBranches, setAvailableBranches] = useState<string[]>([])
+  const [isBranchesLoading, setIsBranchesLoading] = useState(false)
   const [checkInterval, setCheckInterval] = useState(30) // minutes
   const [framework, setFramework] = useState<FrameworkType>('react')
   const [customDependencies, setCustomDependencies] = useState('')
@@ -29,6 +33,28 @@ const DiscordNotificationConfig: React.FC<DiscordNotificationConfigProps> = ({
   const [isTestingConnection, setIsTestingConnection] = useState(false)
   const [testResult, setTestResult] = useState<'success' | 'failure' | null>(null)
   const [isMonitoringActive, setIsMonitoringActive] = useState(false)
+
+  // Function to load branches from the repository
+  const loadBranches = useCallback(async () => {
+    if (!repoUrl) return
+    
+    setIsBranchesLoading(true)
+    try {
+      const branches = await changelogApi.getBranches(repoUrl)
+      setAvailableBranches(branches)
+      
+      // If current branch is not in the list, add it
+      if (branch && !branches.includes(branch)) {
+        setAvailableBranches(prev => [branch, ...prev])
+      }
+    } catch (error) {
+      console.error('Failed to load branches:', error)
+      // Set some common default branches if API fails
+      setAvailableBranches(['main', 'master', 'develop'])
+    } finally {
+      setIsBranchesLoading(false)
+    }
+  }, [repoUrl, branch])
 
   useEffect(() => {
     if (isOpen) {
@@ -50,8 +76,11 @@ const DiscordNotificationConfig: React.FC<DiscordNotificationConfigProps> = ({
           setSubscribers(currentConfig.subscribers.join(', '))
         }
       }
+
+      // Load available branches
+      loadBranches()
     }
-  }, [isOpen, repoUrl])
+  }, [isOpen, repoUrl, loadBranches])
 
   const handleTestConnection = async () => {
     if (!webhookUrl.trim()) {
@@ -127,9 +156,12 @@ const DiscordNotificationConfig: React.FC<DiscordNotificationConfigProps> = ({
       .map(s => s.trim())
       .filter(s => s.length > 0)
 
+    // Generate branch-specific changelog URL
+    const branchSpecificChangelogUrl = `${changelogUrl}?branch=${encodeURIComponent(branch)}`
+
     componentChangeMonitor.addMonitoring(repoUrl, {
       branch,
-      changelogUrl,
+      changelogUrl: branchSpecificChangelogUrl,
       checkInterval,
       dependencyMap,
       subscribers: subscriberList
@@ -234,14 +266,47 @@ const DiscordNotificationConfig: React.FC<DiscordNotificationConfigProps> = ({
           </div>
 
           <div className="discord-config-section">
-            <label className="discord-config-label">Branch to Monitor</label>
-            <input
-              type="text"
-              value={branch}
-              onChange={(e) => setBranch(e.target.value)}
-              placeholder="main"
-              className="discord-config-input"
-            />
+            <label className="discord-config-label">
+              <BranchIcon style={{ marginRight: '8px' }} />
+              Branch to Monitor
+            </label>
+            <div className="discord-branch-selector-container">
+              <select
+                value={branch}
+                onChange={(e) => setBranch(e.target.value)}
+                className="discord-config-select"
+                disabled={isBranchesLoading}
+              >
+                {availableBranches.map((branchName) => (
+                  <option key={branchName} value={branchName}>
+                    {branchName}
+                  </option>
+                ))}
+              </select>
+              {isBranchesLoading && (
+                <div className="discord-branch-loading">
+                  <span>Loading branches...</span>
+                </div>
+              )}
+              <button
+                type="button"
+                onClick={loadBranches}
+                disabled={isBranchesLoading}
+                className="discord-config-button secondary discord-refresh-branches"
+                title="Refresh branches"
+              >
+                🔄
+              </button>
+            </div>
+            <div className="discord-config-help">
+              Select the branch to monitor for component changes. Click refresh to update the branch list.
+            </div>
+            {branch && (
+              <div className="discord-branch-preview">
+                <strong>📋 Changelog URL for notifications:</strong>
+                <pre>{`${changelogUrl}?branch=${encodeURIComponent(branch)}`}</pre>
+              </div>
+            )}
           </div>
 
           <div className="discord-config-section">
