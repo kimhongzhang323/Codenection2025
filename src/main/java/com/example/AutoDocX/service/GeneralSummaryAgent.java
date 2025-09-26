@@ -49,93 +49,101 @@ public class GeneralSummaryAgent {
         this.objectMapper = new ObjectMapper();
     }
 
-    public String run(String gitUrl, String branch) {
+    public String run(String gitUrl, String branch) throws Exception {
         return runCore(gitUrl, branch, null, null);
     }
 
     // Overload: allow callers to provide a focus prompt to steer exploration toward specific parts
     // without ignoring the rest of the project (breadth-first remains required by the prompt).
-    public String run(String gitUrl, String branch, String focusPrompt) {
+    public String run(String gitUrl, String branch, String focusPrompt) throws Exception {
         return runCore(gitUrl, branch, focusPrompt, null);
     }
 
     // Overload: allow callers to set iteration limit
-    public String run(String gitUrl, String branch, Integer iterations) {
+    public String run(String gitUrl, String branch, Integer iterations) throws Exception {
         return runCore(gitUrl, branch, null, iterations);
     }
 
     // Overload: focus + iteration limit
-    public String run(String gitUrl, String branch, String focusPrompt, Integer iterations) {
+    public String run(String gitUrl, String branch, String focusPrompt, Integer iterations) throws Exception {
         return runCore(gitUrl, branch, focusPrompt, iterations);
     }
 
     // DRY core implementation used by both run() overloads; focusPrompt may be null
-    private String runCore(String gitUrl, String branch, String focusPrompt, Integer iterationLimit) {
+    private String runCore(String gitUrl, String branch, String focusPrompt, Integer iterationLimit) throws Exception {
         Session session = sessionManager.getSession(gitUrl, branch);
-        ClonedRepo repo = repoHandler.getRepo(gitUrl, branch);
-        if (repo == null) return "Repository not found.";
-        DocumentationHandler docHandler = documentHandlingService.getDocumentHandler(session);
+        if (!session.getIsGeneralSummaryRunning().compareAndSet(false, true)) {
+            throw new Exception("GeneralSummaryAgent is already running, please wait");
+        }
 
-        Graph graph;
         try {
-            graph = repoHandler.getGraph(repo);
-        } catch (Exception e) {
-            return "Error loading graph: " + e.getMessage();
-        }
-        ToolExecutionContext toolExecutionContext = new ToolExecutionContext(repo, graph, session, session.getMemory().getSumAgentLog());
+            ClonedRepo repo = repoHandler.getRepo(gitUrl, branch);
+            if (repo == null) return "Repository not found.";
+            DocumentationHandler docHandler = documentHandlingService.getDocumentHandler(session);
 
-        if (!session.isInitialStructureLogged()) {
-            session.getMemory().getStructure().addEntry("graph_structure", graph.toString());
-            mcpToolKit.executeTool("get_modified_nodes", Map.of(), toolExecutionContext);
-            mcpToolKit.executeTool("find_central_nodes", Map.of("n", 10), toolExecutionContext);
-            session.setInitialStructureLogged(true);
-        }
-        String runId = java.util.UUID.randomUUID().toString();
-        int iterations = 0;
-        int maxIterations = (iterationLimit == null || iterationLimit <= 0) ? DEFAULT_MAX_ITERATIONS : iterationLimit;
-        while (iterations++ < maxIterations) {
-            List<Tool> summaryTools = mcpToolKit.getExplorationTools();
-            String basePrompt = "Explore the codebase to provide a project-level summary. Your primary goal is breadth-first coverage of all important components.";
-            String loopPrompt = (focusPrompt != null && !focusPrompt.isBlank())
-                ? basePrompt + "\nUSER QUERY/FOCUS: " + focusPrompt
-                : basePrompt;
-
-            List<Content> contents = buildLoopContent(session.getMemory(), loopPrompt, docHandler);
-
-            SendMessageResult result;
+            Graph graph;
             try {
-                result = model.sendMessage(contents, summaryTools);
+                graph = repoHandler.getGraph(repo);
             } catch (Exception e) {
-                String msg = "Model invocation error: " + e.getMessage();
-                logger.warn("SUM[{}] {}", runId, msg);
-                session.getMemory().getSumAgentLog().addEntry("error:model_call", msg);
+                return "Error loading graph: " + e.getMessage();
+            }
+            ToolExecutionContext toolExecutionContext = new ToolExecutionContext(repo, graph, session, session.getMemory().getSumAgentLog());
+
+            if (!session.isInitialStructureLogged()) {
+                session.getMemory().getStructure().addEntry("graph_structure", graph.toString());
+                mcpToolKit.executeTool("get_modified_nodes", Map.of(), toolExecutionContext);
+                mcpToolKit.executeTool("find_central_nodes", Map.of("n", 10), toolExecutionContext);
+                session.setInitialStructureLogged(true);
+            }
+            String runId = java.util.UUID.randomUUID().toString();
+            int iterations = 0;
+            int maxIterations = (iterationLimit == null || iterationLimit <= 0) ? DEFAULT_MAX_ITERATIONS : iterationLimit;
+            while (iterations++ < maxIterations) {
+                List<Tool> summaryTools = mcpToolKit.getExplorationTools();
+                String basePrompt = "Explore the codebase to provide a project-level summary. Your primary goal is breadth-first coverage of all important components.";
+                String loopPrompt = (focusPrompt != null && !focusPrompt.isBlank())
+                    ? basePrompt + "\nUSER QUERY/FOCUS: " + focusPrompt
+                    : basePrompt;
+
+                List<Content> contents = buildLoopContent(session.getMemory(), loopPrompt, docHandler);
+
+                SendMessageResult result;
+                try {
+                    result = model.sendMessage(contents, summaryTools);
+                } catch (Exception e) {
+                    String msg = "Model invocation error: " + e.getMessage();
+                    logger.warn("SUM[{}] {}", runId, msg);
+                    session.getMemory().getSumAgentLog().addEntry("error:model_call", msg);
+                    break;
+                }
+
+                if (!result.getToolCalls().isEmpty()) {
+                    for (ToolCallData fc : result.getToolCalls()) {
+                        logger.info("SUM[{}] Executing tool: {} with args: {}", runId, fc.getName(), fc.getArgs());
+                        mcpToolKit.executeTool(fc.getName(), fc.getArgs(), toolExecutionContext);
+                    }
+                    continue; // let model process tool results in next loop
+                }
+
+                if (result.getText().isPresent()) {
+                    session.getMemory().getSumAgentLog().addEntry("model", result.getText().get());
+                    return result.getText().get();
+                }
                 break;
             }
 
-            if (!result.getToolCalls().isEmpty()) {
-                for (ToolCallData fc : result.getToolCalls()) {
-                    logger.info("SUM[{}] Executing tool: {} with args: {}", runId, fc.getName(), fc.getArgs());
-                    mcpToolKit.executeTool(fc.getName(), fc.getArgs(), toolExecutionContext);
-                }
-                continue; // let model process tool results in next loop
-            }
+            // Final summary generation step
+            String defaultFinalPrompt = "Now produce the final project-level summary. Use your recorded understanding and memory. Provide: intro, architecture overview, and complete inventory of nodes (mark summarised vs inferred).";
+            String finalPrompt = (focusPrompt != null && !focusPrompt.isBlank())
+                ? defaultFinalPrompt + "\nFOCUS: " + focusPrompt
+                : defaultFinalPrompt;
 
-            if (result.getText().isPresent()) {
-                session.getMemory().getSumAgentLog().addEntry("model", result.getText().get());
-                return result.getText().get();
-            }
-            break;
+            String finalSummary = generateFinalSummary(session, finalPrompt, docHandler);
+            session.getMemory().getSummary().replaceEntry("general_summary", finalSummary);
+            return finalSummary;
+        } finally {
+            session.getIsGeneralSummaryRunning().set(false);
         }
-
-        // Final summary generation step
-        String defaultFinalPrompt = "Now produce the final project-level summary. Use your recorded understanding and memory. Provide: intro, architecture overview, and complete inventory of nodes (mark summarised vs inferred).";
-        String finalPrompt = (focusPrompt != null && !focusPrompt.isBlank())
-            ? defaultFinalPrompt + "\nFOCUS: " + focusPrompt
-            : defaultFinalPrompt;
-
-        String finalSummary = generateFinalSummary(session, finalPrompt, docHandler);
-        session.getMemory().getSummary().replaceEntry("general_summary", finalSummary);
-        return finalSummary;
     }
 
     private String generateFinalSummary(Session session, String finalPrompt, DocumentationHandler docHandler) {
