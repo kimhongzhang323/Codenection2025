@@ -87,7 +87,7 @@ const FilesRenderer: React.FC<FilesRendererProps> = ({ children }) => {
   const treeElements = parseFilesStructure(children);
 
   return (
-    <div className="my-6 border border-gray-300 dark:border-gray-600 rounded-lg p-4 bg-gray-50 dark:bg-gray-800">
+    <div className="my-6 border border-gray-300 dark:border-gray-600 rounded-lg p-4 bg-gray-50 dark:bg-gray-800" style={{ fontSize: '0.9rem', lineHeight: 1.6, color: 'var(--docs-normal-text)', fontWeight: 300 }}>
       <Tree className="w-full" initialExpandedItems={getAllFolderIds(children)}>
         {treeElements}
       </Tree>

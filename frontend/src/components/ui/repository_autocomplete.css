@@ -1,0 +1,250 @@
+.repo-autocomplete {
+  position: relative;
+  width: 100%;
+}
+
+.repo-autocomplete__input {
+  width: min(560px, 90vw);
+  padding: 12px 14px;
+  padding-right: 40px;
+  padding-left: 40px;
+  border-radius: 8px;
+  border: 1px solid #2a2a2a;
+  background: #1b1b1b;
+  color: #ffffff;
+  transition: border-color 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
+  box-sizing: border-box;
+  font-size: 16px;
+  font-family: inherit;
+}
+
+.repo-autocomplete__input::placeholder {
+  color: #8a8a8a;
+}
+
+.repo-autocomplete__input:hover {
+  border-color: #343434;
+}
+
+.repo-autocomplete__input:focus,
+.repo-autocomplete__input:focus-visible {
+  outline: none;
+  border-color: #09334e;
+  box-shadow: 0 0 0 3px rgba(59, 59, 255, 0.18);
+  background: #191919;
+}
+
+.repo-autocomplete__dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: #1b1b1b;
+  border: 1px solid #2a2a2a;
+  border-top: none;
+  border-radius: 0 0 8px 8px;
+  max-height: 300px;
+  overflow-y: auto;
+  z-index: 1000;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.repo-autocomplete__dropdown:empty {
+  display: none;
+}
+
+.repo-autocomplete__item {
+  padding: 12px 16px;
+  cursor: pointer;
+  border-bottom: 1px solid #2a2a2a;
+  transition: background-color 160ms ease;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.repo-autocomplete__item:last-child {
+  border-bottom: none;
+}
+
+.repo-autocomplete__item:hover,
+.repo-autocomplete__item--highlighted {
+  background: #2a2a2a;
+}
+
+.repo-autocomplete__item-icon {
+  width: 20px;
+  height: 20px;
+  flex-shrink: 0;
+  opacity: 0.7;
+}
+
+.repo-autocomplete__item-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.repo-autocomplete__item-name {
+  color: #ffffff;
+  font-weight: 500;
+  margin: 0 0 4px 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.repo-autocomplete__item-description {
+  color: #8a8a8a;
+  font-size: 14px;
+  margin: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.repo-autocomplete__item-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+  color: #8a8a8a;
+  font-size: 12px;
+}
+
+.repo-autocomplete__item-language {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.repo-autocomplete__language-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #8a8a8a;
+}
+
+.repo-autocomplete__loading {
+  padding: 16px;
+  text-align: center;
+  color: #8a8a8a;
+  font-style: italic;
+}
+
+.repo-autocomplete__empty {
+  padding: 16px;
+  text-align: center;
+  color: #8a8a8a;
+  font-style: italic;
+}
+
+.repo-autocomplete__error {
+  padding: 16px;
+  text-align: center;
+  color: #ff6b6b;
+  font-style: italic;
+}
+
+/* Focus trap for accessibility */
+.repo-autocomplete__item:focus {
+  outline: 2px solid #09334e;
+  outline-offset: -2px;
+}
+
+/* Scrollbar styling for the dropdown */
+.repo-autocomplete__dropdown::-webkit-scrollbar {
+  width: 8px;
+}
+
+.repo-autocomplete__dropdown::-webkit-scrollbar-track {
+  background: #1b1b1b;
+}
+
+.repo-autocomplete__dropdown::-webkit-scrollbar-thumb {
+  background: #2a2a2a;
+  border-radius: 4px;
+}
+
+.repo-autocomplete__dropdown::-webkit-scrollbar-thumb:hover {
+  background: #343434;
+}
+
+/* Language color mappings */
+.repo-autocomplete__language-dot--javascript {
+  background: #f1e05a;
+}
+
+.repo-autocomplete__language-dot--typescript {
+  background: #2b7489;
+}
+
+.repo-autocomplete__language-dot--python {
+  background: #3572a5;
+}
+
+.repo-autocomplete__language-dot--java {
+  background: #b07219;
+}
+
+.repo-autocomplete__language-dot--html {
+  background: #e34c26;
+}
+
+.repo-autocomplete__language-dot--css {
+  background: #563d7c;
+}
+
+.repo-autocomplete__language-dot--shell {
+  background: #89e051;
+}
+
+.repo-autocomplete__language-dot--c {
+  background: #555555;
+}
+
+.repo-autocomplete__language-dot--cpp {
+  background: #f34b7d;
+}
+
+.repo-autocomplete__language-dot--go {
+  background: #00add8;
+}
+
+.repo-autocomplete__language-dot--rust {
+  background: #dea584;
+}
+
+.repo-autocomplete__language-dot--php {
+  background: #4f5d95;
+}
+
+.repo-autocomplete__language-dot--ruby {
+  background: #701516;
+}
+
+.repo-autocomplete__language-dot--swift {
+  background: #ffac45;
+}
+
+.repo-autocomplete__language-dot--kotlin {
+  background: #f18e33;
+}
+
+.repo-autocomplete__language-dot--dart {
+  background: #00b4ab;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+  .repo-autocomplete__input {
+    width: 90vw;
+  }
+  
+  .repo-autocomplete__item {
+    padding: 10px 12px;
+  }
+  
+  .repo-autocomplete__item-meta {
+    display: none;
+  }
+}

@@ -14,12 +14,19 @@ public class SecurityConfig {
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/**").permitAll()
+                        .requestMatchers("/api/**", "/login/**", "/oauth2/**", "/h2-console/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .formLogin(AbstractHttpConfigurer::disable)
                 .httpBasic(AbstractHttpConfigurer::disable)
-                .oauth2Login(AbstractHttpConfigurer::disable);
+                .oauth2Login(oauth2 -> oauth2
+                        .loginPage("/login")
+                        .defaultSuccessUrl("/api/auth/success", true)
+                        .failureUrl("/login?error=true")
+                );
+
+        // For H2 console
+        http.headers(headers -> headers.frameOptions().sameOrigin());
 
         return http.build();
     }

@@ -1,5 +1,7 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, memo, useCallback, useMemo } from 'react';
 import mermaid from 'mermaid';
+import Modal from 'react-modal';
+import { TransformWrapper, TransformComponent } from 'react-zoom-pan-pinch';
 
 // Initialize mermaid with defaults - Japanese aesthetic
 mermaid.initialize({
@@ -8,21 +10,32 @@ mermaid.initialize({
   securityLevel: 'loose',
   suppressErrorRendering: true,
   logLevel: 'error',
-  maxTextSize: 100000, // Increase text size limit
+  maxTextSize: 100000,
   htmlLabels: true,
   flowchart: {
     htmlLabels: true,
     curve: 'basis',
-    nodeSpacing: 60,
-    rankSpacing: 60,
-    padding: 20,
+    nodeSpacing: 80,
+    rankSpacing: 80,
+    padding: 30,
+    useMaxWidth: true,
   },
   themeCSS: `
-    /* Japanese aesthetic styles for all diagrams */
     .node rect, .node circle, .node ellipse, .node polygon, .node path {
-      fill: #f8f4e6;
-      stroke: #d7c4bb;
-      stroke-width: 1px;
+      fill: #ffffff;
+      stroke: none;
+      stroke-width: 0;
+    }
+    .nodeLabel {
+      color: #333333;
+      font-size: 14px;
+      font-weight: 400;
+      text-align: center;
+      white-space: normal;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+      max-width: none;
+      padding: 8px;
     }
     .edgePath .path {
       stroke: #9b7cb9;
@@ -31,128 +44,61 @@ mermaid.initialize({
     .edgeLabel {
       background-color: transparent;
       color: #333333;
-      p {
-        background-color: transparent !important;
-      }
+      font-size: 12px;
+      white-space: normal;
+      word-wrap: break-word;
     }
     .label {
       color: #333333;
+      font-size: 14px;
+      white-space: normal;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
     }
     .cluster rect {
-      fill: #f8f4e6;
-      stroke: #d7c4bb;
-      stroke-width: 1px;
-    }
-
-    /* Sequence diagram specific styles */
-    .actor {
-      fill: #f8f4e6;
-      stroke: #d7c4bb;
-      stroke-width: 1px;
-    }
-    text.actor {
-      fill: #333333;
+      fill: #ffffff;
       stroke: none;
+      stroke-width: 0;
     }
-    .messageText {
-      fill: #333333;
-      stroke: none;
-    }
-    .messageLine0, .messageLine1 {
-      stroke: #9b7cb9;
-    }
-    .noteText {
-      fill: #333333;
-    }
-
-    /* Dark mode overrides - will be applied with data-theme="dark" */
     [data-theme="dark"] .node rect,
     [data-theme="dark"] .node circle,
     [data-theme="dark"] .node ellipse,
     [data-theme="dark"] .node polygon,
     [data-theme="dark"] .node path {
-      fill: #222222;
-      stroke: #5d4037;
+      fill: #ffffff;
+      stroke: none;
     }
     [data-theme="dark"] .edgePath .path {
       stroke: #9370db;
     }
-    [data-theme="dark"] .edgeLabel {
-      background-color: transparent;
+    [data-theme="dark"] .nodeLabel {
       color: #f0f0f0;
+      font-size: 14px;
+      font-weight: 400;
+      text-align: center;
+      white-space: normal;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
+      max-width: none;
+      padding: 8px;
+    }
+    [data-theme="dark"] .edgeLabel {
+      color: #f0f0f0;
+      font-size: 12px;
+      white-space: normal;
+      word-wrap: break-word;
     }
     [data-theme="dark"] .label {
       color: #f0f0f0;
+      font-size: 14px;
+      white-space: normal;
+      word-wrap: break-word;
+      overflow-wrap: break-word;
     }
     [data-theme="dark"] .cluster rect {
-      fill: #222222;
-      stroke: #5d4037;
-    }
-    [data-theme="dark"] .flowchart-link {
-      stroke: #9370db;
-    }
-
-    /* Dark mode sequence diagram overrides */
-    [data-theme="dark"] .actor {
-      fill: #222222;
-      stroke: #5d4037;
-    }
-    [data-theme="dark"] text.actor {
-      fill: #f0f0f0;
+      fill: #ffffff;
       stroke: none;
     }
-    [data-theme="dark"] .messageText {
-      fill: #f0f0f0;
-      stroke: none;
-      font-weight: 500;
-    }
-    [data-theme="dark"] .messageLine0, [data-theme="dark"] .messageLine1 {
-      stroke: #9370db;
-      stroke-width: 1.5px;
-    }
-    [data-theme="dark"] .noteText {
-      fill: #f0f0f0;
-    }
-    /* Additional styles for sequence diagram text */
-    [data-theme="dark"] #sequenceNumber {
-      fill: #f0f0f0;
-    }
-    [data-theme="dark"] text.sequenceText {
-      fill: #f0f0f0;
-      font-weight: 500;
-    }
-    [data-theme="dark"] text.loopText, [data-theme="dark"] text.loopText tspan {
-      fill: #f0f0f0;
-    }
-    /* Add a subtle background to message text for better readability */
-    [data-theme="dark"] .messageText, [data-theme="dark"] text.sequenceText {
-      paint-order: stroke;
-      stroke: #1a1a1a;
-      stroke-width: 2px;
-      stroke-linecap: round;
-      stroke-linejoin: round;
-    }
-
-    /* Force text elements to be properly colored */
-    text[text-anchor][dominant-baseline],
-    text[text-anchor][alignment-baseline],
-    .nodeLabel,
-    .edgeLabel,
-    .label,
-    text {
-      fill: #777 !important;
-    }
-
-    [data-theme="dark"] text[text-anchor][dominant-baseline],
-    [data-theme="dark"] text[text-anchor][alignment-baseline],
-    [data-theme="dark"] .nodeLabel,
-    [data-theme="dark"] .edgeLabel,
-    [data-theme="dark"] .label,
-    [data-theme="dark"] text {
-      fill: #f0f0f0 !important;
-    }
-
-    /* Add clickable element styles with subtle transitions */
     .clickable {
       transition: all 0.3s ease;
     }
@@ -160,234 +106,333 @@ mermaid.initialize({
       transform: scale(1.03);
       cursor: pointer;
     }
-    .clickable:hover > * {
-      filter: brightness(0.95);
+    svg {
+      max-width: 100%;
+      height: auto;
+    }
+    .mermaid {
+      max-width: 100%;
+      overflow: visible;
+    }
+    .node {
+      overflow: visible;
+    }
+    .nodeLabel {
+      overflow: visible;
+      text-overflow: unset;
     }
   `,
   fontFamily: 'var(--font-geist-sans), var(--font-serif-jp), sans-serif',
-  fontSize: 12,
+  fontSize: 14,
 });
 
 interface MermaidProps {
   chart: string;
   className?: string;
-  zoomingEnabled?: boolean;
 }
 
-// Full screen modal component for the diagram
-const FullScreenModal: React.FC<{
+// Set the app element for react-modal accessibility
+if (typeof window !== 'undefined') {
+  Modal.setAppElement(document.getElementById('root') || document.body);
+}
+
+// Global cache for rendered diagrams - persists across component unmounts
+const GLOBAL_DIAGRAM_CACHE = new Map<string, { svg: string; originalSvg?: string; error: string | null }>();
+
+// Zoomable Modal Dialog component for the diagram
+const ZoomableModal: React.FC<{
   isOpen: boolean;
   onClose: () => void;
-  children: React.ReactNode;
-}> = ({ isOpen, onClose, children }) => {
-  const modalRef = useRef<HTMLDivElement>(null);
-  const [zoom, setZoom] = useState(1);
-
-  // Close on Escape key
-  useEffect(() => {
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        onClose();
-      }
-    };
-
-    if (isOpen) {
-      document.addEventListener('keydown', handleKeyDown);
+  svg: string;
+}> = memo(({ isOpen, onClose, svg }) => {
+  // Calculate responsive initial scale that fits diagram within viewer bounds
+  const calculateInitialScale = (svgString: string) => {
+    const widthMatch = svgString.match(/width="([^"]*)"/) || svgString.match(/viewBox="[^"]*?\s+[^"]*?\s+([^"]*?)\s+[^"]*?"/);
+    const heightMatch = svgString.match(/height="([^"]*)"/) || svgString.match(/viewBox="[^"]*?\s+[^"]*?\s+[^"]*?\s+([^"]*?)"/);
+    
+    // Modal viewer dimensions (accounting for padding and UI elements)
+    const viewerWidth = window.innerWidth * 0.9; // 90% of viewport width
+    const viewerHeight = window.innerHeight * 0.8; // 80% of viewport height
+    
+    console.log('Viewer dimensions:', { viewerWidth, viewerHeight });
+    
+    if (!widthMatch || !heightMatch) {
+      console.log('No dimensions detected, using conservative default scale');
+      return 2.0; // Conservative default scale to ensure fit
     }
-
-    return () => {
-      document.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [isOpen, onClose]);
-
-  // Handle click outside to close
-  useEffect(() => {
-    const handleOutsideClick = (e: MouseEvent) => {
-      if (modalRef.current && !modalRef.current.contains(e.target as Node)) {
-        onClose();
-      }
-    };
-
-    if (isOpen) {
-      document.addEventListener('mousedown', handleOutsideClick);
+    
+    const diagramWidth = parseFloat(widthMatch[1]);
+    const diagramHeight = parseFloat(heightMatch[1]);
+    
+    console.log('Diagram dimensions:', { diagramWidth, diagramHeight });
+    
+    if (!diagramWidth || !diagramHeight) {
+      console.log('Invalid dimensions, using conservative default scale');
+      return 2.0; // Conservative default scale to ensure fit
     }
-
-    return () => {
-      document.removeEventListener('mousedown', handleOutsideClick);
-    };
-  }, [isOpen, onClose]);
-
-  // Reset zoom when modal opens
-  useEffect(() => {
-    if (isOpen) {
-      setZoom(1);
+    
+    // Calculate scale needed to fit within viewer bounds
+    const scaleToFitWidth = viewerWidth / diagramWidth;
+    const scaleToFitHeight = viewerHeight / diagramHeight;
+    const scaleToFit = Math.min(scaleToFitWidth, scaleToFitHeight);
+    
+    // Additional safety check for extremely large or small diagrams
+    if (scaleToFit > 10) {
+      console.log('Very small diagram detected, using conservative scale');
+      return 2.0; // Very small diagrams get conservative scaling
     }
-  }, [isOpen]);
-
-  if (!isOpen) return null;
+    
+    if (scaleToFit < 0.1) {
+      console.log('Very large diagram detected, using minimal scale');
+      return 0.5; // Very large diagrams get minimal scaling
+    }
+    
+    console.log('Scale calculations:', { scaleToFitWidth, scaleToFitHeight, scaleToFit });
+    
+    // Determine optimal initial scale based on diagram characteristics
+    const aspectRatio = diagramWidth / diagramHeight;
+    let targetScale;
+    
+    // More conservative scaling factors to ensure all diagrams fit
+    if (aspectRatio > 2) {
+      // Wide diagrams - use most of the available space with safety margin
+      targetScale = scaleToFit * 0.85; // Conservative scaling to ensure fit
+    } else if (aspectRatio < 0.5) {
+      // Tall diagrams - use most of the available space with safety margin
+      targetScale = scaleToFit * 0.80; // Conservative scaling to ensure fit
+    } else {
+      // Square-ish diagrams - use most of the available space with safety margin
+      targetScale = scaleToFit * 0.82; // Conservative scaling to ensure fit
+    }
+    
+    // Ensure minimum readability and maximum bounds with stricter limits
+    // Use more conservative bounds to guarantee all diagrams fit
+    const finalScale = Math.max(0.8, Math.min(4, targetScale)); // Lower max (4) to ensure fit, reasonable min (0.8)
+    
+    console.log('Final scale calculation:', { 
+      aspectRatio, 
+      targetScale, 
+      finalScale,
+      diagramType: aspectRatio > 2 ? 'wide' : aspectRatio < 0.5 ? 'tall' : 'square'
+    });
+    
+    return finalScale;
+  };
+  
+  const initialScale = calculateInitialScale(svg);
+  const customStyles = {
+    overlay: {
+      backgroundColor: 'rgba(0, 0, 0, 0.8)',
+      zIndex: 1000,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    content: {
+      position: 'relative' as const,
+      top: 'auto',
+      left: 'auto',
+      right: 'auto',
+      bottom: 'auto',
+      width: '95vw',
+      height: '95vh',
+      maxWidth: '1200px',
+      maxHeight: '900px',
+      padding: '0',
+      border: 'none',
+      borderRadius: '12px',
+      overflow: 'hidden',
+      background: '#374151',
+      boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+      outline: 'none',
+    },
+  };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-75 p-4">
-      <div
-        ref={modalRef}
-        className="bg-[var(--card-bg)] rounded-lg shadow-custom max-w-5xl max-h-[90vh] w-full overflow-hidden flex flex-col card-japanese"
-      >
-        {/* Modal header with controls */}
-        <div className="flex items-center justify-between p-4 border-b border-[var(--border-color)]">
-          <div className="font-medium text-[var(--foreground)] font-serif">図表表示</div>
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setZoom(Math.max(0.5, zoom - 0.1))}
-                className="text-[var(--foreground)] hover:bg-[var(--accent-primary)]/10 p-2 rounded-md border border-[var(--border-color)] transition-colors"
-                aria-label="Zoom out"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="11" cy="11" r="8"></circle>
-                  <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                  <line x1="8" y1="11" x2="14" y2="11"></line>
-                </svg>
-              </button>
-              <span className="text-sm text-[var(--muted)]">{Math.round(zoom * 100)}%</span>
-              <button
-                onClick={() => setZoom(Math.min(2, zoom + 0.1))}
-                className="text-[var(--foreground)] hover:bg-[var(--accent-primary)]/10 p-2 rounded-md border border-[var(--border-color)] transition-colors"
-                aria-label="Zoom in"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <circle cx="11" cy="11" r="8"></circle>
-                  <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                  <line x1="11" y1="8" x2="11" y2="14"></line>
-                  <line x1="8" y1="11" x2="14" y2="11"></line>
-                </svg>
-              </button>
-              <button
-                onClick={() => setZoom(1)}
-                className="text-[var(--foreground)] hover:bg-[var(--accent-primary)]/10 p-2 rounded-md border border-[var(--border-color)] transition-colors"
-                aria-label="Reset zoom"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"></path>
-                  <path d="M21 3v5h-5"></path>
-                </svg>
-              </button>
-            </div>
-            <button
-              onClick={onClose}
-              className="text-[var(--foreground)] hover:bg-[var(--accent-primary)]/10 p-2 rounded-md border border-[var(--border-color)] transition-colors"
-              aria-label="Close"
+    <Modal
+      isOpen={isOpen}
+      onRequestClose={onClose}
+      style={customStyles}
+      contentLabel="Diagram Viewer"
+      shouldCloseOnOverlayClick={true}
+      shouldCloseOnEsc={true}
+    >
+      {/* Zoomable content area */}
+      <div className="h-full bg-gray-50 dark:bg-gray-900 relative">
+        <TransformWrapper
+          initialScale={initialScale}
+          initialPositionX={0}
+          initialPositionY={0}
+          minScale={0.2}
+          maxScale={8}
+          limitToBounds={false}
+          centerOnInit={true}
+          wheel={{
+            step: 0.15,
+          }}
+          doubleClick={{
+            disabled: false,
+            mode: 'zoomIn',
+            step: 0.7,
+          }}
+          panning={{
+            velocityDisabled: true,
+          }}
+        >
+          {() => (
+            <TransformComponent
+              wrapperStyle={{
+                width: '100%',
+                height: '100%',
+              }}
+              contentStyle={{
+                width: '100%',
+                height: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
             >
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <line x1="18" y1="6" x2="6" y2="18"></line>
-                <line x1="6" y1="6" x2="18" y2="18"></line>
-              </svg>
-            </button>
-          </div>
-        </div>
-
-        {/* Modal content with zoom */}
-        <div className="overflow-auto p-6 flex-1 flex items-center justify-center bg-[var(--background)]/50">
-          <div
-            style={{
-              transform: `scale(${zoom})`,
-              transformOrigin: 'center center',
-              transition: 'transform 0.3s ease-out'
-            }}
-          >
-            {children}
-          </div>
-        </div>
+              <div 
+                dangerouslySetInnerHTML={{ __html: svg }} 
+                className="select-none"
+              />
+            </TransformComponent>
+          )}
+        </TransformWrapper>
+        
+        {/* Close button - positioned after TransformWrapper to avoid event conflicts */}
+        <button
+          onClick={(e) => {
+            console.log('Close button clicked');
+            e.preventDefault();
+            e.stopPropagation();
+            onClose();
+          }}
+           className="text-white hover:text-gray-300 p-3 cursor-pointer border-none outline-none focus:outline-none transition-colors duration-200"
+           aria-label="Close"
+           style={{ 
+             position: 'absolute',
+             top: '16px',
+             right: '16px',
+             zIndex: 99999,
+             pointerEvents: 'auto',
+             border: 'none',
+             outline: 'none',
+             backgroundColor: 'transparent'
+           }}
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
       </div>
-    </div>
+    </Modal>
   );
-};
+});
 
-const Mermaid: React.FC<MermaidProps> = ({ chart, className = '', zoomingEnabled = false }) => {
+const Mermaid: React.FC<MermaidProps> = memo(({ chart, className = '' }) => {
   const [svg, setSvg] = useState<string>('');
+  const [originalSvg, setOriginalSvg] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
-  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
   const mermaidRef = useRef<HTMLDivElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
-  const idRef = useRef(`mermaid-${Math.random().toString(36).substring(2, 9)}`);
-  const isDarkModeRef = useRef(
+  
+  // Use global cache and rendering lock
+  const isRenderingRef = useRef(false);
+  
+  // Memoize the unique ID so it doesn't change on re-renders
+  const mermaidId = useMemo(() => 
+    `mermaid-${Math.random().toString(36).substring(2, 9)}`, []
+  );
+  
+  // Memoize dark mode detection
+  const isDarkMode = useMemo(() => 
     typeof window !== 'undefined' &&
     window.matchMedia &&
-    window.matchMedia('(prefers-color-scheme: dark)').matches
+    window.matchMedia('(prefers-color-scheme: dark)').matches, []
   );
 
-  // Initialize pan-zoom functionality when SVG is rendered
-  useEffect(() => {
-    if (svg && zoomingEnabled && containerRef.current) {
-      const initializePanZoom = async () => {
-        const svgElement = containerRef.current?.querySelector("svg");
-        if (svgElement) {
-          // Remove any max-width constraints
-          svgElement.style.maxWidth = "none";
-          svgElement.style.width = "100%";
-          svgElement.style.height = "100%";
-
-          try {
-            // Dynamically import svg-pan-zoom only when needed in the browser
-            const svgPanZoom = (await import("svg-pan-zoom")).default;
-
-            svgPanZoom(svgElement, {
-              zoomEnabled: true,
-              controlIconsEnabled: true,
-              fit: true,
-              center: true,
-              minZoom: 0.1,
-              maxZoom: 10,
-              zoomScaleSensitivity: 0.3,
-            });
-          } catch (error) {
-            console.error("Failed to load svg-pan-zoom:", error);
-          }
-        }
-      };
-
-      // Wait for the SVG to be rendered
-      setTimeout(() => {
-        void initializePanZoom();
-      }, 100);
+  // Memoize the cache key to prevent unnecessary effect runs
+  const cacheKey = useMemo(() => `${chart}-${isDarkMode}`, [chart, isDarkMode]);
+  
+  // Check cache immediately and set initial state
+  useMemo(() => {
+    if (!chart) return;
+    
+    const cached = GLOBAL_DIAGRAM_CACHE.get(cacheKey);
+    if (cached && svg !== cached.svg) {
+      setSvg(cached.svg);
+      setOriginalSvg(cached.originalSvg || cached.svg);
+      setError(cached.error);
     }
-  }, [svg, zoomingEnabled]);
+  }, [cacheKey, chart, svg]);
 
   useEffect(() => {
     if (!chart) return;
 
+    // Skip if already cached - this prevents useEffect from running
+    const cached = GLOBAL_DIAGRAM_CACHE.get(cacheKey);
+    if (cached) {
+      return; // Exit early, don't run any rendering logic
+    }
+
+    // Prevent multiple simultaneous renders of the same content
+    if (isRenderingRef.current) return;
+
     let isMounted = true;
+    isRenderingRef.current = true;
 
     const renderChart = async () => {
       if (!isMounted) return;
 
       try {
         setError(null);
-        setSvg('');
+        // Only show loading if we don't have any content yet
+        if (!svg) {
+          setSvg('');
+        }
 
-        // Render the chart directly without preprocessing
-        const { svg: renderedSvg } = await mermaid.render(idRef.current, chart);
+        const { svg: renderedSvg } = await mermaid.render(mermaidId, chart);
 
         if (!isMounted) return;
 
-        let processedSvg = renderedSvg;
-        if (isDarkModeRef.current) {
+        // Store original SVG for modal display
+        let modalSvg = renderedSvg;
+        if (isDarkMode) {
+          modalSvg = modalSvg.replace('<svg ', '<svg data-theme="dark" ');
+        }
+        
+        // Process SVG for component display with size constraints
+        let processedSvg = renderedSvg.replace(
+          '<svg ', 
+          '<svg style="display: block; margin: 0 auto; width: auto; height: auto; max-width: calc(100% - 32px); max-height: 350px;" '
+        );
+        
+        if (isDarkMode) {
           processedSvg = processedSvg.replace('<svg ', '<svg data-theme="dark" ');
         }
 
+        // Cache the result with both versions
+        GLOBAL_DIAGRAM_CACHE.set(cacheKey, { svg: processedSvg, originalSvg: modalSvg, error: null });
+        
         setSvg(processedSvg);
+        setOriginalSvg(modalSvg);
+        setError(null);
 
-        // Call mermaid.contentLoaded to ensure proper initialization
         setTimeout(() => {
           mermaid.contentLoaded();
         }, 50);
       } catch (err) {
         console.error('Mermaid rendering error:', err);
-
-        const errorMessage = err instanceof Error ? err.message : String(err);
-
         if (isMounted) {
-          setError(`Failed to render diagram: ${errorMessage}`);
-
+          const errorMsg = `Failed to render diagram: ${err instanceof Error ? err.message : String(err)}`;
+          
+          // Cache the error too
+          GLOBAL_DIAGRAM_CACHE.set(cacheKey, { svg: '', originalSvg: '', error: errorMsg });
+          
+          setError(errorMsg);
           if (mermaidRef.current) {
             mermaidRef.current.innerHTML = `
               <div class="text-red-500 dark:text-red-400 text-xs mb-1">Syntax error in diagram</div>
@@ -395,6 +440,8 @@ const Mermaid: React.FC<MermaidProps> = ({ chart, className = '', zoomingEnabled
             `;
           }
         }
+      } finally {
+        isRenderingRef.current = false;
       }
     };
 
@@ -402,29 +449,34 @@ const Mermaid: React.FC<MermaidProps> = ({ chart, className = '', zoomingEnabled
 
     return () => {
       isMounted = false;
+      isRenderingRef.current = false;
     };
-  }, [chart]);
+  }, [cacheKey, mermaidId]); // Only depend on cache key and mermaid ID
 
-  const handleDiagramClick = () => {
+  const handleDiagramClick = useCallback(() => {
     if (!error && svg) {
-      setIsFullscreen(true);
+      setIsDialogOpen(true);
     }
-  };
+  }, [error, svg]);
+
+  const handleCloseModal = useCallback(() => {
+    setIsDialogOpen(false);
+  }, []);
 
   if (error) {
     return (
-      <div className={`border border-[var(--highlight)]/30 rounded-md p-4 bg-[var(--highlight)]/5 ${className}`}>
+      <div className={`border border-red-300 dark:border-red-600 rounded-md p-4 bg-red-50 dark:bg-red-900/10 ${className}`}>
         <div className="flex items-center mb-3">
-          <div className="text-[var(--highlight)] text-xs font-medium flex items-center">
+          <div className="text-red-600 dark:text-red-400 text-xs font-medium flex items-center">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
             </svg>
-            図表レンダリングエラー
+            Diagram Rendering Error
           </div>
         </div>
         <div ref={mermaidRef} className="text-xs overflow-auto"></div>
-        <div className="mt-3 text-xs text-[var(--muted)] font-serif">
-          図表に構文エラーがあり、レンダリングできません。
+        <div className="mt-3 text-xs text-gray-600 dark:text-gray-400">
+          There is a syntax error in the diagram and it cannot be rendered.
         </div>
       </div>
     );
@@ -434,10 +486,10 @@ const Mermaid: React.FC<MermaidProps> = ({ chart, className = '', zoomingEnabled
     return (
       <div className={`flex justify-center items-center p-4 ${className}`}>
         <div className="flex items-center space-x-2">
-          <div className="w-2 h-2 bg-[var(--accent-primary)]/70 rounded-full animate-pulse"></div>
-          <div className="w-2 h-2 bg-[var(--accent-primary)]/70 rounded-full animate-pulse delay-75"></div>
-          <div className="w-2 h-2 bg-[var(--accent-primary)]/70 rounded-full animate-pulse delay-150"></div>
-          <span className="text-[var(--muted)] text-xs ml-2 font-serif">図表を描画中...</span>
+          <div className="w-2 h-2 bg-blue-500/70 rounded-full animate-pulse"></div>
+          <div className="w-2 h-2 bg-blue-500/70 rounded-full animate-pulse delay-75"></div>
+          <div className="w-2 h-2 bg-blue-500/70 rounded-full animate-pulse delay-150"></div>
+          <span className="text-gray-600 dark:text-gray-400 text-xs ml-2">Rendering diagram...</span>
         </div>
       </div>
     );
@@ -445,46 +497,30 @@ const Mermaid: React.FC<MermaidProps> = ({ chart, className = '', zoomingEnabled
 
   return (
     <>
-      <div
-        ref={containerRef}
-        className={`w-full max-w-full ${zoomingEnabled ? "h-[600px] p-4" : ""}`}
-      >
+      <div className={`w-full h-[400px] p-4 flex justify-center items-center ${className}`}>
         <div
-          className={`relative group ${zoomingEnabled ? "h-full rounded-lg border-2 border-black" : ""}`}
-        >
-          <div
-            className={`flex justify-center overflow-auto text-center my-2 cursor-pointer hover:shadow-md transition-shadow duration-200 rounded-md ${className} ${zoomingEnabled ? "h-full" : ""}`}
-            dangerouslySetInnerHTML={{ __html: svg }}
-            onClick={zoomingEnabled ? undefined : handleDiagramClick}
-            title={zoomingEnabled ? undefined : "Click to view fullscreen"}
-          />
-
-          {!zoomingEnabled && (
-            <div className="absolute top-2 right-2 bg-gray-700/70 dark:bg-gray-900/70 text-white p-1.5 rounded-md opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex items-center gap-1.5 text-xs shadow-md pointer-events-none">
-              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <circle cx="11" cy="11" r="8"></circle>
-                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                <line x1="11" y1="8" x2="11" y2="14"></line>
-                <line x1="8" y1="11" x2="14" y2="11"></line>
-              </svg>
-              <span>Click to zoom</span>
-            </div>
-          )}
-        </div>
+          ref={mermaidRef}
+          className="clickable w-full overflow-visible text-center cursor-zoom-in flex justify-center items-center"
+          dangerouslySetInnerHTML={{ __html: svg }}
+          onClick={handleDiagramClick}
+          title="Click to open in zoomable viewer"
+          style={{
+            cursor: 'zoom-in',
+            height: '350px',
+            padding: '0 28px 0 0px',
+            boxSizing: 'border-box',
+          }}
+        />
       </div>
-
-      {!zoomingEnabled && (
-        <FullScreenModal
-          isOpen={isFullscreen}
-          onClose={() => setIsFullscreen(false)}
-        >
-          <div dangerouslySetInnerHTML={{ __html: svg }} />
-        </FullScreenModal>
-      )}
+      <ZoomableModal
+        isOpen={isDialogOpen}
+        onClose={handleCloseModal}
+        svg={originalSvg}
+      />
     </>
   );
-};
+});
 
-
+Mermaid.displayName = 'Mermaid';
 
 export default Mermaid;

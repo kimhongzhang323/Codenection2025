@@ -1,0 +1,196 @@
+.codeblock-container pre,
+.codeblock-container code,
+.codeblock-container {
+  scrollbar-width: thin;
+  scrollbar-color: var(--sidebar-border) transparent;
+}
+
+/* WebKit-based browsers */
+.codeblock-container::-webkit-scrollbar,
+.codeblock-container pre::-webkit-scrollbar,
+.codeblock-container code::-webkit-scrollbar {
+  height: 8px;
+  width: 8px;
+}
+
+.codeblock-container::-webkit-scrollbar-thumb,
+.codeblock-container pre::-webkit-scrollbar-thumb,
+.codeblock-container code::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(120,120,120,0.6), rgba(120,120,120,0.35));
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.codeblock-container::-webkit-scrollbar-track,
+.codeblock-container pre::-webkit-scrollbar-track,
+.codeblock-container code::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+/* Dark mode tweak if html has .dark */
+html.dark .codeblock-container::-webkit-scrollbar-thumb,
+html.dark .codeblock-container pre::-webkit-scrollbar-thumb,
+html.dark .codeblock-container code::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(180,180,180,0.45), rgba(180,180,180,0.25));
+}
+
+/* Codeblock frame and header */
+.codeblock {
+  border: 1px solid var(--bottom-dialog-border);
+  border-radius: 12px;
+  background: var(--search-input-bg);
+}
+
+.codeblock__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--bottom-dialog-border);
+  background: color-mix(in srgb, var(--search-input-bg) 85%, black 15%);
+  border-top-left-radius: 12px;
+  border-top-right-radius: 12px;
+}
+
+.codeblock__title {
+  font-size: 12px;
+  color: var(--docs-muted-text, #9ca3af);
+  user-select: none;
+  padding-left: 8px; /* slightly increase left padding */
+}
+
+.codeblock__copybtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border-radius: 8px;
+  border: 1px solid var(--bottom-dialog-border);
+  background: var(--search-input-bg);
+  color: var(--docs-normal-text);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+/* Icon-only copy control */
+.codeblock__copyicon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  padding-right: 6px;
+  color: var(--docs-muted-text, #9ca3af);
+}
+/* Hover: only change icon color to white, no other effects */
+.codeblock__copyicon:hover { border-color: transparent; background: transparent; color: #ffffff; }
+
+/* Markdown Table Styles */
+.markdown-table-container {
+  overflow-x: auto;
+  margin: 24px 0;
+  border-radius: 12px;
+  border: 1px solid var(--sidebar-border);
+  background: var(--search-input-bg);
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+}
+
+.markdown-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.markdown-table-header {
+  background: color-mix(in srgb, var(--search-input-bg) 85%, var(--sidebar-border) 15%);
+  border-bottom: 2px solid var(--sidebar-border);
+}
+
+.markdown-table-body {
+  background: var(--search-input-bg);
+}
+
+.markdown-table-row {
+  border-bottom: 1px solid var(--sidebar-border);
+  transition: background-color 0.15s ease;
+}
+
+.markdown-table-row:hover {
+  background: color-mix(in srgb, var(--search-input-bg) 90%, var(--sidebar-border) 10%);
+}
+
+.markdown-table-row:last-child {
+  border-bottom: none;
+}
+
+.markdown-table-header-cell {
+  padding: 12px 16px;
+  text-align: left;
+  font-weight: 500;
+  font-size: 13px;
+  color: var(--docs-header-text);
+  letter-spacing: 0.025em;
+  text-transform: uppercase;
+}
+
+.markdown-table-data-cell {
+  padding: 12px 16px;
+  color: var(--docs-text);
+  vertical-align: top;
+}
+
+.markdown-table-data-cell code {
+  background: color-mix(in srgb, var(--search-input-bg) 80%, var(--sidebar-border) 20%);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 13px;
+  color: var(--docs-header-text);
+  font-family: 'JetBrains Mono', 'Fira Code', Consolas, monospace;
+}
+
+/* Dark mode scrollbar for table container */
+.markdown-table-container::-webkit-scrollbar {
+  height: 8px;
+  width: 8px;
+}
+
+.markdown-table-container::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(120,120,120,0.6), rgba(120,120,120,0.35));
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.markdown-table-container::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+html.dark .markdown-table-container::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, rgba(180,180,180,0.45), rgba(180,180,180,0.25));
+}
+
+/* Dark mode table colors */
+html.dark .markdown-table-container {
+  background: #1a1a1a;
+}
+
+html.dark .markdown-table-header {
+  background: #1a1a1a;
+}
+
+html.dark .markdown-table-body {
+  background: #1a1a1a;
+}
+
+html.dark .markdown-table-row:hover {
+  background: #252525;
+}
+
+html.dark .markdown-table-data-cell code {
+  background: #252525;
+}

@@ -1,6 +1,4 @@
 # Feedback
-
-#### Receive feedback from your users
         
 ---------------------------------------------
 
@@ -9,52 +7,6 @@
 Feedback is crucial for knowing what your reader thinks, and help you to further improve documentation content.
 
 ## Installation
-
-Add dependencies:
-
-<CodeBlockTabs defaultValue="npm">
-  <CodeBlockTabsList>
-    <CodeBlockTabsTrigger value="npm">
-      npm
-    </CodeBlockTabsTrigger>
-
-    <CodeBlockTabsTrigger value="pnpm">
-      pnpm
-    </CodeBlockTabsTrigger>
-
-    <CodeBlockTabsTrigger value="yarn">
-      yarn
-    </CodeBlockTabsTrigger>
-
-    <CodeBlockTabsTrigger value="bun">
-      bun
-    </CodeBlockTabsTrigger>
-  </CodeBlockTabsList>
-
-  <CodeBlockTab value="npm">
-    ```bash
-    npm install class-variance-authority lucide-react
-    ```
-  </CodeBlockTab>
-
-  <CodeBlockTab value="pnpm">
-    ```bash
-    pnpm add class-variance-authority lucide-react
-    ```
-  </CodeBlockTab>
-
-  <CodeBlockTab value="yarn">
-    ```bash
-    yarn add class-variance-authority lucide-react
-    ```
-  </CodeBlockTab>
-
-  <CodeBlockTab value="bun">
-    ```bash
-    bun add class-variance-authority lucide-react
-    ```
-  </CodeBlockTab>
-</CodeBlockTabs>
 
 Copy the component:
 
