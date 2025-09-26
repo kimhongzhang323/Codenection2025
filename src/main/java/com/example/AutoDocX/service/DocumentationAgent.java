@@ -3,16 +3,13 @@ package com.example.AutoDocX.service;
 import com.example.AutoDocX.model.ClonedRepo;
 import com.example.AutoDocX.model.Documentation;
 import com.example.AutoDocX.model.repo.Model;
-import com.example.AutoDocX.model.repo.GeminiCentral;
 import com.example.AutoDocX.model.repo.GeminiModel;
 import com.example.AutoDocX.model.repo.SendMessageResult;
 import com.example.AutoDocX.model.repo.ModelFinishReason;
 import com.example.AutoDocX.parser.model.Graph;
 import com.example.AutoDocX.parser.model.GraphAlgo;
 import com.example.AutoDocX.parser.model.GraphNode;
-import com.example.AutoDocX.service.dto.DocParams;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.genai.types.Content;
 import com.google.genai.types.Part;
@@ -21,7 +18,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
-import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -32,7 +28,9 @@ public class DocumentationAgent {
     private final SessionManager sessionManager;
     private final McpToolKit mcpToolKit;
     private final Model model;
+    private final GeneralSummaryAgent generalSummaryAgent;
     private final SummaryAgent summaryAgent;
+    private final DocumentHandlingService documentHandlingService;
     private final ObjectMapper objectMapper = new ObjectMapper();
     private static final int DEFAULT_MAX_ITERATIONS = 5;
 
@@ -42,23 +40,31 @@ public class DocumentationAgent {
             SessionManager sessionManager,
             McpToolKit mcpToolKit,
             @Qualifier("geminiCentral") Model model,
-            SummaryAgent summaryAgent
+            GeneralSummaryAgent generalSummaryAgent,
+            SummaryAgent summaryAgent,
+            DocumentHandlingService documentHandlingService
     ) {
         this.repoHandler = repoHandler;
         this.sessionManager = sessionManager;
         this.mcpToolKit = mcpToolKit;
         this.model = model;
+        this.generalSummaryAgent = generalSummaryAgent;
         this.summaryAgent = summaryAgent;
+        this.documentHandlingService = documentHandlingService;
     }
 
-    public String run(String gitUrl, String branch, String userPrompt, DocParams params) {
-        return run(gitUrl, branch, userPrompt, params, null);
+    public String run(String gitUrl, String branch, String userPrompt) {
+        return run(gitUrl, branch, userPrompt, null);
     }
 
-    public String run(String gitUrl, String branch, String userPrompt, DocParams params, Integer iterationLimit) {
+    public String run(String gitUrl, String branch, String userPrompt, Integer iterationLimit) {
         Session session = sessionManager.getSession(gitUrl, branch);
         ClonedRepo repo = repoHandler.getRepo(gitUrl, branch);
         if (repo == null) return "Repository unavailable.";
+
+        DocumentationHandler docHandler = documentHandlingService.getDocumentHandler(session);
+        docHandler.decrementAllExpandedCounters();
+
         Graph graph;
         try { graph = repoHandler.getGraph(repo); } catch (Exception e) { return "Graph load failed: " + e.getMessage(); }
 
@@ -68,7 +74,7 @@ public class DocumentationAgent {
         int maxIterations = (iterationLimit == null || iterationLimit <= 0) ? DEFAULT_MAX_ITERATIONS : iterationLimit;
         while (iterations++ < maxIterations) {
             List<Tool> tools = mcpToolKit.getDocumentationAgentTools();
-            List<Content> contents = buildLoopContent(session, userPrompt, params);
+            List<Content> contents = buildLoopContent(session, docHandler, userPrompt);
 
             SendMessageResult result;
             try {
@@ -100,25 +106,32 @@ public class DocumentationAgent {
                         // Tool execution
                         switch (name) {
                             case "get_summary": {
-                                String query = String.valueOf(args.getOrDefault("query", ""));
-                                Integer summaryIterations = args.get("iterations") instanceof Number ? ((Number) args.get("iterations")).intValue() : null;
-                                String sum = (summaryIterations == null)
-                                        ? summaryAgent.run(session.getGitUrl(), session.getBranch(), query)
-                                        : summaryAgent.run(session.getGitUrl(), session.getBranch(), query, summaryIterations);
-                                session.getMemory().getSummary().replaceEntry(query, sum);
+                                String query = (String) args.get("query");
+                                String sum;
+                                if (query != null && !query.isBlank()) {
+                                    summaryAgent.run(session.getGitUrl(), session.getBranch(), query);
+                                } else {
+                                    sum = generalSummaryAgent.run(session.getGitUrl(), session.getBranch(), "Project Level Understanding");
+                                    session.getMemory().getSummary().replaceEntry(query, sum);
+                                }
                                 break;
                             }
                             case "execute_plan": {
+                                String key = (String) args.get("key");
+                                if (key == null || key.isBlank()) {
+                                    throw new IllegalArgumentException("Parameter 'key' is required for execute_plan.");
+                                }
                                 String planResult = executePlanInternal(session, repo, graph);
                                 Documentation doc = new Documentation(planResult);
-                                session.getDocumentationHandler().save("main_documentation", doc);
-                                System.out.println("Plan execution finished. Result stored in 'main_documentation'.");
+                                docHandler.save(key, doc);
+                                docHandler.setExpandedCounter(key, 3);
+                                System.out.println("Plan execution finished. Result stored in '" + key + "'.");
 
                                 // Safely log the tool call, handling null args and empty results
                                 String toolLogKey = "model:tool_call:" + name + (args != null ? args.toString() : "{}");
                                 String toolLogValue = "Execution finished.";
                                 if (planResult != null && !planResult.isEmpty()) {
-                                    toolLogValue += " Result: " + planResult.substring(0, Math.min(200, planResult.length())) + "... (stored in 'documentation')";
+                                    toolLogValue += " Result: " + planResult.substring(0, Math.min(200, planResult.length())) + "... (stored in " + key + ")";
                                 }
                                 session.getMemory().getEpisodic().addEntry(toolLogKey, toolLogValue);
                                 break;
@@ -146,21 +159,21 @@ public class DocumentationAgent {
 
     // Deprecated helpers retained for potential future use
     @Deprecated
-    private void planOneShot(Session session, ClonedRepo repo, Graph graph, String userPrompt, DocParams params) { }
+    private void planOneShot(Session session, ClonedRepo repo, Graph graph, String userPrompt) { }
 
     @Deprecated
-    private List<Content> buildSectionContents(Session session, ClonedRepo repo, Graph graph, String userPrompt, DocParams params,
+    private List<Content> buildSectionContents(Session session, ClonedRepo repo, Graph graph, String userPrompt,
                                                String sectionName, String focus, List<String> nodes) { return List.of(); }
 
     @Deprecated
-    private String combineSections(String userPrompt, DocParams params, Map<String, String> sectionOutputs) { return ""; }
+    private String combineSections(String userPrompt, Map<String, String> sectionOutputs) { return ""; }
 
-    private String safeParams(DocParams p) {
+    private String safeParams(Object p) {
         if (p == null) return "{}";
         try { return objectMapper.writeValueAsString(p); } catch (Exception e) { return "{}"; }
     }
 
-    private List<Content> buildLoopContent(Session session, String userPrompt, DocParams params) {
+    private List<Content> buildLoopContent(Session session, DocumentationHandler docHandler, String userPrompt) {
         List<Content> contents = new ArrayList<>();
         String systemInstruction = """
 You are a documentation agent. Your task is to produce excellent project documentation or answer the user's request using tools.
@@ -170,7 +183,7 @@ RULES
 2. Keep responses factual and concise.
 3. ALWAYS use the provided tools to gather information or perform actions; do not make up information.
 4. Unless specified, you must always aim for full coverage of important nodes
-5. Only if needed, retrieve source code using get_summary and plans
+5. Only if needed, retrieve source code using get_summary (The prompt must be in full sentence)
 
 STEPS:
 1. Use `get_summary(query)` to get context/summaries from the summary agent (very expensive, use with caution).
@@ -183,7 +196,8 @@ STEPS:
         b) formatting & focus on eg. (usage, architecture, dependencies, purpose)
         c) long & detailed vs short & concise
 3. Use `execute_plan` AFTER all sections have been completed. to run all those subtasks using dedicated agents.
-4. Respond to user's input, describing what you did (the documentation is visible to user)
+    - Tips: Use different keys to cleverly organise the docs system (avoid replacing original docs unless requested).
+4. Respond to user's input, describing what you did in detail (the documentation is visible to user)
 """;
 
         contents.add(Content.builder().role("user").parts(List.of(Part.fromText(systemInstruction))).build());
@@ -195,18 +209,40 @@ STEPS:
             context.append("CURRENT_PLAN:\n").append(memory.getPlan().toString()).append("\n\n");
         }
 
-        if (params != null) {
-            context.append("DOC PARAMS:\n").append(safeParams(params)).append("\n\n");
+        context.append("CONFIG:\n").append(session.getAgentConfig()).append("\n\n");
+
+        String defaultDocKey = docHandler.getDefaultDocumentationKey();
+        if (defaultDocKey != null) {
+            context.append("DEFAULT_DOCUMENTATION_KEY: ").append(defaultDocKey).append("\n\n");
         }
 
-        Map<String, Documentation> currentDocs = session.getDocumentation();
+        Map<String, Documentation> currentDocs = docHandler.getAll();
         if (currentDocs != null && !currentDocs.isEmpty()) {
             context.append("CURRENT_DOCUMENTATION:\n");
             for (Map.Entry<String, Documentation> entry : currentDocs.entrySet()) {
-                context.append("--- START DOC: ").append(entry.getKey()).append(" ---\n");
-                context.append(entry.getValue().toString());
-                context.append("\n--- END DOC: ").append(entry.getKey()).append(" ---\n\n");
+                if (entry.getValue().isExpanded()) {
+                    context.append("--- START DOC: ").append(entry.getKey()).append(" ---\n");
+                    context.append(entry.getValue().toString());
+                    context.append("\n--- END DOC: ").append(entry.getKey()).append(" ---\n\n");
+                } else {
+                    String key = entry.getKey();
+                    Documentation doc = entry.getValue();
+                    long lineCount = doc.getContent() != null ? doc.getContent().lines().count() : 0;
+                    List<String> sections = docHandler.listSections(key);
+                    List<String> sectionPreview = sections.stream().limit(5).collect(Collectors.toList());
+
+                    context.append("- ").append(key).append(" ");
+                    context.append("(hidden, ").append(lineCount).append(" Lines), ");
+                    context.append("Sections[:5]: ");
+                    if (sectionPreview.isEmpty()) {
+                        context.append("No sections found");
+                    } else {
+                        context.append(String.join(" | ", sectionPreview));
+                    }
+                    context.append("\n");
+                }
             }
+            context.append("\n");
         }
 
         if (memory.getSummary() != null && !memory.getSummary().isEmpty()) {
@@ -250,6 +286,9 @@ STEPS:
             return "Plan parse failed: " + e.getMessage();
         }
 
+        String generalSummary = session.getMemory().getSummary().getEntry("general_summary");
+        String agentConfig = session.getAgentConfig().toString();
+
         List<AbstractMap.SimpleEntry<List<Content>, List<Tool>>> requests = new ArrayList<>();
         for (Map.Entry<String, Map<String, Object>> entry : plan.entrySet()) {
             String sectionName = entry.getKey();
@@ -280,13 +319,16 @@ STEPS:
 
             String system = "You are a senior technical writer. Produce the documentation content for the given section. Accuracy is top priority.\n\n";
             String user = "This is a subtask and its related codes\n\n" +
+                    (generalSummary != null && !generalSummary.isBlank() ? "PROJECT SUMMARY:\n" + generalSummary + "\n\n" : "") +
                     "NAME: " + sectionName + "\n\n" +
                     "FOCUS: " + focus + "\n\n" +
                     "RELATED CODE CHUNKS: \n" + contextCodes + "\n\n" +
-                    "TARGET CODE CHUNKS: \n" + nodeCodes;
+                    "TARGET CODE CHUNKS: \n" + nodeCodes + "\n\n" +
+                    "CONFIG:\n" + agentConfig + "\n";
 
             List<Content> contents = new ArrayList<>();
             contents.add(Content.builder().role("user").parts(List.of(Part.fromText(system))).build());
+
             contents.add(Content.builder().role("user").parts(List.of(Part.fromText(user))).build());
 
             requests.add(GeminiModel.createArgs(contents, List.of()));
@@ -295,7 +337,7 @@ STEPS:
         List<SendMessageResult> results = model.sendMessageBulk(requests);
         String resultStr = results.stream()
                 .flatMap(result -> result.getText().stream())
-                .filter(s -> s != null && !s.isBlank())
+                .filter(s -> !s.isBlank())
                 .collect(Collectors.joining("\n\n"));
 
         if (resultStr.isBlank()) {

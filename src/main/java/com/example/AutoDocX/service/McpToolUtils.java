@@ -1,6 +1,7 @@
 package com.example.AutoDocX.service;
 
 import com.example.AutoDocX.model.ClonedRepo;
+import com.example.AutoDocX.model.Documentation;
 import com.example.AutoDocX.model.repo.GeminiModel;
 import com.example.AutoDocX.model.repo.SendMessageResult;
 import com.example.AutoDocX.parser.model.Graph;
@@ -31,11 +32,13 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 public class McpToolUtils {
     private final RepoHandler repoHandler;
     private final Model model;
+    private final DocumentHandlingService documentHandlingService;
     private final ObjectMapper mapper = new ObjectMapper();
 
-    public McpToolUtils(RepoHandler repoHandler, @Qualifier("geminiCentral") Model model) {
+    public McpToolUtils(RepoHandler repoHandler, @Qualifier("geminiCentral") Model model, DocumentHandlingService documentHandlingService) {
         this.repoHandler = repoHandler;
         this.model = model;
+        this.documentHandlingService = documentHandlingService;
     }
 
     public String getCode(ClonedRepo repo, String nodeId) throws IOException, NodeNotFoundException {
@@ -316,5 +319,46 @@ public class McpToolUtils {
     public String updateDocumentation(Session session, String content) {
         session.getMemory().getSummary().replaceEntry("documentation", content);
         return "OK: documentation updated (" + content.length() + " chars)";
+    }
+
+    public String replaceStringInDoc(Session session, String docKey, String oldString, String newString) {
+        DocumentationHandler docHandler = documentHandlingService.getDocumentHandler(session);
+        Documentation doc = docHandler.get(docKey);
+        if (doc == null) {
+            return "Error: Document with key '" + docKey + "' not found.";
+        }
+        String content = doc.getContent();
+        String newContent = content.replace(oldString, newString);
+        docHandler.save(docKey, new Documentation(newContent));
+        return "OK: Replaced string in document '" + docKey + "'.";
+    }
+
+    public String insertIntoDoc(Session session, String docKey, String contentToInsert, String afterString) {
+        DocumentationHandler docHandler = documentHandlingService.getDocumentHandler(session);
+        Documentation doc = docHandler.get(docKey);
+        if (doc == null) {
+            return "Error: Document with key '" + docKey + "' not found.";
+        }
+        String content = doc.getContent();
+
+        String newContent;
+        if (afterString == null || afterString.isEmpty()) {
+            newContent = contentToInsert + content;
+        } else {
+            int index = content.indexOf(afterString);
+            if (index == -1) {
+                return "Error: The 'after_string' was not found in the document '" + docKey + "'.";
+            }
+            int insertPosition = index + afterString.length();
+            newContent = content.substring(0, insertPosition) + contentToInsert + content.substring(insertPosition);
+        }
+        docHandler.save(docKey, new Documentation(newContent));
+        return "OK: Inserted content into document '" + docKey + "'.";
+    }
+
+    public String readDoc(Session session, String key, int countdown) {
+        DocumentationHandler docHandler = documentHandlingService.getDocumentHandler(session);
+        docHandler.setExpandedCounter(key, countdown);
+        return "OK: Document '" + key + "' will be expanded for the next " + countdown + " turns.";
     }
 }

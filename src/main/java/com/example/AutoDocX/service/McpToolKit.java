@@ -127,14 +127,12 @@ public class McpToolKit {
     // Documentation Agent (KISS) toolset: get_summary, update_plan, execute_plan
     declarations.add(FunctionDeclaration.builder()
         .name("get_summary")
-        .description("Generate or refresh a project summary using the code graph. Args: query (string), iterations (optional, number).")
+        .description("Retrieves related context from the codebase. Leave the query is empty to generate a project-level summary")
         .parameters(Schema.builder()
             .type(Type.Known.OBJECT)
             .properties(Map.of(
-                "query", Schema.builder().type(Type.Known.STRING).description("What to focus on in the summary").build(),
-                "iterations", Schema.builder().type(Type.Known.NUMBER).description("Optional iterations hint").build()
+                "query", Schema.builder().type(Type.Known.STRING).description("Prompt passed to the Summarising Agent. Leave empty for a general project summary.").build()
             ))
-            .required(List.of("query"))
             .build())
         .build());
 
@@ -167,7 +165,16 @@ public class McpToolKit {
     declarations.add(FunctionDeclaration.builder()
         .name("execute_plan")
         .description("Execute the current plan: generate all section docs in parallel and compose the final documentation. Stores final_documentation in memory and returns it.")
-        .parameters(Schema.builder().type(Type.Known.OBJECT).build())
+            .parameters(Schema.builder()
+                .type(Type.Known.OBJECT)
+                .properties(Map.of(
+                    "key", Schema.builder()
+                        .type(Type.Known.STRING)
+                        .description("The key under which the final documentation will be saved.")
+                        .build()
+                ))
+                .required(List.of("key"))
+                .build())
         .build());
 
     declarations.add(FunctionDeclaration.builder()
@@ -182,6 +189,47 @@ public class McpToolKit {
             .build())
         .build());
 
+    declarations.add(FunctionDeclaration.builder()
+        .name("replace_string_in_doc")
+        .description("Replaces all occurrences of a specific string within a documentation entry.")
+        .parameters(Schema.builder()
+            .type(Type.Known.OBJECT)
+            .properties(Map.of(
+                "key", Schema.builder().type(Type.Known.STRING).description("The key of the documentation entry to modify.").build(),
+                "old_string", Schema.builder().type(Type.Known.STRING).description("The exact string to be replaced.").build(),
+                "new_string", Schema.builder().type(Type.Known.STRING).description("The string to replace with.").build()
+            ))
+            .required(List.of("key", "old_string", "new_string"))
+            .build())
+        .build());
+
+    declarations.add(FunctionDeclaration.builder()
+        .name("insert_into_doc")
+        .description("Inserts a string into a documentation entry, either at the beginning or after a specified marker.")
+        .parameters(Schema.builder()
+            .type(Type.Known.OBJECT)
+            .properties(Map.of(
+                "key", Schema.builder().type(Type.Known.STRING).description("The key of the documentation entry to modify.").build(),
+                "content_to_insert", Schema.builder().type(Type.Known.STRING).description("The content to insert.").build(),
+                "after_string", Schema.builder().type(Type.Known.STRING).description("Optional. The string after which the content should be inserted. If empty, inserts at the beginning.").build()
+            ))
+            .required(List.of("key", "content_to_insert"))
+            .build())
+        .build());
+
+    declarations.add(FunctionDeclaration.builder()
+        .name("read_doc")
+        .description("Marks a documentation entry as 'expanded' for a specified number of agent iterations, making its full content visible in the context.")
+        .parameters(Schema.builder()
+            .type(Type.Known.OBJECT)
+            .properties(Map.of(
+                "key", Schema.builder().type(Type.Known.STRING).description("The key of the documentation entry to expand.").build(),
+                "countdown", Schema.builder().type(Type.Known.NUMBER).description("The number of turns to keep the document expanded.").build()
+            ))
+            .required(List.of("key", "countdown"))
+            .build())
+        .build());
+
         return declarations;
     }
 
@@ -192,7 +240,7 @@ public class McpToolKit {
 
     // KISS: unified agent tools
     public List<Tool> getDocumentationAgentTools() {
-        List<String> names = List.of("get_summary", "add_plan", "execute_plan");
+        List<String> names = List.of("get_summary", "add_plan", "execute_plan", "replace_string_in_doc", "insert_into_doc", "read_doc");
         return buildTools(names);
     }
 
@@ -236,6 +284,9 @@ public class McpToolKit {
                 case "add_plan":
                 case "execute_plan":
                 case "update_documentation":
+                case "replace_string_in_doc":
+                case "insert_into_doc":
+                case "read_doc":
                     // handled internally; nothing to store synchronously here
                     break;
                 case "update_understanding":
@@ -292,6 +343,23 @@ public class McpToolKit {
             case "update_documentation": {
                 String content = String.valueOf(paramsMap.getOrDefault("content", ""));
                 return mcpToolUtils.updateDocumentation(context.getSession(), content);
+            }
+            case "replace_string_in_doc": {
+                String key = (String) paramsMap.get("key");
+                String oldString = (String) paramsMap.get("old_string");
+                String newString = (String) paramsMap.get("new_string");
+                return mcpToolUtils.replaceStringInDoc(context.getSession(), key, oldString, newString);
+            }
+            case "insert_into_doc": {
+                String key = (String) paramsMap.get("key");
+                String contentToInsert = (String) paramsMap.get("content_to_insert");
+                String afterString = (String) paramsMap.get("after_string");
+                return mcpToolUtils.insertIntoDoc(context.getSession(), key, contentToInsert, afterString);
+            }
+            case "read_doc": {
+                String key = (String) paramsMap.get("key");
+                int countdown = ((Number) paramsMap.get("countdown")).intValue();
+                return mcpToolUtils.readDoc(context.getSession(), key, countdown);
             }
             default:
                 throw new IllegalArgumentException("Unknown tool: " + toolName);
