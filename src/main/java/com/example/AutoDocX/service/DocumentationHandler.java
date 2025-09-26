@@ -21,6 +21,7 @@ public class DocumentationHandler {
 
     private static final Logger logger = LoggerFactory.getLogger(DocumentationHandler.class);
     private final Map<String, Documentation> documentationMap = new ConcurrentHashMap<>();
+    private String defaultDocumentationKey;
 
     public void loadFromDirectory(Path repoRoot) {
         if (repoRoot == null || !Files.isDirectory(repoRoot)) {
@@ -130,5 +131,17 @@ public class DocumentationHandler {
 
     public void clear() {
         documentationMap.clear();
+    }
+
+    public String getDefaultDocumentationKey() {
+        return defaultDocumentationKey;
+    }
+
+    public boolean setDefaultDocumentationKey(String key) {
+        if (documentationMap.containsKey(key)) {
+            this.defaultDocumentationKey = key;
+            return true;
+        }
+        return false;
     }
 }

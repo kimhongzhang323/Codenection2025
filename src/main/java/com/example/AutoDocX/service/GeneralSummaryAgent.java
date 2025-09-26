@@ -85,10 +85,10 @@ public class GeneralSummaryAgent {
             mcpToolKit.executeTool("find_central_nodes", Map.of("n", 10), toolExecutionContext);
             session.setInitialStructureLogged(true);
         }
-    String runId = java.util.UUID.randomUUID().toString();
-    int iterations = 0;
-    int maxIterations = (iterationLimit == null || iterationLimit <= 0) ? DEFAULT_MAX_ITERATIONS : iterationLimit;
-    while (iterations++ < maxIterations) {
+        String runId = java.util.UUID.randomUUID().toString();
+        int iterations = 0;
+        int maxIterations = (iterationLimit == null || iterationLimit <= 0) ? DEFAULT_MAX_ITERATIONS : iterationLimit;
+        while (iterations++ < maxIterations) {
             List<Tool> summaryTools = mcpToolKit.getExplorationTools();
             String basePrompt = "Explore the codebase breadth-first. Use tools in batches. After finishing tool calls, call update_understanding with a concise plan: current understanding + next actions.";
             String loopPrompt = (focusPrompt != null && !focusPrompt.isBlank())
@@ -123,12 +123,15 @@ public class GeneralSummaryAgent {
             }
         }
 
-    // Final summary generation step
-    String defaultFinalPrompt = "Now produce the final project-level summary. Use your recorded understanding and memory. Provide: intro, architecture overview, and complete inventory of nodes (mark summarised vs inferred).";
-    String finalPrompt = (focusPrompt != null && !focusPrompt.isBlank())
-        ? defaultFinalPrompt + "\nFOCUS: " + focusPrompt
-        : defaultFinalPrompt;
-    return generateFinalSummary(session, finalPrompt);
+        // Final summary generation step
+        String defaultFinalPrompt = "Now produce the final project-level summary. Use your recorded understanding and memory. Provide: intro, architecture overview, and complete inventory of nodes (mark summarised vs inferred).";
+        String finalPrompt = (focusPrompt != null && !focusPrompt.isBlank())
+            ? defaultFinalPrompt + "\nFOCUS: " + focusPrompt
+            : defaultFinalPrompt;
+
+        String finalSummary = generateFinalSummary(session, finalPrompt);
+        session.getMemory().getSummary().replaceEntry("general_summary", finalSummary);
+        return finalSummary;
     }
 
     private String generateFinalSummary(Session session, String finalPrompt) {
@@ -229,7 +232,7 @@ Never produce a response without it.
                 }
 
                 // Code Memory (recent)
-                String codeSummary = memory.getCode().toString(20);
+                String codeSummary = memory.getCode().toString(10);
                 if (!codeSummary.isBlank()) {
                     contents.add(Content.builder().parts(Part.builder().text("CODE MEMORY:\n" + codeSummary).build()).role("user").build());
                 }

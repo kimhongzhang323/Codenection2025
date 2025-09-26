@@ -1,6 +1,7 @@
 package com.example.AutoDocX.service;
 
 import com.example.AutoDocX.model.Documentation;
+import com.example.AutoDocX.model.config.AgentConfig;
 import lombok.Getter;
 import lombok.Setter;
 
@@ -13,6 +14,7 @@ public class Session {
     private final String branch;
     private final Memory memory;
     private final DocumentationHandler documentationHandler;
+    private final AgentConfig agentConfig;
     @Setter
     private boolean initialStructureLogged = false;
     @Setter
@@ -23,6 +25,7 @@ public class Session {
         this.branch = branch;
         this.memory = new Memory();
         this.documentationHandler = new DocumentationHandler();
+        this.agentConfig = new AgentConfig();
     }
 
     public Map<String, Documentation> getDocumentation() {

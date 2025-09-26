@@ -9,7 +9,6 @@ import com.example.AutoDocX.model.repo.ModelFinishReason;
 import com.example.AutoDocX.parser.model.Graph;
 import com.example.AutoDocX.parser.model.GraphAlgo;
 import com.example.AutoDocX.parser.model.GraphNode;
-import com.example.AutoDocX.service.dto.DocParams;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.genai.types.Content;
@@ -51,11 +50,11 @@ public class DocumentationAgent {
         this.summaryAgent = summaryAgent;
     }
 
-    public String run(String gitUrl, String branch, String userPrompt, DocParams params) {
-        return run(gitUrl, branch, userPrompt, params, null);
+    public String run(String gitUrl, String branch, String userPrompt) {
+        return run(gitUrl, branch, userPrompt, null);
     }
 
-    public String run(String gitUrl, String branch, String userPrompt, DocParams params, Integer iterationLimit) {
+    public String run(String gitUrl, String branch, String userPrompt, Integer iterationLimit) {
         Session session = sessionManager.getSession(gitUrl, branch);
         ClonedRepo repo = repoHandler.getRepo(gitUrl, branch);
         if (repo == null) return "Repository unavailable.";
@@ -76,7 +75,7 @@ public class DocumentationAgent {
         int maxIterations = (iterationLimit == null || iterationLimit <= 0) ? DEFAULT_MAX_ITERATIONS : iterationLimit;
         while (iterations++ < maxIterations) {
             List<Tool> tools = mcpToolKit.getDocumentationAgentTools();
-            List<Content> contents = buildLoopContent(session, userPrompt, params);
+            List<Content> contents = buildLoopContent(session, userPrompt);
 
             SendMessageResult result;
             try {
@@ -111,11 +110,11 @@ public class DocumentationAgent {
                                 String query = (String) args.get("query");
                                 String sum;
                                 if (query != null && !query.isBlank()) {
-                                    sum = summaryAgent.run(session.getGitUrl(), session.getBranch(), query);
+                                    summaryAgent.run(session.getGitUrl(), session.getBranch(), query);
                                 } else {
                                     sum = generalSummaryAgent.run(session.getGitUrl(), session.getBranch(), "Project Level Understanding");
+                                    session.getMemory().getSummary().replaceEntry(query, sum);
                                 }
-                                session.getMemory().getSummary().replaceEntry(query != null ? query : "general_summary", sum);
                                 break;
                             }
                             case "execute_plan": {
@@ -160,21 +159,21 @@ public class DocumentationAgent {
 
     // Deprecated helpers retained for potential future use
     @Deprecated
-    private void planOneShot(Session session, ClonedRepo repo, Graph graph, String userPrompt, DocParams params) { }
+    private void planOneShot(Session session, ClonedRepo repo, Graph graph, String userPrompt) { }
 
     @Deprecated
-    private List<Content> buildSectionContents(Session session, ClonedRepo repo, Graph graph, String userPrompt, DocParams params,
+    private List<Content> buildSectionContents(Session session, ClonedRepo repo, Graph graph, String userPrompt,
                                                String sectionName, String focus, List<String> nodes) { return List.of(); }
 
     @Deprecated
-    private String combineSections(String userPrompt, DocParams params, Map<String, String> sectionOutputs) { return ""; }
+    private String combineSections(String userPrompt, Map<String, String> sectionOutputs) { return ""; }
 
-    private String safeParams(DocParams p) {
+    private String safeParams(Object p) {
         if (p == null) return "{}";
         try { return objectMapper.writeValueAsString(p); } catch (Exception e) { return "{}"; }
     }
 
-    private List<Content> buildLoopContent(Session session, String userPrompt, DocParams params) {
+    private List<Content> buildLoopContent(Session session, String userPrompt) {
         List<Content> contents = new ArrayList<>();
         String systemInstruction = """
 You are a documentation agent. Your task is to produce excellent project documentation or answer the user's request using tools.
@@ -210,8 +209,11 @@ STEPS:
             context.append("CURRENT_PLAN:\n").append(memory.getPlan().toString()).append("\n\n");
         }
 
-        if (params != null) {
-            context.append("DOC PARAMS:\n").append(safeParams(params)).append("\n\n");
+        context.append("CONFIG:\n").append(session.getAgentConfig()).append("\n\n");
+
+        String defaultDocKey = session.getDocumentationHandler().getDefaultDocumentationKey();
+        if (defaultDocKey != null) {
+            context.append("DEFAULT_DOCUMENTATION_KEY: ").append(defaultDocKey).append("\n\n");
         }
 
         Map<String, Documentation> currentDocs = session.getDocumentation();
@@ -285,6 +287,7 @@ STEPS:
         }
 
         String generalSummary = session.getMemory().getSummary().getEntry("general_summary");
+        String agentConfig = session.getAgentConfig().toString();
 
         List<AbstractMap.SimpleEntry<List<Content>, List<Tool>>> requests = new ArrayList<>();
         for (Map.Entry<String, Map<String, Object>> entry : plan.entrySet()) {
@@ -320,7 +323,8 @@ STEPS:
                     "NAME: " + sectionName + "\n\n" +
                     "FOCUS: " + focus + "\n\n" +
                     "RELATED CODE CHUNKS: \n" + contextCodes + "\n\n" +
-                    "TARGET CODE CHUNKS: \n" + nodeCodes;
+                    "TARGET CODE CHUNKS: \n" + nodeCodes + "\n\n" +
+                    "CONFIG:\n" + agentConfig + "\n";
 
             List<Content> contents = new ArrayList<>();
             contents.add(Content.builder().role("user").parts(List.of(Part.fromText(system))).build());

@@ -129,4 +129,21 @@ public class DocumentationController {
         }
         return ResponseEntity.badRequest().build();
     }
+
+    @PostMapping("/default")
+    public ResponseEntity<Void> setDefaultDocumentation(
+            @RequestParam String gitUrl,
+            @RequestParam(required = false) String branch,
+            @RequestParam String key
+    ) {
+        Session session = sessionManager.getSession(gitUrl, branch);
+        if (session != null && session.getDocumentationHandler() != null) {
+            if (session.getDocumentationHandler().setDefaultDocumentationKey(key)) {
+                return ResponseEntity.ok().build();
+            } else {
+                return ResponseEntity.notFound().build();
+            }
+        }
+        return ResponseEntity.badRequest().build();
+    }
 }
