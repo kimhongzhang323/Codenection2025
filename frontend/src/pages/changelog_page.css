@@ -5,6 +5,8 @@
   background: var(--docs-bg);
   color: var(--docs-text);
   font-family: 'Geist Sans', system-ui, -apple-system, sans-serif;
+  overflow: hidden;
+  max-height: 100vh;
 }
 
 .changelog-header {
@@ -45,7 +47,7 @@
 
 .changelog-search {
   flex: 1;
-  max-width: 450px;
+  max-width: 200px;
   position: relative;
 }
 
@@ -186,8 +188,37 @@
 
 .changelog-content {
   flex: 1;
-  overflow: auto;
+  overflow-y: auto;
+  overflow-x: hidden;
   padding: 0 32px 32px 32px;
+  max-height: calc(100vh - 200px);
+  scroll-behavior: smooth;
+}
+
+/* Custom scrollbar for changelog content */
+.changelog-content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.changelog-content::-webkit-scrollbar-track {
+  background: rgba(var(--sidebar-border-rgb, 229, 229, 229), 0.1);
+  border-radius: 4px;
+}
+
+.changelog-content::-webkit-scrollbar-thumb {
+  background: rgba(100, 108, 255, 0.3);
+  border-radius: 4px;
+  transition: background 0.2s ease;
+}
+
+.changelog-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 108, 255, 0.5);
+}
+
+/* Firefox scrollbar */
+.changelog-content {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(100, 108, 255, 0.3) rgba(var(--sidebar-border-rgb, 229, 229, 229), 0.1);
 }
 
 .changelog-results-header {
@@ -240,6 +271,9 @@
   display: flex;
   flex-direction: column;
   gap: 20px;
+  overflow-y: auto;
+  max-height: 100%;
+  padding-right: 4px;
 }
 
 .changelog-entry {
@@ -260,6 +294,13 @@
   border-color: #646cff;
   box-shadow: 0 4px 16px rgba(100, 108, 255, 0.15);
   transform: translateY(-1px);
+}
+
+.changelog-entry:active {
+  transform: translateY(0px);
+  box-shadow: 0 2px 8px rgba(100, 108, 255, 0.2);
+  opacity: 0.9;
+  transition: all 0.1s ease;
 }
 
 .changelog-entry-avatar {
@@ -404,6 +445,11 @@
 
 /* Responsive design */
 @media (max-width: 768px) {
+  .changelog-page {
+    height: 100vh;
+    overflow: hidden;
+  }
+
   .changelog-controls {
     flex-direction: column;
     align-items: stretch;
@@ -437,6 +483,9 @@
 
   .changelog-content {
     padding: 0 20px 24px 20px;
+    max-height: calc(100vh - 180px);
+    overflow-y: auto;
+    overflow-x: hidden;
   }
 
   .changelog-header {
@@ -461,5 +510,13 @@
 
   .changelog-entry-stats {
     gap: 16px;
+  }
+}
+
+/* Tablet responsive scrolling */
+@media (max-width: 1024px) and (min-width: 769px) {
+  .changelog-content {
+    max-height: calc(100vh - 190px);
+    overflow-y: auto;
   }
 }

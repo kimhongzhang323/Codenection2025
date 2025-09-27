@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useCallback } from 'react'
-import { useLocation, useNavigate } from 'react-router-dom'
 import { SearchIcon } from './icons/search_icon'
 import { HistoryIcon } from './icons/history_icon'
 import BranchIcon from './icons/branch_icon'
@@ -21,9 +20,6 @@ const EmbeddedChangelog: React.FC<EmbeddedChangelogProps> = ({
   repo, 
   className = '' 
 }) => {
-  const location = useLocation() as { state?: { repoUrl?: string; repoData?: { name?: string; fullName?: string } } }
-  const navigate = useNavigate()
-  
   // State management
   const [entries, setEntries] = useState<ChangelogEntry[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -42,14 +38,21 @@ const EmbeddedChangelog: React.FC<EmbeddedChangelogProps> = ({
 
   const [, setAuthors] = useState<string[]>([])
 
-  const effectiveRepoUrl = repoUrl || location.state?.repoUrl || (
-    repo && repo.includes('/') ? `https://github.com/${repo}` : null
-  )
-
-  // Get effective repo from URL
-  const effectiveRepo = effectiveRepoUrl ? 
-    effectiveRepoUrl.replace('https://github.com/', '') : 
-    (repo || '')
+  // Get the current workspace repository (consistent with other components)
+  const getCurrentRepository = () => {
+    // Priority: props repoUrl > props repo > current workspace
+    if (repoUrl) return repoUrl
+    if (repo && repo.includes('/')) return `https://github.com/${repo}`
+    
+    // Fallback to current workspace repository
+    const currentWorkspaceRepo = 'kimhongzhang323/Codenection2025'
+    return `https://github.com/${currentWorkspaceRepo}`
+  }
+  
+  const effectiveRepoUrl = getCurrentRepository()
+  const effectiveRepo = effectiveRepoUrl.replace('https://github.com/', '')
+  
+  console.log('Embedded Changelog Repository Info:', { repoUrl, repo, effectiveRepoUrl, effectiveRepo })
 
   // Load available branches
   const loadBranches = useCallback(async () => {
@@ -134,6 +137,13 @@ const EmbeddedChangelog: React.FC<EmbeddedChangelogProps> = ({
       return
     }
 
+    // Validate repository URL format
+    if (effectiveRepoUrl.includes('github.com/') && !effectiveRepo.includes('/')) {
+      setError(`Invalid repository format. Expected owner/repository, got: ${effectiveRepo}`)
+      setIsLoading(false)
+      return
+    }
+
     try {
       setIsLoading(true)
       setError(null)
@@ -158,7 +168,7 @@ const EmbeddedChangelog: React.FC<EmbeddedChangelogProps> = ({
     } finally {
       setIsLoading(false)
     }
-  }, [effectiveRepoUrl, selectedBranch, convertGitHubCommitToEntry])
+  }, [effectiveRepoUrl, effectiveRepo, selectedBranch, convertGitHubCommitToEntry])
 
   // Load branches on mount
   useEffect(() => {
@@ -213,12 +223,14 @@ const EmbeddedChangelog: React.FC<EmbeddedChangelogProps> = ({
     setEntries([]) // Clear current entries while loading new branch
   }
 
-  // Handle commit click
+  // Handle commit click with full page refresh
   const handleCommitClick = (sha: string) => {
     if (repo) {
-      navigate(`/${repo}/commit/${sha}`, {
-        state: location.state
-      })
+      // Add loading cursor for visual feedback
+      document.body.style.cursor = 'wait'
+      
+      // Force full page reload like sidebar navigation
+      window.location.href = `/${repo}/commit/${sha}`
     }
   }
 

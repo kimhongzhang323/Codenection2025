@@ -692,6 +692,7 @@ function DocumentationPage() {
                   setTimeout(() => window.location.reload(), 100)
                 }}
                 aria-label="View System Diagrams"
+                style={{ display: 'none' }} // Temporarily hidden
               >
                 <DiagramIcon size={16} />
                 <span>System Diagrams</span>
