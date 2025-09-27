@@ -1,30 +1,27 @@
-# ==============================
-# Stage 1: Build the application
-# ==============================
+# ---------- Build stage ----------
 FROM maven:3.9.4-eclipse-temurin-17 AS build
-WORKDIR /workspace
 
-# Copy pom.xml and download dependencies (layer caching)
+WORKDIR /app
+
+# copy pom.xml and download dependencies
 COPY pom.xml .
 RUN mvn -B dependency:go-offline
 
-# Copy source code
-COPY src src
+# copy the rest of the source
+COPY src ./src
 
-# Package application (skip tests during image build)
-RUN mvn -B package -DskipTests
+# build the app (with Spring Boot repackage)
+RUN mvn -B clean package -DskipTests
 
-# ==============================
-# Stage 2: Run the application
-# ==============================
-FROM eclipse-temurin:17-jdk-jammy
+# ---------- Runtime stage ----------
+FROM eclipse-temurin:17-jdk AS runtime
+
 WORKDIR /app
 
-# Copy JAR from build stage
-COPY --from=build /workspace/target/*.jar app.jar
+# copy only the fat jar from the build stage
+COPY --from=build /app/target/*.jar app.jar
 
-# Let Spring Boot pick up PORT from environment
-ENV PORT=8080
+# Render provides PORT env var → Spring Boot respects it automatically
 EXPOSE 8080
 
-ENTRYPOINT ["java", "-jar", "app.jar"]
+ENTRYPOINT ["java","-jar","/app/app.jar"]
