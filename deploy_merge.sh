@@ -21,7 +21,7 @@ git checkout master
 git pull origin master
 
 # Merge current branch into master
-git merge --no-ff "$CURRENT_BRANCH" -m "Merge branch '$CURRENT_BRANCH' into master"
+git merge "$CURRENT_BRANCH"
 
 # Push updated master
 git push origin master
