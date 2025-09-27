@@ -70,6 +70,9 @@ public class DocumentationAgent {
 
         ToolExecutionContext ctx = new ToolExecutionContext(repo, graph, session, session.getMemory().getDocAgentLog());
 
+        // add user
+        session.getMemory().getDocAgentLog().addEntry("user", userPrompt);
+
         int iterations = 0;
         int maxIterations = (iterationLimit == null || iterationLimit <= 0) ? DEFAULT_MAX_ITERATIONS : iterationLimit;
         while (iterations++ < maxIterations) {
@@ -245,10 +248,10 @@ STEPS:
         }
 
         if (memory.getDocAgentLog() != null && !memory.getDocAgentLog().isEmpty()) {
-            context.append("LOG:\n").append(memory.getDocAgentLog().toString(DEFAULT_MAX_ITERATIONS * 2)).append("\n\n");
+            context.append("LOG:\n").append(memory.getDocAgentLog().toString(DEFAULT_MAX_ITERATIONS * 2 + 2)).append("\n\n");
         }
 
-        context.append("USER PROMPT WAS:\n").append(userPrompt == null ? "" : userPrompt).append("\n\n");
+        context.append("REMINDER: USER PROMPT WAS:\n").append(userPrompt == null ? "" : userPrompt).append("\n\n");
 
         contents.add(Content.builder().role("user").parts(List.of(Part.fromText(context.toString()))).build());
         return contents;
