@@ -41,7 +41,7 @@ interface CommitDetailPageProps {
 }
 
 const CommitDetailPage: React.FC<CommitDetailPageProps> = () => {
-  const { sha } = useParams<{ sha: string }>()
+  const { sha, repo } = useParams<{ sha: string; repo: string }>()
   const navigate = useNavigate()
   const location = useLocation()
   const [commit, setCommit] = useState<ChangelogEntry | null>(null)
@@ -120,9 +120,41 @@ const CommitDetailPage: React.FC<CommitDetailPageProps> = () => {
     return isDark ? tomorrow : prism
   }
 
-  // Get repository info from location state or localStorage
-  const repoUrl = location.state?.repoUrl || localStorage.getItem('current_repo_url')
-  const repoName = location.state?.repoName || localStorage.getItem('current_repo_name')
+  // Get the current workspace repository (fallback to current project)
+  const getCurrentRepository = () => {
+    // If URL has repo parameter, use it
+    if (repo && repo.includes('/')) {
+      return {
+        url: `https://github.com/${repo}`,
+        name: repo
+      }
+    }
+    
+    // Fallback to current workspace repository
+    const currentWorkspaceRepo = 'kimhongzhang323/Codenection2025'
+    return {
+      url: `https://github.com/${currentWorkspaceRepo}`,
+      name: currentWorkspaceRepo
+    }
+  }
+  
+  const currentRepo = getCurrentRepository()
+  const repoUrl = currentRepo.url
+  const repoName = currentRepo.name
+  
+  // Clear stale localStorage data and update with current repository
+  useEffect(() => {
+    localStorage.setItem('current_repo_url', repoUrl)
+    localStorage.setItem('current_repo_name', repoName)
+  }, [repoUrl, repoName])
+  
+  // Debug: Log repository information
+  console.log('Commit Detail Repository Info:', {
+    urlRepo: repo,
+    finalRepoUrl: repoUrl,
+    finalRepoName: repoName,
+    locationState: location.state
+  })
 
   useEffect(() => {
     const loadCommitDetails = async () => {
@@ -135,6 +167,14 @@ const CommitDetailPage: React.FC<CommitDetailPageProps> = () => {
       try {
         setIsLoading(true)
         setError(null)
+        
+        console.log('Loading commit details:', { repoUrl, sha, repoName })
+        
+        // First validate repository access
+        const isAccessible = await changelogApi.validateRepository(repoUrl)
+        if (!isAccessible) {
+          throw new Error(`Cannot access repository. Please check if the repository exists and you have proper permissions.`)
+        }
         
         const commitData = await changelogApi.getCommit(repoUrl, sha)
         
@@ -247,6 +287,33 @@ const CommitDetailPage: React.FC<CommitDetailPageProps> = () => {
         <div className="commit-detail-error">
           <h2>Error Loading Commit</h2>
           <p>{error || 'Commit not found'}</p>
+          
+          {error && error.includes('422') && (
+            <div style={{ marginTop: '16px', padding: '12px', borderRadius: '6px', backgroundColor: 'var(--background-secondary)', border: '1px solid var(--border-color)' }}>
+              <h4 style={{ margin: '0 0 8px 0', fontSize: '14px' }}>Common causes for this error:</h4>
+              <ul style={{ margin: 0, paddingLeft: '20px', fontSize: '13px', lineHeight: '1.5' }}>
+                <li>The repository doesn't exist or is private</li>
+                <li>The commit SHA is invalid or doesn't exist in this repository</li>
+                <li>Your GitHub access token doesn't have permission to access this repository</li>
+                <li>The repository has been moved or deleted</li>
+              </ul>
+            </div>
+          )}
+          
+          <button 
+            onClick={() => window.location.reload()} 
+            style={{ 
+              marginTop: '16px', 
+              padding: '8px 16px', 
+              borderRadius: '6px', 
+              border: '1px solid #646cff', 
+              background: '#646cff', 
+              color: 'white', 
+              cursor: 'pointer' 
+            }}
+          >
+            Retry
+          </button>
         </div>
       </div>
     )

@@ -40,11 +40,29 @@ const ChangelogPage: React.FC<ChangelogPageProps> = ({ className = '' }) => {
   const [sortBy, setSortBy] = useState<'date' | 'author' | 'changes'>('date')
   const [authors, setAuthors] = useState<string[]>([])
 
-  const repoName = location.state?.repoData?.fullName || repo || 'Repository'
-  const repoUrl = location.state?.repoUrl || (
-    // Try to construct a valid GitHub URL, fallback if repo param isn't in owner/repo format
-    repo && repo.includes('/') ? `https://github.com/${repo}` : null
-  )
+  // Get the current workspace repository (prioritize URL parameter)
+  const getCurrentRepository = () => {
+    // If URL has repo parameter, use it
+    if (repo && repo.includes('/')) {
+      return {
+        url: `https://github.com/${repo}`,
+        name: repo
+      }
+    }
+    
+    // Fallback to current workspace repository
+    const currentWorkspaceRepo = 'kimhongzhang323/Codenection2025'
+    return {
+      url: `https://github.com/${currentWorkspaceRepo}`,
+      name: currentWorkspaceRepo
+    }
+  }
+  
+  const currentRepo = getCurrentRepository()
+  const repoUrl = currentRepo.url
+  const repoName = currentRepo.name
+  
+  console.log('Changelog Repository Info:', { repo, repoUrl, repoName })
 
   // Convert GitHub commit to ChangelogEntry
   const convertGitHubCommitToEntry = useCallback((commit: GitHubCommit): ChangelogEntry => {
@@ -95,6 +113,13 @@ const ChangelogPage: React.FC<ChangelogPageProps> = ({ className = '' }) => {
   const loadChangelog = useCallback(async (page: number = 1, resetResults: boolean = true) => {
     if (!repoUrl) {
       setError(`No valid GitHub repository URL available. Please access this page from a repository documentation page.`)
+      setIsLoading(false)
+      return
+    }
+    
+    // Validate the repository URL format
+    if (repoUrl === `https://github.com/${repo}` && (!repo || !repo.includes('/'))) {
+      setError(`Invalid repository format: "${repo}". Expected format: owner/repository. Please navigate to this page from a valid GitHub repository.`)
       setIsLoading(false)
       return
     }
@@ -164,7 +189,7 @@ const ChangelogPage: React.FC<ChangelogPageProps> = ({ className = '' }) => {
     } finally {
       setIsLoading(false)
     }
-  }, [repoUrl, filters, convertGitHubCommitToEntry])
+  }, [repoUrl, repo, filters, convertGitHubCommitToEntry])
 
   // Search functionality with debounce for real-time search
   const handleSearch = useCallback((query: string) => {
@@ -185,19 +210,19 @@ const ChangelogPage: React.FC<ChangelogPageProps> = ({ className = '' }) => {
     setCurrentPage(1)
   }, [])
 
-  // Entry selection - navigate to commit detail page
+  // Entry selection - navigate to commit detail page with full page refresh
   const handleEntryClick = useCallback((entry: ChangelogEntry) => {
-    // Store repo data in localStorage for the detail page
-    if (repoUrl) localStorage.setItem('current_repo_url', repoUrl)
-    if (repoName) localStorage.setItem('current_repo_name', repoName)
+    // Store current repository data in localStorage for the detail page
+    const currentRepoUrl = repo && repo.includes('/') ? `https://github.com/${repo}` : repoUrl
+    if (currentRepoUrl) localStorage.setItem('current_repo_url', currentRepoUrl)
+    if (repo) localStorage.setItem('current_repo_name', repo)
     
-    navigate(`/${repo}/commit/${entry.sha}`, {
-      state: {
-        repoUrl: repoUrl,
-        repoName: repoName
-      }
-    })
-  }, [navigate, repo, repoUrl, repoName])
+    // Add loading cursor for visual feedback
+    document.body.style.cursor = 'wait'
+    
+    // Force full page reload like sidebar navigation
+    window.location.href = `/${repo}/commit/${entry.sha}`
+  }, [repo, repoUrl])
 
   // Load more functionality
   const handleLoadMore = useCallback(() => {
@@ -210,6 +235,17 @@ const ChangelogPage: React.FC<ChangelogPageProps> = ({ className = '' }) => {
   useEffect(() => {
     loadChangelog()
   }, [loadChangelog])
+
+  // Handle reload when returning from commit detail page
+  useEffect(() => {
+    const state = location.state as { shouldReload?: boolean; repoUrl?: string; repoData?: { name?: string; fullName?: string } } | null
+    if (state?.shouldReload) {
+      // Clear the shouldReload flag and reload the changelog
+      navigate(window.location.pathname, { replace: true, state: { ...state, shouldReload: false } })
+      console.log('Auto-refreshing changelog after returning from commit details...')
+      loadChangelog()
+    }
+  }, [location.state, navigate, loadChangelog])
 
   // Format date helper
   const formatDate = (dateString: string) => {
@@ -372,6 +408,17 @@ const ChangelogPage: React.FC<ChangelogPageProps> = ({ className = '' }) => {
             <HistoryIcon size={48} />
             <h3 className="changelog-empty-title">Error loading changelog</h3>
             <p className="changelog-empty-description">{error}</p>
+            {error.includes('Invalid repository format') && (
+              <div style={{ marginTop: '16px', padding: '12px', borderRadius: '8px', background: 'var(--background-secondary)', border: '1px solid var(--border-color)' }}>
+                <h4 style={{ margin: '0 0 8px 0', fontSize: '14px', fontWeight: '600' }}>How to access a repository changelog:</h4>
+                <ol style={{ margin: 0, paddingLeft: '20px', fontSize: '13px', lineHeight: '1.5' }}>
+                  <li>Go to the dashboard and select a repository</li>
+                  <li>Navigate to the documentation page</li>
+                  <li>Click on "Changelog" in the sidebar</li>
+                  <li>Or use URL format: /owner/repository/changelog</li>
+                </ol>
+              </div>
+            )}
             <button 
               onClick={() => loadChangelog()}
               style={{ marginTop: '16px', padding: '8px 16px', borderRadius: '6px', border: '1px solid #646cff', background: '#646cff', color: 'white', cursor: 'pointer' }}

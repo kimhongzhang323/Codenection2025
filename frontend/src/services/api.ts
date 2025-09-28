@@ -106,7 +106,7 @@ export interface DocumentConfig {
   audience: string
   tone: string
   documentationTemplate: string
-  extra?: Record<string, any>
+  extra?: Record<string, unknown>
 }
 
 export interface ConfigResponse {
@@ -443,6 +443,39 @@ export const changelogApi = {
     return data.items || []
   },
 
+  // Validate repository access before making other API calls
+  async validateRepository(gitUrl: string): Promise<boolean> {
+    try {
+      const { owner, name } = parseGitUrl(gitUrl)
+      const accessToken = localStorage.getItem('github_access_token')
+      
+      if (!accessToken) {
+        throw new Error('No GitHub access token available')
+      }
+
+      const response = await fetch(
+        `https://api.github.com/repos/${owner}/${name}`,
+        {
+          headers: {
+            'Authorization': `token ${accessToken}`,
+            'Accept': 'application/vnd.github.v3+json',
+          },
+        }
+      )
+
+      if (response.ok) {
+        console.log(`Repository ${owner}/${name} is accessible`)
+        return true
+      } else {
+        console.error(`Repository ${owner}/${name} is not accessible: ${response.status} ${response.statusText}`)
+        return false
+      }
+    } catch (error) {
+      console.error('Error validating repository:', error)
+      return false
+    }
+  },
+
   // Get detailed commit information
   async getCommit(gitUrl: string, sha: string): Promise<GitHubCommit> {
     const { owner, name } = parseGitUrl(gitUrl)
@@ -451,6 +484,13 @@ export const changelogApi = {
     if (!accessToken) {
       throw new Error('No GitHub access token available')
     }
+
+    // Validate SHA format
+    if (!sha || sha.length < 7) {
+      throw new Error(`Invalid commit SHA: "${sha}". SHA must be at least 7 characters long.`)
+    }
+
+    console.log(`Fetching commit ${sha} from repository ${owner}/${name}`);
 
     const response = await fetch(
       `https://api.github.com/repos/${owner}/${name}/commits/${sha}`, 
@@ -463,7 +503,19 @@ export const changelogApi = {
     )
 
     if (!response.ok) {
-      throw new Error(`Failed to fetch commit: ${response.statusText}`)
+      const errorText = await response.text()
+      console.error(`GitHub API Error ${response.status}:`, errorText)
+      console.error(`Request URL: https://api.github.com/repos/${owner}/${name}/commits/${sha}`)
+      
+      if (response.status === 422) {
+        throw new Error(`Invalid request to GitHub API. This usually means the repository "${owner}/${name}" doesn't exist, the commit SHA "${sha}" is invalid, or you don't have access to this repository.`)
+      } else if (response.status === 404) {
+        throw new Error(`Repository "${owner}/${name}" or commit "${sha}" not found.`)
+      } else if (response.status === 401 || response.status === 403) {
+        throw new Error(`Access denied to repository "${owner}/${name}". Please check your GitHub access token permissions.`)
+      } else {
+        throw new Error(`Failed to fetch commit: ${response.status} ${response.statusText}`)
+      }
     }
 
     return response.json()
@@ -588,10 +640,14 @@ export function parseGitUrl(gitUrl: string): { owner: string; name: string } {
     throw new Error('Invalid GitHub URL: URL is required and must be a string')
   }
 
+  console.log('Parsing Git URL:', gitUrl)
+
   // Handle different GitHub URL formats
   const httpsMatch = gitUrl.match(/https:\/\/github\.com\/([^/]+)\/([^/]+?)(?:\.git)?(?:\/.*)?$/)
   const sshMatch = gitUrl.match(/git@github\.com:([^/]+)\/([^/]+?)(?:\.git)?$/)
   const shortMatch = gitUrl.match(/^([^/]+)\/([^/]+)$/) // owner/repo format
+  
+  console.log('URL matches:', { httpsMatch, sshMatch, shortMatch })
   
   let owner: string, name: string
   
@@ -614,7 +670,9 @@ export function parseGitUrl(gitUrl: string): { owner: string; name: string } {
     throw new Error(`Invalid GitHub URL format: owner and repository name are required`)
   }
   
-  return { owner: owner.trim(), name: name.trim() }
+  const result = { owner: owner.trim(), name: name.trim() }
+  console.log('Parsed Git URL result:', result)
+  return result
 }
 
 // Configuration API Service

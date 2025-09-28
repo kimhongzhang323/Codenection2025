@@ -193,7 +193,12 @@ const parseSectionFromApiResponse = (apiResponse: ApiResponse, targetSection: st
     
     else if (targetSection === 'fullreadme') {
       if (readmeContent) {
-        return `# Full Documentation\n\n${cleanContent(readmeContent)}`
+        const cleanedContent = cleanContent(readmeContent)
+        // Ensure the content starts with an H1 header for button rendering
+        if (!cleanedContent.trim().startsWith('#')) {
+          return `# Full README\n\n${cleanedContent}`
+        }
+        return cleanedContent
       }
       
       // If no README.md, generate comprehensive documentation from all files
@@ -210,7 +215,7 @@ const parseSectionFromApiResponse = (apiResponse: ApiResponse, targetSection: st
       })
       
       if (allContent.length > 0) {
-        return `# Full Documentation\n\n${allContent.join('\n\n---\n\n')}`
+        return allContent.join('\n\n---\n\n')
       }
     }
     
@@ -249,8 +254,11 @@ const DocumentationSection: React.FC<DocumentationSectionProps> = ({
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
+    // Reset content immediately when section changes
+    setContent('')
+    setIsLoading(true)
+
     const loadSectionContent = async () => {
-      setIsLoading(true)
       try {
         console.log(`[DocumentationSection] Loading ${section} content from:`, githubHref)
         const docs = await documentationApi.getAll(githubHref)
@@ -267,7 +275,12 @@ const DocumentationSection: React.FC<DocumentationSectionProps> = ({
     }
 
     if (githubHref && githubHref !== '#') {
-      loadSectionContent()
+      // Add a small delay to ensure the loading state is visible
+      const timeoutId = setTimeout(() => {
+        loadSectionContent()
+      }, 50)
+      
+      return () => clearTimeout(timeoutId)
     } else {
       setContent(getSectionFallbackContent(section))
       setIsLoading(false)
@@ -293,7 +306,7 @@ const DocumentationSection: React.FC<DocumentationSectionProps> = ({
 
   return (
     <div className="documentation-section">
-      <Markdown content={content} repoUrl={githubHref} />
+      <Markdown content={content} />
       {showTOC && <TableOfContents content={content} />}
     </div>
   )

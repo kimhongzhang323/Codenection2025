@@ -1,10 +1,12 @@
 /* Commit Detail Page Styles */
 
 .commit-detail-page {
-  min-height: 100vh;
   background: var(--docs-bg);
   color: var(--docs-text);
   font-family: "Geist Sans", system-ui, -apple-system, sans-serif;
+  height: 100vh;                /* ← Set fixed viewport height */
+  overflow-y: auto;             /* ← Enables vertical scrolling */
+  overflow-x: hidden;           /* ← Prevent horizontal scroll */
 }
 
 /* Loading & Error States */
@@ -384,7 +386,8 @@
   padding: 0;
   background: #0d1117;
   color: #e6edf3;
-  overflow-x: auto;
+  overflow: auto;
+  max-height: 500px;
 }
 
 .file-patch pre {
@@ -394,7 +397,8 @@
   font-size: 12px;
   line-height: 1.5;
   white-space: pre;
-  overflow-x: auto;
+  overflow: auto;
+  max-height: 450px;
 }
 
 .file-patch code {
@@ -415,6 +419,10 @@
 
 /* Responsive Design */
 @media (max-width: 768px) {
+  .commit-detail-page {
+    min-height: 100vh;
+  }
+
   .commit-detail-header {
     padding: 16px 20px;
     flex-direction: column;
@@ -476,6 +484,11 @@
     padding: 16px;
   }
 
+  .file-patch,
+  .file-patch pre {
+    max-height: 300px;
+  }
+
   .commit-message h1 {
     font-size: 20px;
   }
@@ -488,6 +501,47 @@
   .files-title {
     font-size: 18px;
   }
+}
+
+/* Scrollbar Styling */
+.commit-detail-info::-webkit-scrollbar,
+.commit-files::-webkit-scrollbar,
+.file-patch::-webkit-scrollbar,
+.file-patch pre::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.commit-detail-info::-webkit-scrollbar-track,
+.commit-files::-webkit-scrollbar-track,
+.file-patch::-webkit-scrollbar-track,
+.file-patch pre::-webkit-scrollbar-track {
+  background: var(--docs-hover-bg, rgba(0, 0, 0, 0.05));
+  border-radius: 4px;
+}
+
+.commit-detail-info::-webkit-scrollbar-thumb,
+.commit-files::-webkit-scrollbar-thumb,
+.file-patch::-webkit-scrollbar-thumb,
+.file-patch pre::-webkit-scrollbar-thumb {
+  background: rgba(100, 108, 255, 0.3);
+  border-radius: 4px;
+  transition: background 0.2s ease;
+}
+
+.commit-detail-info::-webkit-scrollbar-thumb:hover,
+.commit-files::-webkit-scrollbar-thumb:hover,
+.file-patch::-webkit-scrollbar-thumb:hover,
+.file-patch pre::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 108, 255, 0.5);
+}
+
+/* Smooth scrolling behavior */
+.commit-detail-info,
+.commit-files,
+.file-patch,
+.file-patch pre {
+  scroll-behavior: smooth;
 }
 
 /* Dark mode specific adjustments */

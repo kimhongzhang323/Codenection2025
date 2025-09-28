@@ -72,10 +72,27 @@ const SummarizeButton: React.FC<SummarizeButtonProps> = ({ repoUrl, pageContent 
   }, [repoUrl]);
 
   async function handleSummarize() {
+    console.log('[SummarizeButton] handleSummarize called:', { 
+      isSummarizing, 
+      repoUrl, 
+      selectedBranch, 
+      pageContentLength: pageContent?.length 
+    })
+    
     if (isSummarizing) return
     
+    // Always open the panel first
+    setIsPanelOpen(true)
+    
     if (!repoUrl || repoUrl === '#') {
-      console.warn('No repository URL available for summarization')
+      console.warn('[SummarizeButton] No repository URL available for summarization:', repoUrl)
+      setSummary(`### No Repository URL
+      
+Cannot generate summary because no valid repository URL is available.
+
+**Current URL:** ${repoUrl}
+
+Please ensure you're viewing a valid GitHub repository.`)
       return
     }
 
@@ -84,17 +101,22 @@ const SummarizeButton: React.FC<SummarizeButtonProps> = ({ repoUrl, pageContent 
     setIsPanelOpen(true)
     
     try {
+      console.log('[SummarizeButton] Calling agentApi.runSummary with:', { repoUrl, selectedBranch, pageContentLength: pageContent?.length })
       // Call the backend summary agent API with selected branch and page content
       const summaryResult = await agentApi.runSummary(repoUrl, selectedBranch, pageContent)
+      console.log('[SummarizeButton] Summary result received:', summaryResult?.substring(0, 200) + '...')
       setSummary(summaryResult)
     } catch (error) {
-      console.error('Error generating summary:', error)
+      console.error('[SummarizeButton] Error generating summary:', error)
       setSummary(`### Error
       
 Failed to generate summary. Please try again later.
 
 **Error Details:**
-${error instanceof Error ? error.message : 'Unknown error occurred'}`)
+${error instanceof Error ? error.message : 'Unknown error occurred'}
+
+**Repository URL:** ${repoUrl}
+**Branch:** ${selectedBranch}`)
     } finally {
       setIsSummarizing(false)
     }
@@ -112,7 +134,10 @@ ${error instanceof Error ? error.message : 'Unknown error occurred'}`)
   return (
     <div style={{ position: 'relative', display: 'inline-block' }}>
       <button
-        onClick={handleSummarize}
+        onClick={() => {
+          console.log('[SummarizeButton] Button clicked!')
+          handleSummarize()
+        }}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
         disabled={isSummarizing}
@@ -152,8 +177,23 @@ ${error instanceof Error ? error.message : 'Unknown error occurred'}`)
         <span>{isSummarizing ? 'Summarizing...' : 'Summarize'}</span>
       </button>
       
+      {/* Backdrop overlay */}
+      {isPanelOpen && (
+        <div 
+          className="tldr-overlay"
+          onClick={() => setIsPanelOpen(false)}
+        />
+      )}
+      
       {/* Slide-in TL;DR panel */}
-      <div className={`tldr-panel ${isPanelOpen ? 'is-open' : ''} ${isFullScreen ? 'is-fullscreen' : ''}`} role="dialog" aria-modal="true">
+      <div 
+        className={`tldr-panel ${isPanelOpen ? 'is-open' : ''} ${isFullScreen ? 'is-fullscreen' : ''}`} 
+        role="dialog" 
+        aria-modal="true"
+        style={{ 
+          display: isPanelOpen ? 'flex' : 'flex' // Always render for debugging
+        }}
+      >
         {/* Top bar: controls only */}
         <div className="tldr-panel__topbar">
           <div className="tldr-panel__actions">

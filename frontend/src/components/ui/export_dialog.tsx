@@ -99,7 +99,47 @@ export default function ExportDialog({ isOpen, onClose, markdownContent, documen
   };
 
   const exportAsHTML = async (content: string) => {
-    // Convert markdown to HTML (basic implementation)
+    // Convert markdown to HTML with better formatting
+    const convertMarkdownToHTML = (markdown: string): string => {
+      let html = markdown;
+      
+      // Headers
+      html = html.replace(/^### (.*$)/gim, '<h3>$1</h3>');
+      html = html.replace(/^## (.*$)/gim, '<h2>$1</h2>');
+      html = html.replace(/^# (.*$)/gim, '<h1>$1</h1>');
+      
+      // Bold and Italic
+      html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+      html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
+      
+      // Code blocks
+      html = html.replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>');
+      html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+      
+      // Links
+      html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
+      
+      // Lists
+      html = html.replace(/^\* (.*$)/gim, '<li>$1</li>');
+      html = html.replace(/^- (.*$)/gim, '<li>$1</li>');
+      html = html.replace(/^\d+\. (.*$)/gim, '<li>$1</li>');
+      
+      // Wrap consecutive list items in ul/ol tags
+      html = html.replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>');
+      
+      // Blockquotes
+      html = html.replace(/^> (.*$)/gim, '<blockquote>$1</blockquote>');
+      
+      // Line breaks
+      html = html.replace(/\n\n/g, '</p><p>');
+      html = html.replace(/\n/g, '<br>');
+      
+      // Wrap in paragraphs
+      html = '<p>' + html + '</p>';
+      
+      return html;
+    };
+
     const htmlContent = `
 <!DOCTYPE html>
 <html lang="en">
@@ -108,15 +148,73 @@ export default function ExportDialog({ isOpen, onClose, markdownContent, documen
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Documentation Export</title>
     <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; line-height: 1.6; max-width: 800px; margin: 0 auto; padding: 20px; }
-        pre { background: #f5f5f5; padding: 15px; border-radius: 5px; overflow-x: auto; }
-        code { background: #f5f5f5; padding: 2px 4px; border-radius: 3px; }
-        h1, h2, h3 { color: #333; }
-        blockquote { border-left: 4px solid #ddd; margin: 0; padding-left: 20px; color: #666; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; 
+            line-height: 1.6; 
+            max-width: 900px; 
+            margin: 0 auto; 
+            padding: 20px; 
+            color: #333;
+        }
+        h1, h2, h3, h4, h5, h6 { 
+            color: #2c3e50; 
+            margin-top: 2rem; 
+            margin-bottom: 1rem;
+        }
+        h1 { border-bottom: 2px solid #3498db; padding-bottom: 10px; }
+        h2 { border-bottom: 1px solid #bdc3c7; padding-bottom: 5px; }
+        pre { 
+            background: #f8f9fa; 
+            padding: 15px; 
+            border-radius: 5px; 
+            overflow-x: auto; 
+            border: 1px solid #e9ecef;
+        }
+        code { 
+            background: #f1f3f4; 
+            padding: 2px 6px; 
+            border-radius: 3px; 
+            font-family: 'Courier New', monospace;
+        }
+        blockquote { 
+            border-left: 4px solid #3498db; 
+            margin: 1rem 0; 
+            padding-left: 20px; 
+            color: #7f8c8d; 
+            font-style: italic;
+        }
+        ul, ol { margin: 1rem 0; padding-left: 2rem; }
+        li { margin: 0.5rem 0; }
+        a { color: #3498db; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        p { margin: 1rem 0; }
+        .export-header {
+            text-align: center;
+            padding: 2rem 0;
+            border-bottom: 2px solid #ecf0f1;
+            margin-bottom: 2rem;
+        }
+        .export-footer {
+            text-align: center;
+            padding: 2rem 0;
+            border-top: 1px solid #ecf0f1;
+            margin-top: 2rem;
+            color: #7f8c8d;
+            font-size: 0.9rem;
+        }
     </style>
 </head>
 <body>
-    <div id="content">${content.replace(/\n/g, '<br>')}</div>
+    <div class="export-header">
+        <h1>Documentation Export</h1>
+        <p>Generated on ${new Date().toLocaleDateString()}</p>
+    </div>
+    
+    <div id="content">${convertMarkdownToHTML(content)}</div>
+    
+    <div class="export-footer">
+        <p>This documentation was exported from your project repository.</p>
+    </div>
 </body>
 </html>`;
     const blob = new Blob([htmlContent], { type: 'text/html' });
@@ -124,25 +222,210 @@ export default function ExportDialog({ isOpen, onClose, markdownContent, documen
   };
 
   const exportAsPDF = async (content: string) => {
-    // For PDF export, we'll use the browser's print functionality
+    // Convert markdown to HTML for better PDF formatting
+    const convertMarkdownToHTML = (markdown: string): string => {
+      let html = markdown;
+      
+      // Headers
+      html = html.replace(/^### (.*$)/gim, '<h3>$1</h3>');
+      html = html.replace(/^## (.*$)/gim, '<h2>$1</h2>');
+      html = html.replace(/^# (.*$)/gim, '<h1>$1</h1>');
+      
+      // Bold and Italic
+      html = html.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+      html = html.replace(/\*(.*?)\*/g, '<em>$1</em>');
+      
+      // Code blocks
+      html = html.replace(/```([\s\S]*?)```/g, '<pre><code>$1</code></pre>');
+      html = html.replace(/`([^`]+)`/g, '<code>$1</code>');
+      
+      // Links
+      html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2">$1</a>');
+      
+      // Lists
+      html = html.replace(/^\* (.*$)/gim, '<li>$1</li>');
+      html = html.replace(/^- (.*$)/gim, '<li>$1</li>');
+      html = html.replace(/^\d+\. (.*$)/gim, '<li>$1</li>');
+      
+      // Wrap consecutive list items in ul tags
+      html = html.replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>');
+      
+      // Blockquotes
+      html = html.replace(/^> (.*$)/gim, '<blockquote>$1</blockquote>');
+      
+      // Line breaks
+      html = html.replace(/\n\n/g, '</p><p>');
+      html = html.replace(/\n/g, '<br>');
+      
+      // Wrap in paragraphs
+      html = '<p>' + html + '</p>';
+      
+      return html;
+    };
+
+    // Create a print-optimized window
     const printWindow = window.open('', '_blank');
     if (printWindow) {
       printWindow.document.write(`
+        <!DOCTYPE html>
         <html>
           <head>
-            <title>Documentation Export</title>
+            <meta charset="UTF-8">
+            <title>Documentation Export - PDF</title>
             <style>
-              body { font-family: Arial, sans-serif; line-height: 1.6; }
-              @media print { body { margin: 0; } }
+              @page {
+                margin: 1in;
+                size: A4;
+              }
+              
+              body { 
+                font-family: 'Times New Roman', serif; 
+                line-height: 1.5; 
+                color: #000;
+                margin: 0;
+                padding: 0;
+              }
+              
+              h1, h2, h3, h4, h5, h6 { 
+                color: #000; 
+                page-break-after: avoid;
+                margin-top: 1.5em;
+                margin-bottom: 0.5em;
+              }
+              
+              h1 { 
+                font-size: 24pt; 
+                border-bottom: 2px solid #000; 
+                padding-bottom: 8pt;
+                page-break-before: always;
+              }
+              
+              h2 { 
+                font-size: 18pt; 
+                border-bottom: 1px solid #666; 
+                padding-bottom: 4pt;
+              }
+              
+              h3 { font-size: 14pt; }
+              
+              p { 
+                margin: 0.5em 0; 
+                text-align: justify;
+              }
+              
+              pre { 
+                background: #f5f5f5; 
+                padding: 10pt; 
+                border: 1px solid #ccc;
+                font-family: 'Courier New', monospace;
+                font-size: 9pt;
+                page-break-inside: avoid;
+                margin: 1em 0;
+              }
+              
+              code { 
+                background: #f0f0f0; 
+                padding: 2pt 4pt; 
+                font-family: 'Courier New', monospace;
+                font-size: 9pt;
+              }
+              
+              blockquote { 
+                border-left: 4pt solid #666; 
+                margin: 1em 0; 
+                padding-left: 15pt; 
+                color: #333; 
+                font-style: italic;
+              }
+              
+              ul, ol { 
+                margin: 0.5em 0; 
+                padding-left: 20pt; 
+              }
+              
+              li { 
+                margin: 0.25em 0; 
+              }
+              
+              a { 
+                color: #000; 
+                text-decoration: underline;
+              }
+              
+              .pdf-header {
+                text-align: center;
+                border-bottom: 2pt solid #000;
+                padding-bottom: 15pt;
+                margin-bottom: 20pt;
+              }
+              
+              .pdf-footer {
+                position: fixed;
+                bottom: 0;
+                width: 100%;
+                text-align: center;
+                font-size: 8pt;
+                color: #666;
+                border-top: 1pt solid #ccc;
+                padding-top: 5pt;
+              }
+              
+              @media print {
+                body { 
+                  -webkit-print-color-adjust: exact; 
+                  print-color-adjust: exact;
+                }
+                
+                .page-break { 
+                  page-break-before: always; 
+                }
+                
+                .no-break { 
+                  page-break-inside: avoid; 
+                }
+                
+                .pdf-footer {
+                  position: fixed;
+                  bottom: 0;
+                }
+              }
             </style>
           </head>
           <body>
-            <pre>${content}</pre>
+            <div class="pdf-header">
+              <h1>Documentation Export</h1>
+              <p>Generated on ${new Date().toLocaleDateString()} at ${new Date().toLocaleTimeString()}</p>
+            </div>
+            
+            <div class="content">
+              ${convertMarkdownToHTML(content)}
+            </div>
+            
+            <div class="pdf-footer">
+              <p>Page <span id="pageNumber"></span> | Documentation Export</p>
+            </div>
+            
+            <script>
+              window.addEventListener('load', function() {
+                // Auto-print after content loads
+                setTimeout(() => {
+                  window.print();
+                }, 500);
+              });
+              
+              // Close window after printing (if user cancels or completes)
+              window.addEventListener('afterprint', function() {
+                setTimeout(() => {
+                  window.close();
+                }, 1000);
+              });
+            </script>
           </body>
         </html>
       `);
       printWindow.document.close();
-      printWindow.print();
+    } else {
+      alert('PDF export requires popup permissions. Please allow popups for this site and try again.');
     }
   };
 
@@ -160,10 +443,58 @@ export default function ExportDialog({ isOpen, onClose, markdownContent, documen
   };
 
   const exportAsZIP = async (content: string, data: Record<string, unknown>) => {
-    // For ZIP export, we'll create multiple files and prompt user to save each
-    await exportAsMarkdown(content);
-    await exportAsJSON(data);
-    alert('Multiple files downloaded. Please organize them as needed.');
+    // Since we don't have a ZIP library, we'll create a structured export
+    // by downloading multiple related files with clear naming
+    
+    const timestamp = new Date().toISOString().split('T')[0]; // YYYY-MM-DD format
+    const baseName = `documentation-export-${timestamp}`;
+    
+    // Export markdown file
+    const markdownBlob = new Blob([content], { type: 'text/markdown' });
+    downloadFile(markdownBlob, `${baseName}.md`);
+    
+    // Export JSON metadata
+    const exportData = {
+      timestamp: new Date().toISOString(),
+      documentation: data,
+      content: content,
+      metadata: {
+        exportFormat: 'zip-collection',
+        version: '1.0',
+        files: ['markdown', 'json', 'html']
+      }
+    };
+    const jsonBlob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+    downloadFile(jsonBlob, `${baseName}-metadata.json`);
+    
+    // Export HTML version
+    await new Promise(resolve => setTimeout(resolve, 100)); // Small delay between downloads
+    await exportAsHTML(content);
+    
+    // Create a README for the export
+    const readmeContent = `# Documentation Export
+    
+This folder contains exported documentation files:
+
+## Files Included:
+- \`${baseName}.md\` - Main documentation in Markdown format
+- \`${baseName}-metadata.json\` - Export metadata and structured data
+- \`documentation.html\` - Formatted HTML version
+
+## Export Details:
+- Export Date: ${new Date().toLocaleDateString()}
+- Export Time: ${new Date().toLocaleTimeString()}
+- Content Length: ${content.length} characters
+- Format: Multi-file collection (ZIP alternative)
+
+To use these files, organize them in a single folder for easy access.
+`;
+    
+    const readmeBlob = new Blob([readmeContent], { type: 'text/markdown' });
+    await new Promise(resolve => setTimeout(resolve, 200)); // Delay between downloads
+    downloadFile(readmeBlob, `${baseName}-README.md`);
+    
+    alert(`Documentation exported as multiple files! \n\nFiles downloaded:\n- ${baseName}.md\n- ${baseName}-metadata.json\n- documentation.html\n- ${baseName}-README.md\n\nOrganize these files in a single folder for easy access.`);
   };
 
   const downloadFile = (blob: Blob, filename: string) => {
