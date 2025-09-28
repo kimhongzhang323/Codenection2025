@@ -96,6 +96,74 @@ class DiscordNotificationService {
     }
   }
 
+  async sendNotificationWithImage(payload: DiscordWebhookPayload, imageDataUrl?: string): Promise<boolean> {
+    if (!this.isConfigured()) {
+      console.warn('Discord webhook not configured')
+      return false
+    }
+
+    try {
+      if (imageDataUrl && imageDataUrl.startsWith('data:image/')) {
+        try {
+          // First try sending with embedded image in embed
+          const payloadWithImage = {
+            ...payload,
+            embeds: payload.embeds?.map(embed => ({
+              ...embed,
+              image: {
+                url: imageDataUrl
+              }
+            })) || []
+          }
+          
+          const embedResponse = await fetch(this.webhookUrl!, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(payloadWithImage)
+          })
+
+          if (embedResponse.ok) {
+            return true
+          }
+          
+          console.warn('Embed method failed, trying file upload...')
+          
+          // If embed fails, try file upload method
+          const response = await fetch(imageDataUrl)
+          const blob = await response.blob()
+          
+          // Create FormData for file upload
+          const formData = new FormData()
+          formData.append('payload_json', JSON.stringify(payload))
+          formData.append('file', blob, `screenshot_${Date.now()}.png`)
+          
+          const discordResponse = await fetch(this.webhookUrl!, {
+            method: 'POST',
+            body: formData
+          })
+
+          if (!discordResponse.ok) {
+            throw new Error(`Discord webhook failed: ${discordResponse.status} ${discordResponse.statusText}`)
+          }
+          
+          return true
+        } catch (imageError) {
+          console.warn('Image upload failed, sending text only:', imageError)
+          // Fall back to text-only message
+          return await this.sendNotification(payload)
+        }
+      } else {
+        // Send without image
+        return await this.sendNotification(payload)
+      }
+    } catch (error) {
+      console.error('Failed to send Discord notification with image:', error)
+      return false
+    }
+  }
+
   async notifyComponentChange(change: ComponentChange): Promise<boolean> {
     const embed: DiscordEmbed = {
       title: `🔧 Component ${change.type.charAt(0).toUpperCase() + change.type.slice(1)}: ${change.component}`,

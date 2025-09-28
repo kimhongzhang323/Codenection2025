@@ -24,6 +24,8 @@ import EmbeddedChangelog from '../components/embedded_changelog'
 import EmbeddedFlowchart from '../components/embedded_flowchart'
 
 import { ExportIcon } from '../components/icons/export_icon'
+import { FeedbackIcon } from '../components/icons/feedback_icon'
+import FeedbackModal from '../components/ui/feedback_modal'
 
 import TranslationDialog from '../components/ui/translation_dialog'
 import { useTranslation } from '../contexts/TranslationContext'
@@ -127,6 +129,7 @@ function DocumentationPage() {
   const [isShareDialogOpen, setIsShareDialogOpen] = useState(false)
   const [isViewCodeDialogOpen, setIsViewCodeDialogOpen] = useState(false)
   const [isExportDialogOpen, setIsExportDialogOpen] = useState(false)
+  const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false)
   const [isTranslationDialogOpen, setIsTranslationDialogOpen] = useState(false)
   const [isDiscordConfigOpen, setIsDiscordConfigOpen] = useState(false)
   const [isDiscordMonitoringActive, setIsDiscordMonitoringActive] = useState(false)
@@ -466,6 +469,25 @@ function DocumentationPage() {
     setIsExportDialogOpen(true)
   }
 
+  // Handle feedback functionality
+  const handleFeedback = () => {
+    setIsFeedbackModalOpen(true)
+  }
+
+  // Global keyboard shortcut for screenshot feedback (Ctrl+Shift+S)
+  useEffect(() => {
+    const handleGlobalScreenshot = (event: KeyboardEvent) => {
+      if (event.ctrlKey && event.shiftKey && event.key === 'S') {
+        event.preventDefault()
+        // Open feedback modal for screenshot
+        setIsFeedbackModalOpen(true)
+      }
+    }
+
+    document.addEventListener('keydown', handleGlobalScreenshot)
+    return () => document.removeEventListener('keydown', handleGlobalScreenshot)
+  }, [])
+
   // Sync document class with theme state
   useEffect(() => {
     if (isDarkSelected) {
@@ -616,6 +638,18 @@ function DocumentationPage() {
         >
           <ExportIcon size={16} />
           <span>Export</span>
+        </button>
+      </div>
+
+      {/* Feedback Button - Top Right Corner */}
+      <div className="docs-feedback-button-container">
+        <button
+          className="docs-feedback-button"
+          onClick={handleFeedback}
+          aria-label="Give feedback"
+        >
+          <FeedbackIcon size={16} />
+          <span>Feedback</span>
         </button>
       </div>
 
@@ -986,6 +1020,12 @@ function DocumentationPage() {
       <TranslationDialog
         isOpen={isTranslationDialogOpen}
         onClose={() => setIsTranslationDialogOpen(false)}
+      />
+
+      {/* Feedback Modal */}
+      <FeedbackModal
+        isOpen={isFeedbackModalOpen}
+        onClose={() => setIsFeedbackModalOpen(false)}
       />
 
       {/* Discord Notification Config Dialog */}
