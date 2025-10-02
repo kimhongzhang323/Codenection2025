@@ -301,11 +301,7 @@ public class McpToolKit {
     public String executeTool(String toolName, Map<String, Object> params, ToolExecutionContext context) {
         String result;
         String paramForMemory;
-        try {
-            paramForMemory = params == null ? "null" : objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(params);
-        } catch (JsonProcessingException e) {
-            paramForMemory = String.valueOf(params);
-        }
+        paramForMemory = (params == null) ? "null" : params.toString();
 
         try {
             result = execute(toolName, params, context);
@@ -339,17 +335,17 @@ public class McpToolKit {
                     break;
                 case "update_understanding":
             context.getSession().getMemory().getSummary().replaceEntry("understanding", result);
-            context.getEpisodicMemory().addEntry("model:tool_call:" + toolName + "(" + "..." + ")", "Success");
+            context.getEpisodicMemory().addEntry("model", toolName + "{" + "..." + "}");
             return result;
         default:
-            System.out.println("WARNING: unknown tool: " + toolName + " (" + paramForMemory + ")");
+            System.out.println("WARNING: unknown tool: " + toolName + paramForMemory);
             break;
     }
-    context.getEpisodicMemory().addEntry("model:tool_call:" + toolName + "(" + paramForMemory + ")", "Success");
+    context.getEpisodicMemory().addEntry("model", toolName + paramForMemory + ": " + "Success");
 } catch (Exception e) {
     result = e.getClass().getSimpleName() + ": " + e.getMessage();
     System.err.println("DEBUG: Tool execution failed for " + toolName + " with param " + paramForMemory + ". Error: " + e.getMessage());
-    context.getSession().getMemory().getDocAgentLog().addEntry("tool_call:" + toolName + "(" + paramForMemory + ")", result);
+    context.getSession().getMemory().getDocAgentLog().addEntry("model", toolName + paramForMemory + ": " + result);
 }
 return result;
 }    private String execute(String toolName, Map<String, Object> paramsMap, ToolExecutionContext context) throws Exception {

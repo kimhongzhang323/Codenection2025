@@ -1,7 +1,6 @@
 package com.example.AutoDocX.service;
 
-import com.example.AutoDocX.model.Documentation;
-import com.example.AutoDocX.model.config.AgentConfig;
+import com.example.AutoDocX.model.AgentConfig;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 

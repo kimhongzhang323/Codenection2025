@@ -5,7 +5,9 @@ import com.example.AutoDocX.service.DocumentHandlingService;
 import com.example.AutoDocX.service.DocumentationHandler;
 import com.example.AutoDocX.service.Session;
 import com.example.AutoDocX.service.SessionManager;
+import com.example.AutoDocX.util.ApiResponse;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -25,114 +27,148 @@ public class DocumentationController {
     }
 
     @GetMapping
-    public ResponseEntity<Map<String, Documentation>> getDocumentation(
+    public ResponseEntity<ApiResponse<Map<String, Documentation>>> getDocumentation(
             @RequestParam String gitUrl,
             @RequestParam(required = false) String branch
     ) {
-        Session session = sessionManager.getSession(gitUrl, branch);
-        DocumentationHandler handler = documentHandlingService.getDocumentHandler(session);
-        return ResponseEntity.ok(handler.getAll());
+        try {
+            Session session = sessionManager.getSession(gitUrl, branch);
+            DocumentationHandler handler = documentHandlingService.getDocumentHandler(session);
+            return new ResponseEntity<>(ApiResponse.success("Documentation retrieved successfully", handler.getAll()), HttpStatus.OK);
+        } catch (IllegalArgumentException ex) {
+            return new ResponseEntity<>(ApiResponse.error(ex.getMessage()), HttpStatus.BAD_REQUEST);
+        }
     }
 
     @GetMapping("/sections")
-    public ResponseEntity<java.util.List<String>> listSections(
+    public ResponseEntity<ApiResponse<java.util.List<String>>> listSections(
             @RequestParam String gitUrl,
             @RequestParam(required = false) String branch,
             @RequestParam String key
     ) {
-        Session session = sessionManager.getSession(gitUrl, branch);
-        DocumentationHandler handler = documentHandlingService.getDocumentHandler(session);
-        java.util.List<String> sections = handler.listSections(key);
-        return ResponseEntity.ok(sections);
+        try {
+            Session session = sessionManager.getSession(gitUrl, branch);
+            DocumentationHandler handler = documentHandlingService.getDocumentHandler(session);
+            java.util.List<String> sections = handler.listSections(key);
+            return new ResponseEntity<>(ApiResponse.success("Sections retrieved successfully", sections), HttpStatus.OK);
+        } catch (IllegalArgumentException ex) {
+            return new ResponseEntity<>(ApiResponse.error(ex.getMessage()), HttpStatus.BAD_REQUEST);
+        }
     }
 
     @GetMapping("/section")
-    public ResponseEntity<String> getSection(
+    public ResponseEntity<ApiResponse<String>> getSection(
             @RequestParam String gitUrl,
             @RequestParam(required = false) String branch,
             @RequestParam String key,
             @RequestParam String sectionPath
     ) {
-        Session session = sessionManager.getSession(gitUrl, branch);
-        DocumentationHandler handler = documentHandlingService.getDocumentHandler(session);
-        String sectionContent = handler.getSection(key, sectionPath);
-        if (sectionContent != null) {
-            return ResponseEntity.ok(sectionContent);
+        try {
+            Session session = sessionManager.getSession(gitUrl, branch);
+            DocumentationHandler handler = documentHandlingService.getDocumentHandler(session);
+            String sectionContent = handler.getSection(key, sectionPath);
+            if (sectionContent != null) {
+                return new ResponseEntity<>(ApiResponse.success("Section content retrieved successfully", sectionContent), HttpStatus.OK);
+            } else {
+                return new ResponseEntity<>(ApiResponse.error("Section not found"), HttpStatus.NOT_FOUND);
+            }
+        } catch (IllegalArgumentException ex) {
+            return new ResponseEntity<>(ApiResponse.error(ex.getMessage()), HttpStatus.BAD_REQUEST);
         }
-        return ResponseEntity.notFound().build();
     }
 
     @GetMapping("/single")
-    public ResponseEntity<Documentation> getSingleDocumentation(
+    public ResponseEntity<ApiResponse<Documentation>> getSingleDocumentation(
             @RequestParam String gitUrl,
             @RequestParam(required = false) String branch,
             @RequestParam String key
     ) {
-        Session session = sessionManager.getSession(gitUrl, branch);
-        DocumentationHandler handler = documentHandlingService.getDocumentHandler(session);
-        Documentation doc = handler.get(key);
-        if (doc != null) {
-            return ResponseEntity.ok(doc);
+        try {
+            Session session = sessionManager.getSession(gitUrl, branch);
+            DocumentationHandler handler = documentHandlingService.getDocumentHandler(session);
+            Documentation doc = handler.get(key);
+            if (doc != null) {
+                return new ResponseEntity<>(ApiResponse.success("Documentation retrieved successfully", doc), HttpStatus.OK);
+            } else {
+                return new ResponseEntity<>(ApiResponse.error("Documentation not found"), HttpStatus.NOT_FOUND);
+            }
+        } catch (IllegalArgumentException ex) {
+            return new ResponseEntity<>(ApiResponse.error(ex.getMessage()), HttpStatus.BAD_REQUEST);
         }
-        return ResponseEntity.notFound().build();
     }
 
     @PostMapping("/single")
-    public ResponseEntity<Void> createDocumentation(
+    public ResponseEntity<ApiResponse<Void>> createDocumentation(
             @RequestParam String gitUrl,
             @RequestParam(required = false) String branch,
             @RequestParam String key,
             @RequestBody String content
     ) {
-        Session session = sessionManager.getSession(gitUrl, branch);
-        DocumentationHandler handler = documentHandlingService.getDocumentHandler(session);
-        handler.save(key, new Documentation(content));
-        return ResponseEntity.ok().build();
+        try {
+            Session session = sessionManager.getSession(gitUrl, branch);
+            DocumentationHandler handler = documentHandlingService.getDocumentHandler(session);
+            handler.save(key, new Documentation(content));
+            return new ResponseEntity<>(ApiResponse.success("Documentation created successfully", null), HttpStatus.CREATED);
+        } catch (IllegalArgumentException ex) {
+            return new ResponseEntity<>(ApiResponse.error(ex.getMessage()), HttpStatus.BAD_REQUEST);
+        }
     }
 
     @PutMapping("/single")
-    public ResponseEntity<Void> updateDocumentation(
+    public ResponseEntity<ApiResponse<Void>> updateDocumentation(
             @RequestParam String gitUrl,
             @RequestParam(required = false) String branch,
             @RequestParam String key,
             @RequestBody String content
     ) {
-        Session session = sessionManager.getSession(gitUrl, branch);
-        DocumentationHandler handler = documentHandlingService.getDocumentHandler(session);
-        Documentation doc = handler.get(key);
-        if (doc != null) {
-            doc.setContent(content);
-            handler.save(key, doc);
-            return ResponseEntity.ok().build();
-        } else {
-            return ResponseEntity.notFound().build();
+        try {
+            Session session = sessionManager.getSession(gitUrl, branch);
+            DocumentationHandler handler = documentHandlingService.getDocumentHandler(session);
+            Documentation doc = handler.get(key);
+            if (doc != null) {
+                doc.setContent(content);
+                handler.save(key, doc);
+                return new ResponseEntity<>(ApiResponse.success("Documentation updated successfully", null), HttpStatus.OK);
+            } else {
+                return new ResponseEntity<>(ApiResponse.error("Documentation not found"), HttpStatus.NOT_FOUND);
+            }
+        } catch (IllegalArgumentException ex) {
+            return new ResponseEntity<>(ApiResponse.error(ex.getMessage()), HttpStatus.BAD_REQUEST);
         }
     }
 
     @DeleteMapping("/single")
-    public ResponseEntity<Void> deleteDocumentation(
+    public ResponseEntity<ApiResponse<Void>> deleteDocumentation(
             @RequestParam String gitUrl,
             @RequestParam(required = false) String branch,
             @RequestParam String key
     ) {
-        Session session = sessionManager.getSession(gitUrl, branch);
-        DocumentationHandler handler = documentHandlingService.getDocumentHandler(session);
-        handler.delete(key);
-        return ResponseEntity.ok().build();
+        try {
+            Session session = sessionManager.getSession(gitUrl, branch);
+            DocumentationHandler handler = documentHandlingService.getDocumentHandler(session);
+            handler.delete(key);
+            return new ResponseEntity<>(ApiResponse.success("Documentation deleted successfully", null), HttpStatus.OK);
+        } catch (IllegalArgumentException ex) {
+            return new ResponseEntity<>(ApiResponse.error(ex.getMessage()), HttpStatus.BAD_REQUEST);
+        }
     }
 
     @PostMapping("/default")
-    public ResponseEntity<Void> setDefaultDocumentation(
+    public ResponseEntity<ApiResponse<Void>> setDefaultDocumentation(
             @RequestParam String gitUrl,
             @RequestParam(required = false) String branch,
             @RequestParam String key
     ) {
-        Session session = sessionManager.getSession(gitUrl, branch);
-        DocumentationHandler handler = documentHandlingService.getDocumentHandler(session);
-        if (handler.setDefaultDocumentationKey(key)) {
-            return ResponseEntity.ok().build();
-        } else {
-            return ResponseEntity.notFound().build();
+        try {
+            Session session = sessionManager.getSession(gitUrl, branch);
+            DocumentationHandler handler = documentHandlingService.getDocumentHandler(session);
+            if (handler.setDefaultDocumentationKey(key)) {
+                return new ResponseEntity<>(ApiResponse.success("Default documentation set successfully", null), HttpStatus.OK);
+            } else {
+                return new ResponseEntity<>(ApiResponse.error("Documentation not found"), HttpStatus.NOT_FOUND);
+            }
+        } catch (IllegalArgumentException ex) {
+            return new ResponseEntity<>(ApiResponse.error(ex.getMessage()), HttpStatus.BAD_REQUEST);
         }
     }
 }

@@ -1,10 +1,10 @@
 package com.example.AutoDocX.service;
 
 import com.example.AutoDocX.model.ClonedRepo;
-import com.example.AutoDocX.model.repo.ModelFinishReason;
-import com.example.AutoDocX.model.repo.ToolCallData;
-import com.example.AutoDocX.model.repo.Model;
-import com.example.AutoDocX.model.repo.SendMessageResult;
+import com.example.AutoDocX.model.ModelFinishReason;
+import com.example.AutoDocX.model.ToolCallData;
+import com.example.AutoDocX.model.Model;
+import com.example.AutoDocX.model.SendMessageResult;
 import com.example.AutoDocX.parser.model.Graph;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.genai.types.*;
@@ -184,13 +184,13 @@ public class Agent {
         }
 
         // === Structure Memory (recent only) ===
-        List<Memory.MemoryEntry> structureEntries = memory.getStructure().getEntries();
+        List<MemoryInterface.MemoryEntry> structureEntries = memory.getStructure().getEntries();
         if (!structureEntries.isEmpty()) {
             StringBuilder structureSection = new StringBuilder("STRUCTURE MEMORY:\n");
             int start = Math.max(0, structureEntries.size() - STRUCTURE_HISTORY_FOR_PROMPT);
             for (int i = start; i < structureEntries.size(); i++) {
-                Memory.MemoryEntry e = structureEntries.get(i);
-                structureSection.append("- ").append(e.getQuery()).append(": ").append(e.getResult()).append("\n");
+                MemoryInterface.MemoryEntry e = structureEntries.get(i);
+                structureSection.append("- ").append(e.getKey()).append(": ").append(e.getValue()).append("\n");
             }
             contents.add(Content.builder()
                     .parts(List.of(Part.builder().text(structureSection.toString()).build()))
@@ -199,13 +199,13 @@ public class Agent {
         }
 
         // === Episodic Memory (recent only, for flow) ===
-        List<Memory.MemoryEntry> episodicEntries = memory.getSumAgentLog().getEntries();
+        List<MemoryInterface.MemoryEntry> episodicEntries = memory.getSumAgentLog().getEntries();
         if (!episodicEntries.isEmpty()) {
             StringBuilder episodicSection = new StringBuilder("LOG MEMORY:\n");
             int start = Math.max(0, episodicEntries.size() - EPISODIC_HISTORY_FOR_PROMPT);
             for (int i = start; i < episodicEntries.size(); i++) {
-                Memory.MemoryEntry e = episodicEntries.get(i);
-                episodicSection.append("- ").append(e.getQuery()).append(": ").append(e.getResult()).append("\n");
+                MemoryInterface.MemoryEntry e = episodicEntries.get(i);
+                episodicSection.append("- ").append(e.getKey()).append(": ").append(e.getValue()).append("\n");
             }
             contents.add(Content.builder()
                     .parts(List.of(Part.builder().text(episodicSection.toString()).build()))
@@ -225,18 +225,18 @@ public class Agent {
 
     private String getFinalResponse(Memory memory) {
         // Prefer the last final_answer in episodic memory
-        List<Memory.MemoryEntry> episodic = memory.getSumAgentLog().getEntries();
+        List<MemoryInterface.MemoryEntry> episodic = memory.getSumAgentLog().getEntries();
         for (int i = episodic.size() - 1; i >= 0; i--) {
-            Memory.MemoryEntry e = episodic.get(i);
-            if ("model".equals(e.getQuery())) {
-                return e.getResult();
+            MemoryInterface.MemoryEntry e = episodic.get(i);
+            if ("model".equals(e.getKey())) {
+                return e.getValue();
             }
         }
         // Otherwise return last tool_result cached in episodic
         for (int i = episodic.size() - 1; i >= 0; i--) {
-            Memory.MemoryEntry e = episodic.get(i);
-            if (e.getQuery().startsWith("model:tool_call:")) {
-                return e.getResult();
+            MemoryInterface.MemoryEntry e = episodic.get(i);
+            if (e.getKey().startsWith("model:tool_call:")) {
+                return e.getValue();
             }
         }
         return "No documentation generated.";

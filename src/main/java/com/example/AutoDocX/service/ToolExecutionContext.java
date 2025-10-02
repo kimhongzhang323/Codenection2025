@@ -11,5 +11,5 @@ public class ToolExecutionContext {
     private final ClonedRepo repo;
     private final Graph graph;
     private final Session session;
-    private final Memory.MemoryStore episodicMemory;
+    private final EpisodicMemory episodicMemory;
 }

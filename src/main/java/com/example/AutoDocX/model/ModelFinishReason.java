@@ -1,4 +1,4 @@
-package com.example.AutoDocX.model.repo;
+package com.example.AutoDocX.model;
 
 public enum ModelFinishReason {
     FINAL,           // final natural answer text (no more tools)

@@ -2,10 +2,10 @@ package com.example.AutoDocX.service;
 
 import com.example.AutoDocX.model.ClonedRepo;
 import com.example.AutoDocX.model.Documentation;
-import com.example.AutoDocX.model.repo.Model;
-import com.example.AutoDocX.model.repo.GeminiModel;
-import com.example.AutoDocX.model.repo.SendMessageResult;
-import com.example.AutoDocX.model.repo.ModelFinishReason;
+import com.example.AutoDocX.model.Model;
+import com.example.AutoDocX.model.GeminiModel;
+import com.example.AutoDocX.model.SendMessageResult;
+import com.example.AutoDocX.model.ModelFinishReason;
 import com.example.AutoDocX.parser.model.Graph;
 import com.example.AutoDocX.parser.model.GraphAlgo;
 import com.example.AutoDocX.parser.model.GraphNode;
@@ -71,17 +71,19 @@ public class DocumentationAgent {
         ToolExecutionContext ctx = new ToolExecutionContext(repo, graph, session, session.getMemory().getDocAgentLog());
 
         // add user
+        session.getMemory().getDocAgentLog().newRound();
         session.getMemory().getDocAgentLog().addEntry("user", userPrompt);
 
         int iterations = 0;
         int maxIterations = (iterationLimit == null || iterationLimit <= 0) ? DEFAULT_MAX_ITERATIONS : iterationLimit;
         while (iterations++ < maxIterations) {
-            List<Tool> tools = mcpToolKit.getDocumentationAgentTools();
-            List<Content> contents = buildLoopContent(session, docHandler, userPrompt);
+            MessageBuilder messageBuilder = new MessageBuilder();
+            messageBuilder.addTools(mcpToolKit.getDocumentationAgentTools());
+            List<Content> contents = buildLoopContent(session, docHandler, userPrompt, messageBuilder);
 
             SendMessageResult result;
             try {
-                result = model.sendMessage(contents, tools);
+                result = model.sendMessage(contents, messageBuilder.getTools());
             } catch (Exception e) {
                 String msg = "Model invocation error: " + e.getMessage();
                 System.err.println("WARN (DocumentationAgent): " + msg);
@@ -98,15 +100,15 @@ public class DocumentationAgent {
             }
             if (result.getText().isPresent()) {
                 String assistant = result.getText().get();
-                session.getMemory().getDocAgentLog().addEntry("doc_agent.assistant", assistant);
+                session.getMemory().getDocAgentLog().addEntry("model", assistant);
             }
 
             if (!result.getToolCalls().isEmpty()) {
                 for (var call : result.getToolCalls()) {
                     String name = call.getName();
                     Map<String, Object> args = call.getArgs();
-                    String toolLogKey = "model:tool_call:" + name + args;
-                    String toolLogValue = "Execution finished.";
+                    String toolLogKey = "model";
+                    String toolLogValue = name + args + ": Execution finished.";
                     try {
                         // Tool execution
                         switch (name) {
@@ -166,8 +168,7 @@ public class DocumentationAgent {
         try { return objectMapper.writeValueAsString(p); } catch (Exception e) { return "{}"; }
     }
 
-    private List<Content> buildLoopContent(Session session, DocumentationHandler docHandler, String userPrompt) {
-        List<Content> contents = new ArrayList<>();
+    private List<Content> buildLoopContent(Session session, DocumentationHandler docHandler, String userPrompt, MessageBuilder messageBuilder) {
         String systemInstruction = """
 You are a documentation agent. Your task is to produce excellent project documentation or answer the user's request using tools.
 
@@ -195,10 +196,11 @@ STEPS:
 5. Respond to user's input, describing what you did in detail (the documentation is visible to user)
 
 
+
 """;
         // 6. ALL docs operations can ONLY be performed on expanded docs
 
-        contents.add(Content.builder().role("user").parts(List.of(Part.fromText(systemInstruction))).build());
+        messageBuilder.addSystem(systemInstruction);
 
         StringBuilder context = new StringBuilder();
         Memory memory = session.getMemory();
@@ -234,7 +236,8 @@ STEPS:
 //                    context.append("Sections Preview (top 5): ");
 //                    if (sectionPreview.isEmpty()) {
 //                        context.append("No sections found");
-//                    } else {
+//                    }
+//                    else {
 //                        context.append(String.join(" | ", sectionPreview));
 //                    }
                     context.append("\n");
@@ -247,14 +250,9 @@ STEPS:
             context.append("EXISTING SUMMARY:\n").append(memory.getSummary().toString()).append("\n\n");
         }
 
-        if (memory.getDocAgentLog() != null && !memory.getDocAgentLog().isEmpty()) {
-            context.append("LOG:\n").append(memory.getDocAgentLog().toString(DEFAULT_MAX_ITERATIONS * 2 + 2)).append("\n\n");
-        }
-
-        context.append("REMINDER: USER PROMPT WAS:\n").append(userPrompt == null ? "" : userPrompt).append("\n\n");
-
-        contents.add(Content.builder().role("user").parts(List.of(Part.fromText(context.toString()))).build());
-        return contents;
+        messageBuilder.addUser(context.toString());
+        messageBuilder.addMemory(memory.getDocAgentLog(), DEFAULT_MAX_ITERATIONS * 2 + 2);
+        return messageBuilder.build();
     }
 
     // Executes the current plan stored in memory: generates section docs in bulk and assembles final_documentation

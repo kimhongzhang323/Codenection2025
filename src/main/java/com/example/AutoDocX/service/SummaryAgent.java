@@ -1,9 +1,9 @@
 package com.example.AutoDocX.service;
 
 import com.example.AutoDocX.model.ClonedRepo;
-import com.example.AutoDocX.model.repo.Model;
-import com.example.AutoDocX.model.repo.SendMessageResult;
-import com.example.AutoDocX.model.repo.ToolCallData;
+import com.example.AutoDocX.model.Model;
+import com.example.AutoDocX.model.SendMessageResult;
+import com.example.AutoDocX.model.ToolCallData;
 import com.example.AutoDocX.parser.model.Graph;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.genai.types.Content;
@@ -184,13 +184,13 @@ IMPORTANT
             contents.add(Content.builder().parts(Part.builder().text(docContext).build()).role("user").build());
         }
 
-        List<Memory.MemoryEntry> structureEntries = memory.getStructure().getEntries();
+        List<MemoryInterface.MemoryEntry> structureEntries = memory.getStructure().getEntries();
         if (!structureEntries.isEmpty()) {
             StringBuilder structureSection = new StringBuilder("STRUCTURE MEMORY:\n");
             int start = Math.max(0, structureEntries.size() - 15);
             for (int i = start; i < structureEntries.size(); i++) {
-                Memory.MemoryEntry e = structureEntries.get(i);
-                structureSection.append("- ").append(e.getQuery()).append(": ").append(e.getResult()).append("\n");
+                MemoryInterface.MemoryEntry e = structureEntries.get(i);
+                structureSection.append("- ").append(e.getKey()).append(": ").append(e.getValue()).append("\n");
             }
             contents.add(Content.builder().parts(Part.builder().text(structureSection.toString()).build()).role("user").build());
         }
