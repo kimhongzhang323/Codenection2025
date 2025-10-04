@@ -195,6 +195,7 @@ STEPS:
 5. Respond to user's input, describing what you did in detail (the documentation is visible to user)
 
 
+
 """;
         // 6. ALL docs operations can ONLY be performed on expanded docs
 

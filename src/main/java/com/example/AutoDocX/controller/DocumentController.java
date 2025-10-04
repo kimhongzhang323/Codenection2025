@@ -13,13 +13,13 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/documentation")
-public class DocumentationController {
+public class DocumentController {
 
     private final SessionManager sessionManager;
     private final DocumentHandlingService documentHandlingService;
 
     @Autowired
-    public DocumentationController(SessionManager sessionManager, DocumentHandlingService documentHandlingService) {
+    public DocumentController(SessionManager sessionManager, DocumentHandlingService documentHandlingService) {
         this.sessionManager = sessionManager;
         this.documentHandlingService = documentHandlingService;
     }

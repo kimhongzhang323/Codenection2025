@@ -59,7 +59,7 @@ public class ChatController {
             }
 
         } catch (Exception e) {
-            return GlobalExceptionHandler.errorResponseEntity("Sorry, an error occurred while communicating with the AI service: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+            return new ResponseEntity<>(new ApiResponse<>("FAIL", "Sorry, an error occurred while communicating with the AI service", e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 }
