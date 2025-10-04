@@ -1,0 +1,90 @@
+# Production Configuration
+spring:
+  # Production Database Configuration (you can configure your production DB here)
+  # For now, keeping the default from main application.properties
+  
+  # Cache Configuration (Redis for production)
+  cache:
+    type: redis
+  
+  # Redis Configuration for production
+  data:
+    redis:
+      repositories:
+        enabled: true
+      host: ${REDIS_HOST:redis-10725.crce185.ap-seast-1-1.ec2.redns.redis-cloud.com}
+      port: ${REDIS_PORT:10725}
+      password: ${REDIS_PASSWORD:K8tO4b0Md6PMhCIyPuVy7vifV0R0lBW0}
+      username: ${REDIS_USERNAME:default}
+      database: ${REDIS_DATABASE:0}
+      ssl:
+        enabled: ${REDIS_SSL_ENABLED:true}
+      timeout: 10000ms
+      connect-timeout: 10000ms
+      client-type: jedis
+      jedis:
+        pool:
+          max-active: 20
+          max-idle: 10
+          min-idle: 2
+          max-wait: 10000ms
+          time-between-eviction-runs: 30000ms
+          min-evictable-idle-time: 60000ms
+          test-on-borrow: true
+          test-on-return: false
+          test-while-idle: true
+  
+  # Security Configuration - Production (Vercel domain)
+  security:
+    oauth2:
+      client:
+        registration:
+          github:
+            client-id: ${GITHUB_CLIENT_ID:your-github-client-id}
+            client-secret: ${GITHUB_CLIENT_SECRET:your-github-client-secret}
+            scope:
+              - read:user
+              - user:email
+              - public_repo
+            redirect-uri: https://autodocx-beta.vercel.app/login/oauth2/code/github
+
+# Server Configuration
+server:
+  port: ${PORT:8080}
+  tomcat:
+    max-threads: 100
+    min-spare-threads: 10
+
+# CORS Configuration (Allow production domain)
+app:
+  cors:
+    allowed-origins: https://autodocx-beta.vercel.app
+    allowed-methods: GET,POST,PUT,DELETE,OPTIONS
+    allowed-headers: "*"
+    allow-credentials: true
+
+# Logging Configuration (Less verbose for production)
+logging:
+  level:
+    root: INFO
+    com.example.AutoDocX: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level %logger{36} - %msg%n"
+
+# Actuator Configuration (Limited exposure for production)
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: when-authorized
+
+# Gemini Configuration
+gemini:
+  model:
+    name: gemini-2.5-flash
+  api:
+    key: ${GEMINI_API_KEY}
+    keyList: ${GEMINI_API_KEY_LIST}
