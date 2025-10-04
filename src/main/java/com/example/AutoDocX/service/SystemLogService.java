@@ -161,9 +161,9 @@ public class SystemLogService {
      * Delete logs older than specified days
      */
     public void deleteOldLogs(int daysToKeep) {
-        LocalDateTime cutoffDate = LocalDateTime.now().minusDays(daysToKeep);
         // Implementation would depend on requirements
         // Could add a custom delete query to repository
+        // For now, this is a placeholder method
     }
     
     /**
@@ -249,4 +249,8 @@ public class SystemLogService {
         
         return saveLog(log);
     }
+    
+
+    
+
 }

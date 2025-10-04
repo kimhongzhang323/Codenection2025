@@ -139,6 +139,9 @@ const TracingPage: React.FC = () => {
   const [autoRefresh, setAutoRefresh] = useState(false);
   const [username, setUsername] = useState<string>('');
   
+  // Refresh state
+  const [lastRefreshTime, setLastRefreshTime] = useState<Date | null>(null);
+  
   const logLevels = ['ALL', 'ERROR', 'WARN', 'INFO', 'DEBUG'];
 
   // Fetch logs from API
@@ -148,32 +151,35 @@ const TracingPage: React.FC = () => {
     
     try {
       const activeFilters = customFilters || filters;
-      let url = `/api/logs?page=${page}&size=${size}`;
+      let url = `/api/logs/latest?page=${page}&size=${size}`;
       
-      // Add filters to URL
+      // Add level filter
       if (activeFilters.level && activeFilters.level !== 'ALL') {
         url += `&level=${activeFilters.level}`;
       }
-      if (activeFilters.searchTerm) {
-        url += `&term=${encodeURIComponent(activeFilters.searchTerm)}`;
-      }
-      if (activeFilters.logger) {
-        url += `&logger=${encodeURIComponent(activeFilters.logger)}`;
-      }
-      if (activeFilters.startTime) {
-        url += `&startTime=${activeFilters.startTime}`;
-      }
-      if (activeFilters.endTime) {
-        url += `&endTime=${activeFilters.endTime}`;
-      }
-      if (activeFilters.userId) {
-        url += `&userId=${activeFilters.userId}`;
-      }
       
-      // Use advanced search if filters are present
-      const hasFilters = Object.values(activeFilters).some(value => value && value !== 'ALL');
-      if (hasFilters) {
-        url = url.replace('/api/logs?', '/api/logs/advanced-search?');
+      // For other filters, use advanced search
+      if (activeFilters.searchTerm || activeFilters.logger || activeFilters.startTime || activeFilters.endTime || activeFilters.userId) {
+        url = `/api/logs/advanced-search?page=${page}&size=${size}`;
+        
+        if (activeFilters.level && activeFilters.level !== 'ALL') {
+          url += `&level=${activeFilters.level}`;
+        }
+        if (activeFilters.searchTerm) {
+          url += `&term=${encodeURIComponent(activeFilters.searchTerm)}`;
+        }
+        if (activeFilters.logger) {
+          url += `&logger=${encodeURIComponent(activeFilters.logger)}`;
+        }
+        if (activeFilters.startTime) {
+          url += `&startTime=${activeFilters.startTime}`;
+        }
+        if (activeFilters.endTime) {
+          url += `&endTime=${activeFilters.endTime}`;
+        }
+        if (activeFilters.userId) {
+          url += `&userId=${activeFilters.userId}`;
+        }
       }
       
       const response = await fetch(url);
@@ -207,6 +213,7 @@ const TracingPage: React.FC = () => {
         setCurrentPage(page);
         setUsingMockData(true);
         setError('Backend not available - showing sample data. Please start the Spring Boot application on port 8081.');
+        setLastRefreshTime(new Date());
         return;
       }
       
@@ -216,6 +223,7 @@ const TracingPage: React.FC = () => {
       setTotalPages(data.totalPages || 0);
       setCurrentPage(page);
       setUsingMockData(false);
+      setLastRefreshTime(new Date());
     } catch {
       console.warn('Backend not available, using mock data');
       const mockLogs = generateMockLogs();
@@ -225,6 +233,7 @@ const TracingPage: React.FC = () => {
       setCurrentPage(0);
       setUsingMockData(true);
       setError('Backend not available - showing sample data. Please start the Spring Boot application on port 8081.');
+      setLastRefreshTime(new Date());
     } finally {
       setLoading(false);
     }
@@ -471,6 +480,8 @@ User session cache showing **inconsistent state** across service instances. Patt
     };
   }, [autoRefresh, currentPage, fetchLogs]);
 
+
+
   // Fetch username from localStorage
   useEffect(() => {
     const storedUsername = localStorage.getItem('username');
@@ -514,6 +525,11 @@ User session cache showing **inconsistent state** across service instances. Patt
     setQuickSearch('');
     setSelectedLevel('');
     fetchLogs(0, pageSize, {});
+  };
+
+  // Handle tab changes
+  const handleTabChange = (tab: 'logs' | 'analysis' | 'health') => {
+    setActiveTab(tab);
   };
 
   // Format timestamp
@@ -620,19 +636,19 @@ User session cache showing **inconsistent state** across service instances. Patt
           <div className="tab-selector">
             <button 
               className={activeTab === 'logs' ? 'active' : ''} 
-              onClick={() => setActiveTab('logs')}
+              onClick={() => handleTabChange('logs')}
             >
               Logs
             </button>
             <button 
               className={activeTab === 'analysis' ? 'active' : ''} 
-              onClick={() => setActiveTab('analysis')}
+              onClick={() => handleTabChange('analysis')}
             >
               AI Analysis
             </button>
             <button 
               className={activeTab === 'health' ? 'active' : ''} 
-              onClick={() => setActiveTab('health')}
+              onClick={() => handleTabChange('health')}
             >
               System Health
             </button>
@@ -645,9 +661,42 @@ User session cache showing **inconsistent state** across service instances. Patt
                 checked={autoRefresh}
                 onChange={(e) => setAutoRefresh(e.target.checked)}
               />
-              Auto Refresh
+              Auto Refresh (30s)
             </label>
-            <button onClick={() => fetchLogs(currentPage)}>Refresh</button>
+            
+            <button 
+              onClick={() => fetchLogs(currentPage)} 
+              className="refresh-button"
+              title="Load latest logs"
+            >
+              🔄 Refresh Latest
+            </button>
+            
+            {usingMockData && (
+              <button 
+                onClick={async () => {
+                  try {
+                    const response = await fetch('/api/logs/generate-test-logs', { method: 'POST' });
+                    if (response.ok) {
+                      console.log('Test logs generated');
+                      // Refresh after generating test logs
+                      fetchLogs(currentPage);
+                    }
+                  } catch (error) {
+                    console.error('Failed to generate test logs:', error);
+                  }
+                }}
+                className="test-logs-button"
+              >
+                Generate Test Logs
+              </button>
+            )}
+            
+            {lastRefreshTime && (
+              <div className="last-update">
+                Last refresh: {lastRefreshTime.toLocaleTimeString()}
+              </div>
+            )}
           </div>
         </div>
       </div>
