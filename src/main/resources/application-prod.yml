@@ -14,7 +14,7 @@ spring:
         enabled: true
       host: ${REDIS_HOST:redis-10725.crce185.ap-seast-1-1.ec2.redns.redis-cloud.com}
       port: ${REDIS_PORT:10725}
-      password: ${REDIS_PASSWORD:K8tO4b0Md6PMhCIyPuVy7vifV0R0lBW0}
+      password: ${REDIS_PASSWORD}
       username: ${REDIS_USERNAME:default}
       database: ${REDIS_DATABASE:0}
       ssl:
