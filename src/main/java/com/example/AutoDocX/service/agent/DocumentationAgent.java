@@ -11,11 +11,14 @@ import com.example.AutoDocX.parser.model.GraphAlgo;
 import com.example.AutoDocX.parser.model.GraphNode;
 import com.example.AutoDocX.service.*;
 import com.example.AutoDocX.service.agent.tools.McpToolKit;
+import com.example.AutoDocX.service.agent.util.AgentUtil;
 import com.example.AutoDocX.service.agent.util.MessageBuilder;
 import com.example.AutoDocX.service.agent.data.Session;
 import com.example.AutoDocX.service.agent.tools.ToolExecutionContext;
 import com.example.AutoDocX.service.agent.memory.Memory;
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.genai.types.Content;
 import com.google.genai.types.Part;
@@ -24,6 +27,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -175,35 +181,7 @@ public class DocumentationAgent {
     }
 
     private List<Content> buildLoopContent(Session session, DocumentationHandler docHandler, String userPrompt, MessageBuilder messageBuilder) {
-        String systemInstruction = """
-You are a documentation agent. Your task is to produce excellent project documentation or answer the user's request using tools.
-
-RULES
-1. Use multiple tool calls in the same response when needed.
-2. Keep responses factual and concise.
-3. ALWAYS use the provided tools to gather information or perform actions; do not make up information.
-4. Unless specified, you must always aim for full coverage of important nodes
-5. Only if needed, retrieve source code using get_summary (The prompt must be in full sentence)
-6. Plans are useful for code related documentations, they have full access to source code.
-    - Example: add_plan(node_id), execute_plan("temp"), modify_docs([main_doc, temp], "add temp into main doc")
-
-STEPS:
-1. Use `get_summary(query)` to get context/summaries from the summary agent (very expensive, use with caution).
-2. Use `add_plan` to add documentation subtasks, remember to hint the style (detailed, usage focused, architecture focused etc), and the related node ids
-    - Example: call multiple `add_plan` in the same response to quickly add multiple documentation sections
-    - You don't need to 100% sure of nodes' details, it will be provided inside the subtasks
-    - CRITICAL: ALL the subtasks (plans) will be CONCATENATED DIRECTLY into a final documentation. Therefore, you MUST provide enough context so all sections can merge together smoothly
-    - Example context:
-        a) section index (so each section have synced index (start from 1!!), or no index)
-        b) formatting & focus on eg. (usage, architecture, dependencies, purpose)
-3. Use `execute_plan` AFTER all sections have been completed. to run all those subtasks using dedicated agents.
-    - Tips: Use different keys to cleverly organise the docs system (avoid replacing original docs unless requested).
-4. Use the `modify_docs` to refine the NEW documentation, or merge it with EXISTING documentations (Optional).
-5. Respond to user's input, describing what you did in detail (the documentation is visible to user)
-
-
-
-""";
+        String systemInstruction = AgentUtil.loadSystemPrompt("documentation_agent_system.txt");
         // 6. ALL docs operations can ONLY be performed on expanded docs
 
         messageBuilder.addSystem(systemInstruction);
@@ -260,7 +238,7 @@ STEPS:
         messageBuilder.addMemory(memory.getDocAgentLog(), DEFAULT_MAX_ITERATIONS * 2 + 2);
         return messageBuilder.build();
     }
-
+    
     // Executes the current plan stored in memory: generates section docs in bulk and assembles final_documentation
     public String executePlanInternal(Session session, ClonedRepo repo, Graph graph) {
         Object planObj = session.getMemory().getPlan().getRawEntry("plan");
@@ -275,11 +253,11 @@ STEPS:
             } else if (planObj instanceof String) {
                 String planJson = (String) planObj;
                 try {
-                    plan = objectMapper.readValue(planJson, new com.fasterxml.jackson.core.type.TypeReference<Map<String, Map<String, Object>>>(){});
+                    plan = objectMapper.readValue(planJson, new TypeReference<Map<String, Map<String, Object>>>(){});
                 } catch (JsonProcessingException e) {
                     // If that fails, assume it's a double-encoded string and parse it twice.
                     String decodedJson = objectMapper.readValue(planJson, String.class);
-                    plan = objectMapper.readValue(decodedJson, new com.fasterxml.jackson.core.type.TypeReference<Map<String, Map<String, Object>>>(){});
+                    plan = objectMapper.readValue(decodedJson, new TypeReference<Map<String, Map<String, Object>>>(){});
                 }
             } else {
                 return "Plan object is not in expected format: " + planObj.getClass();

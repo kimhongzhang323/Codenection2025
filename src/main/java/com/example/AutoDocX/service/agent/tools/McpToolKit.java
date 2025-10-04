@@ -30,39 +30,392 @@ public class McpToolKit {
     private List<FunctionDeclaration> initializeAllTools() {
         List<FunctionDeclaration> declarations = new ArrayList<>();
 
-        declarations.add(FunctionDeclaration.builder().name("get_code").description("Retrieves the source code for a specific node (class, method, field) using graph node id.").parameters(Schema.builder().type(Type.Known.OBJECT).properties(Map.of("node_id", Schema.builder().type(Type.Known.STRING).description("The ID of the node (e.g., class_MyClass, method_MyClass_myMethod).").build())).required(List.of("node_id")).build()).build());
+        // === Core Code Tools ===
+        declarations.add(
+            FunctionDeclaration.builder()
+                .name("get_code")
+                .description("Retrieves the source code for a specific node (class, method, field) using graph node id.")
+                .parameters(
+                    Schema.builder()
+                        .type(Type.Known.OBJECT)
+                        .properties(
+                            Map.of(
+                                "node_id",
+                                Schema.builder()
+                                    .type(Type.Known.STRING)
+                                    .description("The ID of the node (e.g., class_MyClass, method_MyClass_myMethod).")
+                                    .build()
+                            )
+                        )
+                        .required(List.of("node_id"))
+                        .build()
+                )
+                .build()
+        );
 
-        declarations.add(FunctionDeclaration.builder().name("find_central_nodes").description("Finds the top N most important 'hub' nodes in the code graph. Hubs are nodes that point to many other authoritative nodes, representing orchestrators or central business logic.").parameters(Schema.builder().type(Type.Known.OBJECT).properties(Map.of("n", Schema.builder().type(Type.Known.NUMBER).description("The number of hub nodes to return.").build())).required(List.of("n")).build()).build());
+        declarations.add(
+            FunctionDeclaration.builder()
+                .name("find_central_nodes")
+                .description("Finds the top N most important 'hub' nodes in the code graph.")
+                .parameters(
+                    Schema.builder()
+                        .type(Type.Known.OBJECT)
+                        .properties(
+                            Map.of(
+                                "n",
+                                Schema.builder()
+                                    .type(Type.Known.NUMBER)
+                                    .description("The number of hub nodes to return.")
+                                    .build()
+                            )
+                        )
+                        .required(List.of("n"))
+                        .build()
+                )
+                .build()
+        );
 
-        declarations.add(FunctionDeclaration.builder().name("find_neighbour_nodes").description("Performs a depth-first search on target node to find its neighbors.").parameters(Schema.builder().type(Type.Known.OBJECT).properties(Map.of("node_id", Schema.builder().type(Type.Known.STRING).description("The ID of the node to start the DFS from.").build(), "depth_limit", Schema.builder().type(Type.Known.NUMBER).description("The maximum depth to traverse. Optional.").build())).required(List.of("node_id")).build()).build());
+        declarations.add(
+            FunctionDeclaration.builder()
+                .name("find_neighbour_nodes")
+                .description("Performs a depth-first search on target node to find its neighbors.")
+                .parameters(
+                    Schema.builder()
+                        .type(Type.Known.OBJECT)
+                        .properties(
+                            Map.of(
+                                "node_id",
+                                Schema.builder()
+                                    .type(Type.Known.STRING)
+                                    .description("The ID of the node to start the DFS from.")
+                                    .build(),
+                                "depth_limit",
+                                Schema.builder()
+                                    .type(Type.Known.NUMBER)
+                                    .description("The maximum depth to traverse. Optional.")
+                                    .build()
+                            )
+                        )
+                        .required(List.of("node_id"))
+                        .build()
+                )
+                .build()
+        );
 
-        declarations.add(FunctionDeclaration.builder().name("summarise_code").description("Add to memory a structured summary of source code retrieved with get_code").parameters(Schema.builder().type(Type.Known.OBJECT).properties(Map.of("node_id", Schema.builder().type(Type.Known.STRING).description("The ID of the node to summarise.").build(), "description", Schema.builder().type(Type.Known.STRING).description("The node's brief description. Helps preserve essential context once the raw code is no longer retained.").build())).required(List.of("node_id", "description")).build()).build());
+        declarations.add(
+            FunctionDeclaration.builder()
+                .name("summarise_code")
+                .description("Add to memory a structured summary of source code retrieved with get_code")
+                .parameters(
+                    Schema.builder()
+                        .type(Type.Known.OBJECT)
+                        .properties(
+                            Map.of(
+                                "node_id",
+                                Schema.builder()
+                                    .type(Type.Known.STRING)
+                                    .description("The ID of the node to summarise.")
+                                    .build(),
+                                "description",
+                                Schema.builder()
+                                    .type(Type.Known.STRING)
+                                    .description("Brief description to preserve context once raw code is discarded.")
+                                    .build()
+                            )
+                        )
+                        .required(List.of("node_id", "description"))
+                        .build()
+                )
+                .build()
+        );
 
-        declarations.add(FunctionDeclaration.builder().name("summarize_nodes_bulk").description("Receives a list of nodes to summarize, and sends them to LLM in bulk to be summarized and stored in the summary memory.").parameters(Schema.builder().type(Type.Known.OBJECT).properties(Map.of("node_ids", Schema.builder().type(Type.Known.ARRAY).description("The list of node IDs to summarize.").items(Schema.builder().type(Type.Known.STRING).build()).build())).required(List.of("node_ids")).build()).build());
+        declarations.add(
+            FunctionDeclaration.builder()
+                .name("summarize_nodes_bulk")
+                .description("Summarizes a list of nodes in bulk and stores them in memory.")
+                .parameters(
+                    Schema.builder()
+                        .type(Type.Known.OBJECT)
+                        .properties(
+                            Map.of(
+                                "node_ids",
+                                Schema.builder()
+                                    .type(Type.Known.ARRAY)
+                                    .description("The list of node IDs to summarize.")
+                                    .items(Schema.builder().type(Type.Known.STRING).build())
+                                    .build()
+                            )
+                        )
+                        .required(List.of("node_ids"))
+                        .build()
+                )
+                .build()
+        );
 
-        declarations.add(FunctionDeclaration.builder().name("update_understanding").description("Replace or create the 'understanding' entry in summary memory with the current plan/understanding and next actions.").parameters(Schema.builder().type(Type.Known.OBJECT).properties(Map.of("text", Schema.builder().type(Type.Known.STRING).description("Short plan: current understanding of the project and what to do next.").build())).required(List.of("text")).build()).build());
+        declarations.add(
+            FunctionDeclaration.builder()
+                .name("update_understanding")
+                .description("Replace or create the 'understanding' entry in summary memory.")
+                .parameters(
+                    Schema.builder()
+                        .type(Type.Known.OBJECT)
+                        .properties(
+                            Map.of(
+                                "text",
+                                Schema.builder()
+                                    .type(Type.Known.STRING)
+                                    .description("Short plan: current understanding and next actions.")
+                                    .build()
+                            )
+                        )
+                        .required(List.of("text"))
+                        .build()
+                )
+                .build()
+        );
 
-        // Documentation Agent (KISS) toolset: get_summary, update_plan, execute_plan
-        declarations.add(FunctionDeclaration.builder().name("get_summary").description("Retrieves related context from the codebase. Leave the query is empty to generate a project-level summary").parameters(Schema.builder().type(Type.Known.OBJECT).properties(Map.of("query", Schema.builder().type(Type.Known.STRING).description("Prompt passed to the Summarising Agent. Leave empty for a general project summary.").build())).build()).build());
+        // === Documentation Agent Toolset ===
+        declarations.add(
+            FunctionDeclaration.builder()
+                .name("get_summary")
+                .description("Retrieves related context from the codebase. Leave query empty for project-level summary.")
+                .parameters(
+                    Schema.builder()
+                        .type(Type.Known.OBJECT)
+                        .properties(
+                            Map.of(
+                                "query",
+                                Schema.builder()
+                                    .type(Type.Known.STRING)
+                                    .description("Prompt passed to the Summarising Agent. Leave empty for a general project summary.")
+                                    .build()
+                            )
+                        )
+                        .build()
+                )
+                .build()
+        );
 
-        declarations.add(FunctionDeclaration.builder().name("add_plan").description("Adds an item to the overall plan. " + "Each item will be executed in parallel by sub-workers with access to the relevant code nodes. " + "Use the `focus` parameter to control the style or perspective (e.g., detailed, concise, architecture-focused, usage-focused).").parameters(Schema.builder().type(Type.Known.OBJECT).properties(Map.of("name", Schema.builder().type(Type.Known.STRING).description("The name or title of this plan item.").build(), "focus", Schema.builder().type(Type.Known.STRING).description("The focus or style for generating this item (e.g., detailed, concise, architecture, usage).").build(), "nodes", Schema.builder().type(Type.Known.ARRAY).items(Schema.builder().type(Type.Known.STRING).build()).description("The list of node IDs that this item should consider.").build())).required(List.of("name", "focus", "nodes")).build()).build());
+        declarations.add(
+            FunctionDeclaration.builder()
+                .name("add_plan")
+                .description("Adds an item to the overall plan. Each item will be executed in parallel by sub-workers.")
+                .parameters(
+                    Schema.builder()
+                        .type(Type.Known.OBJECT)
+                        .properties(
+                            Map.of(
+                                "name",
+                                Schema.builder()
+                                    .type(Type.Known.STRING)
+                                    .description("The name or title of this plan item.")
+                                    .build(),
+                                "focus",
+                                Schema.builder()
+                                    .type(Type.Known.STRING)
+                                    .description("The focus or style (e.g., detailed, concise, architecture).")
+                                    .build(),
+                                "nodes",
+                                Schema.builder()
+                                    .type(Type.Known.ARRAY)
+                                    .items(Schema.builder().type(Type.Known.STRING).build())
+                                    .description("The list of node IDs this item should consider.")
+                                    .build()
+                            )
+                        )
+                        .required(List.of("name", "focus", "nodes"))
+                        .build()
+                )
+                .build()
+        );
 
-        declarations.add(FunctionDeclaration.builder().name("execute_plan").description("Execute the current plan: generate all section docs in parallel and compose the final documentation. Stores final_documentation in memory and returns it.").parameters(Schema.builder().type(Type.Known.OBJECT).properties(Map.of("key", Schema.builder().type(Type.Known.STRING).description("The key under which the final documentation will be saved.").build())).required(List.of("key")).build()).build());
+        declarations.add(
+            FunctionDeclaration.builder()
+                .name("execute_plan")
+                .description("Execute the current plan and store final documentation under the given key.")
+                .parameters(
+                    Schema.builder()
+                        .type(Type.Known.OBJECT)
+                        .properties(
+                            Map.of(
+                                "key",
+                                Schema.builder()
+                                    .type(Type.Known.STRING)
+                                    .description("The key under which the final documentation will be saved.")
+                                    .build()
+                            )
+                        )
+                        .required(List.of("key"))
+                        .build()
+                )
+                .build()
+        );
 
-        declarations.add(FunctionDeclaration.builder().name("update_documentation").description("Write or replace the current assembled documentation text into summary memory under key 'documentation'.").parameters(Schema.builder().type(Type.Known.OBJECT).properties(Map.of("content", Schema.builder().type(Type.Known.STRING).description("Full or partial documentation content to store.").build())).required(List.of("content")).build()).build());
+        declarations.add(
+            FunctionDeclaration.builder()
+                .name("update_documentation")
+                .description("Write or replace the current documentation text in summary memory.")
+                .parameters(
+                    Schema.builder()
+                        .type(Type.Known.OBJECT)
+                        .properties(
+                            Map.of(
+                                "content",
+                                Schema.builder()
+                                    .type(Type.Known.STRING)
+                                    .description("Full or partial documentation content to store.")
+                                    .build()
+                            )
+                        )
+                        .required(List.of("content"))
+                        .build()
+                )
+                .build()
+        );
 
-        declarations.add(FunctionDeclaration.builder().name("replace_string_in_doc").description("Replaces all occurrences of a specific string within a documentation entry.").parameters(Schema.builder().type(Type.Known.OBJECT).properties(Map.of("key", Schema.builder().type(Type.Known.STRING).description("The key of the documentation entry to modify.").build(), "old_string", Schema.builder().type(Type.Known.STRING).description("The exact string to be replaced.").build(), "new_string", Schema.builder().type(Type.Known.STRING).description("The string to replace with.").build())).required(List.of("key", "old_string", "new_string")).build()).build());
+        declarations.add(
+            FunctionDeclaration.builder()
+                .name("replace_string_in_doc")
+                .description("Replaces all occurrences of a specific string within a documentation entry.")
+                .parameters(
+                    Schema.builder()
+                        .type(Type.Known.OBJECT)
+                        .properties(
+                            Map.of(
+                                "key",
+                                Schema.builder()
+                                    .type(Type.Known.STRING)
+                                    .description("The key of the documentation entry to modify.")
+                                    .build(),
+                                "old_string",
+                                Schema.builder()
+                                    .type(Type.Known.STRING)
+                                    .description("The exact string to be replaced.")
+                                    .build(),
+                                "new_string",
+                                Schema.builder()
+                                    .type(Type.Known.STRING)
+                                    .description("The string to replace with.")
+                                    .build()
+                            )
+                        )
+                        .required(List.of("key", "old_string", "new_string"))
+                        .build()
+                )
+                .build()
+        );
 
-        declarations.add(FunctionDeclaration.builder().name("insert_edit_into_doc").description("Performs an intelligent, agent-based edit on a documentation entry using a patch-like syntax.").parameters(Schema.builder().type(Type.Known.OBJECT).properties(Map.of("key", Schema.builder().type(Type.Known.STRING).description("The key of the documentation entry to modify.").build(), "patch", Schema.builder().type(Type.Known.STRING).description("A patch-like string describing the edit. Use '...existing content...' to represent unchanged parts.").build())).required(List.of("key", "patch")).build()).build());
+        declarations.add(
+            FunctionDeclaration.builder()
+                .name("insert_edit_into_doc")
+                .description("Performs an intelligent, agent-based edit on a documentation entry using patch-like syntax.")
+                .parameters(
+                    Schema.builder()
+                        .type(Type.Known.OBJECT)
+                        .properties(
+                            Map.of(
+                                "key",
+                                Schema.builder()
+                                    .type(Type.Known.STRING)
+                                    .description("The key of the documentation entry to modify.")
+                                    .build(),
+                                "patch",
+                                Schema.builder()
+                                    .type(Type.Known.STRING)
+                                    .description("A patch-like string describing the edit.")
+                                    .build()
+                            )
+                        )
+                        .required(List.of("key", "patch"))
+                        .build()
+                )
+                .build()
+        );
 
-        declarations.add(FunctionDeclaration.builder().name("read_doc").description("Expands a collapsed document for reading").parameters(Schema.builder().type(Type.Known.OBJECT).properties(Map.of("key", Schema.builder().type(Type.Known.STRING).description("The key of the documentation entry to expand.").build(), "countdown", Schema.builder().type(Type.Known.NUMBER).description("The number of cycles to keep the document expanded.").build())).required(List.of("key", "countdown")).build()).build());
+        declarations.add(
+            FunctionDeclaration.builder()
+                .name("read_doc")
+                .description("Expands a collapsed document for reading.")
+                .parameters(
+                    Schema.builder()
+                        .type(Type.Known.OBJECT)
+                        .properties(
+                            Map.of(
+                                "key",
+                                Schema.builder()
+                                    .type(Type.Known.STRING)
+                                    .description("The key of the documentation entry to expand.")
+                                    .build(),
+                                "countdown",
+                                Schema.builder()
+                                    .type(Type.Known.NUMBER)
+                                    .description("The number of cycles to keep the document expanded.")
+                                    .build()
+                            )
+                        )
+                        .required(List.of("key", "countdown"))
+                        .build()
+                )
+                .build()
+        );
 
-        declarations.add(FunctionDeclaration.builder().name("modify_docs").description("Performs a complex, instruction-based manipulation on one or more documents and saves the result.").parameters(Schema.builder().type(Type.Known.OBJECT).properties(Map.of("documents_involved", Schema.builder().type(Type.Known.ARRAY).items(Schema.builder().type(Type.Known.STRING).build()).description("A list of document keys to be used as source material.").build(), "save_key", Schema.builder().type(Type.Known.STRING).description("The key where the final, modified document will be saved.").build(), "what_to_do", Schema.builder().type(Type.Known.STRING).description("Full sentence. A natural language instruction describing the manipulation (e.g., 'Merge doc1 and doc2', 'Remove the introduction from main_doc', 'insert xxx into README.md at Introduction').").build())).required(List.of("documents_involved", "save_key", "what_to_do")).build()).build());
+        declarations.add(
+            FunctionDeclaration.builder()
+                .name("modify_docs")
+                .description("Performs instruction-based manipulation on one or more documents and saves the result.")
+                .parameters(
+                    Schema.builder()
+                        .type(Type.Known.OBJECT)
+                        .properties(
+                            Map.of(
+                                "documents_involved",
+                                Schema.builder()
+                                    .type(Type.Known.ARRAY)
+                                    .items(Schema.builder().type(Type.Known.STRING).build())
+                                    .description("A list of document keys to be used as source material.")
+                                    .build(),
+                                "save_key",
+                                Schema.builder()
+                                    .type(Type.Known.STRING)
+                                    .description("The key where the final, modified document will be saved.")
+                                    .build(),
+                                "what_to_do",
+                                Schema.builder()
+                                    .type(Type.Known.STRING)
+                                    .description("Natural language instruction describing the manipulation.")
+                                    .build()
+                            )
+                        )
+                        .required(List.of("documents_involved", "save_key", "what_to_do"))
+                        .build()
+                )
+                .build()
+        );
 
-        declarations.add(FunctionDeclaration.builder().name("get_modified_nodes").description("Get a list of nodes that have been modified since the documentation was last updated.").parameters(Schema.builder().type(Type.Known.OBJECT).properties(Map.of("doc_key", Schema.builder().type(Type.Known.STRING).description("The key of the documentation file to compare against. If not provided, the default documentation is used.").build())).build()).build());
+        declarations.add(
+            FunctionDeclaration.builder()
+                .name("get_modified_nodes")
+                .description("Get a list of nodes that have been modified since the documentation was last updated.")
+                .parameters(
+                    Schema.builder()
+                        .type(Type.Known.OBJECT)
+                        .properties(
+                            Map.of(
+                                "doc_key",
+                                Schema.builder()
+                                    .type(Type.Known.STRING)
+                                    .description("The key of the documentation file to compare against.")
+                                    .build()
+                            )
+                        )
+                        .build()
+                )
+                .build()
+        );
 
         return declarations;
     }
+
 
     public List<Tool> getExplorationTools() {
         List<String> names = List.of("get_code", "find_neighbour_nodes", "update_understanding", "read_doc");

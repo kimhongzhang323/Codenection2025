@@ -11,6 +11,7 @@ import com.example.AutoDocX.service.agent.data.Session;
 import com.example.AutoDocX.service.agent.tools.ToolExecutionContext;
 import com.example.AutoDocX.service.agent.memory.Memory;
 import com.example.AutoDocX.service.agent.memory.MemoryInterface;
+import com.example.AutoDocX.service.agent.util.AgentUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.genai.types.Content;
 import com.google.genai.types.Part;
@@ -160,28 +161,7 @@ public class SummaryAgent {
     private List<Content> buildLoopContent(Memory memory, String userPrompt, DocumentationHandler docHandler) {
         List<Content> contents = new ArrayList<>();
 
-        String systemInstruction =
-"""
-You are an expert software architect.
-
-RULES
-- Be factual: do not invent names or dependencies.
-- You can Infer, but you MUST mark the information as "inferred"
-- Use `find_neighbour_nodes` to expand graph coverage.
-- Use `get_code` only when necessary for better context.
-
-Your primary goal: help the user by directly providing what they ask for.
-- If the request is explicit (e.g., "show me the source code of X", "list dependencies of Y"):
-    - satisfy it directly using available tools, without unnecessary exploration or summary and shortening.
-  
-- If the request is broad, unclear, or about project understanding (e.g., "summarize", "explain architecture", "give context")
-    - explore the codebase, expand the graph, and build summaries as needed.
-  
-IMPORTANT
-- When exploration requires multiple queries, ALWAYS issue MULTIPLE TOOL CALLS in THE SAME response instead of one by one.
-    - Example: If you need info from 5 nodes, call get_code() on all 5 nodes in one step.
-    - Example: Call find_neighbour_nodes, get_code, and update_understanding all in the same step if you need to.
-""";
+        String systemInstruction = AgentUtil.loadSystemPrompt("summary_agent_loop_system.txt");
 
         contents.add(Content.builder().role("user").parts(Part.builder().text(systemInstruction).build()).build());
 
@@ -218,15 +198,7 @@ IMPORTANT
     private List<Content> buildFinalSummaryContent(Memory memory, String userPrompt, Graph graph, DocumentationHandler docHandler) {
         List<Content> contents = new ArrayList<>();
 
-        String systemInstruction =
-"""
-You are an expert software architect.
-- If the request is explicit (e.g., "show me the source code of X", "list dependencies of Y"):
-    - satisfy it directly using available tools, without unnecessary summary and shortening.
-- Else produce a summary that
-    - gives useful context to the user’s query.
-    - contains ALL information that is helpful for the query
-""";
+        String systemInstruction = AgentUtil.loadSystemPrompt("summary_agent_final_system.txt");
 
         contents.add(Content.builder().role("user").parts(Part.builder().text(systemInstruction).build()).build());
 
