@@ -1,7 +1,7 @@
 package com.example.AutoDocX.service;
 
-import com.example.AutoDocX.model.repo.Model;
-import com.example.AutoDocX.model.repo.SendMessageResult;
+import com.example.AutoDocX.model.Model;
+import com.example.AutoDocX.model.SendMessageResult;
 import com.google.genai.types.Content;
 import com.google.genai.types.Part;
 import org.springframework.beans.factory.annotation.Autowired;
