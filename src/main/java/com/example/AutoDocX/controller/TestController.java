@@ -5,7 +5,7 @@ import com.example.AutoDocX.parser.model.GraphNode;
 import com.example.AutoDocX.service.GitService;
 import com.example.AutoDocX.service.JavaGraphConverter;
 import com.example.AutoDocX.service.JavaTreeConverter;
-import com.example.AutoDocX.service.McpToolUtils;
+import com.example.AutoDocX.service.agent.tools.McpToolUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 

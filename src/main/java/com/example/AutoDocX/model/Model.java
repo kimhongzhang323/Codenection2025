@@ -1,4 +1,4 @@
-package com.example.AutoDocX.model.repo;
+package com.example.AutoDocX.model;
 
 import java.util.Map;
 import com.google.genai.types.Content;

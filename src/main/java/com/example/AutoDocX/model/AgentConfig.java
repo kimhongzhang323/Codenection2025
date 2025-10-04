@@ -1,4 +1,4 @@
-package com.example.AutoDocX.model.config;
+package com.example.AutoDocX.model;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;

@@ -1,4 +1,4 @@
-package com.example.AutoDocX.model.repo;
+package com.example.AutoDocX.model;
 
 import com.google.genai.Client;
 import com.google.genai.types.Content;
@@ -221,9 +221,36 @@ public class GeminiModel implements Model {
         sb.append("{\n");
         sb.append("  requestId: \"").append(rid).append("\",\n");
         sb.append("  model: \"").append(modelName).append("\",\n");
-        sb.append("  text: \"").append(extractText(contents)).append("\",\n");
-        sb.append("  tools: [\n");
+        sb.append("  messages:\n");
 
+        for (Content content : contents) {
+            String role = content.role().orElse("NULL");
+            sb.append("\t\t").append(role.toUpperCase()).append(":\t");
+
+            if (content.parts().isPresent()) {
+                List<Part> parts = content.parts().get();
+                boolean first = true;
+                for (Part part : parts) {
+                    if (part.text().isPresent()) {
+                        String[] lines = part.text().get().split("\n");
+                        for (String line : lines) {
+                            if (first) {
+                                sb.append(line).append("\n");
+                                first = false;
+                            } else {
+                                sb.append("\t\t\t\t").append(line).append("\n");
+                            }
+                        }
+                    } else if (part.functionCall().isPresent()) {
+                        sb.append("[FunctionCall: ")
+                                .append(part.functionCall().get().name().orElse("UNKNOWN"))
+                                .append("]\n");
+                    }
+                }
+            }
+        }
+
+        sb.append("  tools: [\n");
         for (Tool t : tools) {
             t.functionDeclarations().ifPresent(decls -> decls.forEach(fd -> {
                 sb.append("    ")
@@ -231,11 +258,12 @@ public class GeminiModel implements Model {
                         .append("()\n");
             }));
         }
-
         sb.append("  ]\n");
         sb.append("}\n");
+
         System.out.println(sb);
     }
+
 
     private void logResponse(String rid, ModelFinishReason finish, int tokens, ParsedCandidate parsed) {
         StringBuilder sb = new StringBuilder();
@@ -263,19 +291,6 @@ public class GeminiModel implements Model {
 
     private void logError(String rid, String message) {
         System.out.println("{ error: \"" + message + "\", requestId: \"" + rid + "\" }");
-    }
-
-    // --- Helper to extract text ---
-    private String extractText(List<Content> contents) {
-        StringBuilder sb = new StringBuilder();
-        for (Content content : contents) {
-            content.parts().ifPresent(parts -> {
-                for (Part part : parts) {
-                    part.text().ifPresent(sb::append);
-                }
-            });
-        }
-        return sb.toString();
     }
 }
 

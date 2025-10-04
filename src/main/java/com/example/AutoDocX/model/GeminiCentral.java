@@ -1,4 +1,4 @@
-package com.example.AutoDocX.model.repo;
+package com.example.AutoDocX.model;
 
 import com.google.genai.types.Content;
 import com.google.genai.types.Tool;

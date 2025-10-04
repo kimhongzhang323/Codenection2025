@@ -1,7 +1,7 @@
 package com.example.AutoDocX.controller;
 
-import com.example.AutoDocX.service.DocumentRewriteAgent;
-import com.example.AutoDocX.service.DocumentRewriteAgent.RewriteStyle;
+import com.example.AutoDocX.service.agent.DocumentRewriteAgent;
+import com.example.AutoDocX.service.agent.DocumentRewriteAgent.RewriteStyle;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
