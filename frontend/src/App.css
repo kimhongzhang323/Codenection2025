@@ -99,7 +99,7 @@
 }
 
 .home__subtitle {
-  margin: 0 0 4px 0;
+  margin: -12px 0 4px 0;
   color: #bdbdbd;
   text-align: center;
 }
@@ -116,8 +116,8 @@
 }
 
 .home__input::placeholder {
-  color: #8a8a8a;
-  font-size: 14px;
+  color: #ffffff;
+  font-size: 9px;
 }
 
 /* Hover and focus states for wrapper */
@@ -190,7 +190,7 @@
 .home__input-wrapper .home__input,
 .home__input-wrapper .repo-autocomplete__input {
   padding-right: 44px;
-  padding-left: 28px;
+  padding-left: 22px;
 }
 
 /* Loading animation for the search icon */
