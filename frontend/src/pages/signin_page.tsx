@@ -67,14 +67,37 @@ const SignIn: React.FC = () => {
 
   return (
     <div className="signup-container">
-      {/* Top Left Logo */}
-      <div className="top-logo" onClick={handleBackToWelcome}>
-        <img src="/logo.png" alt="AutoDocX" className="logo-image" />
-        <span className="logo-text">AutoDocX</span>
+      {/* Left Side - Quote Panel */}
+      <div className="testimonial-section">
+        <div className="quote-container">
+          <Magnet 
+            padding={80} 
+            magnetStrength={2.5} 
+            activeTransition="transform 0.2s ease-out"
+            inactiveTransition="transform 0.4s ease-in-out"
+          >
+            <div className="quote-symbol">❝</div>
+          </Magnet>
+          <Magnet 
+            padding={100} 
+            magnetStrength={2.5} 
+            activeTransition="transform 0.25s ease-out"
+            inactiveTransition="transform 0.45s ease-in-out"
+          >
+            <p className="quote-text">
+              Every line of code deserves to be understood. AutoDocX helps you generate clear, structured, and maintainable documentation — so your projects can scale, your teammates can onboard quickly, and your future self will thank you.
+            </p>
+          </Magnet>
+        </div>
       </div>
 
-      {/* Left Side - Sign In Form */}
+      {/* Right Side - Sign In Form */}
       <div className="signin-section">
+        {/* Logo inside signin panel */}
+        <div className="top-logo" onClick={handleBackToWelcome}>
+          <img src="/logo.png" alt="AutoDocX" className="logo-image" />
+          <span className="logo-text">AutoDocX</span>
+        </div>
         <div className="signin-header">
           <div className="signin-content">
             <h1 className="signin-title">Welcome back</h1>
@@ -155,30 +178,6 @@ const SignIn: React.FC = () => {
 
         <div className="terms-section">
           <p>By continuing, you agree to AutoDocX's <button type="button" className="link-button">Terms of Service</button> and <button type="button" className="link-button">Privacy Policy</button> and to receive periodic emails with updates.</p>
-        </div>
-      </div>
-
-      {/* Right Side - Quote Panel */}
-      <div className="testimonial-section">
-        <div className="quote-container">
-          <Magnet 
-            padding={80} 
-            magnetStrength={2.5} 
-            activeTransition="transform 0.2s ease-out"
-            inactiveTransition="transform 0.4s ease-in-out"
-          >
-            <div className="quote-symbol">❝</div>
-          </Magnet>
-          <Magnet 
-            padding={100} 
-            magnetStrength={2.5} 
-            activeTransition="transform 0.25s ease-out"
-            inactiveTransition="transform 0.45s ease-in-out"
-          >
-            <p className="quote-text">
-              Every line of code deserves to be understood. AutoDocX helps you generate clear, structured, and maintainable documentation — so your projects can scale, your teammates can onboard quickly, and your future self will thank you.
-            </p>
-          </Magnet>
         </div>
       </div>
     </div>
