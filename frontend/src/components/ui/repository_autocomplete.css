@@ -4,13 +4,13 @@
 }
 
 .repo-autocomplete__input {
-  width: min(560px, 90vw);
-  padding: 12px 14px;
-  padding-right: 40px;
-  padding-left: 40px;
+  width: 100%;
+  padding: 6px 16px;
+  padding-right: 44px;
+  padding-left: 32px;
   border-radius: 8px;
-  border: 1px solid #2a2a2a;
-  background: #1b1b1b;
+  border: none;
+  background: transparent;
   color: #ffffff;
   transition: border-color 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
   box-sizing: border-box;
@@ -19,19 +19,15 @@
 }
 
 .repo-autocomplete__input::placeholder {
-  color: #8a8a8a;
-}
-
-.repo-autocomplete__input:hover {
-  border-color: #343434;
+  color: #9ca3af;
+  font-size: 15px;
+  font-weight: 400;
 }
 
 .repo-autocomplete__input:focus,
 .repo-autocomplete__input:focus-visible {
   outline: none;
-  border-color: #09334e;
-  box-shadow: 0 0 0 3px rgba(59, 59, 255, 0.18);
-  background: #191919;
+  /* Let the wrapper handle all visual styling */
 }
 
 .repo-autocomplete__dropdown {

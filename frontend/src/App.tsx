@@ -3,6 +3,7 @@ import { Routes, Route, useNavigate, useLocation, useParams } from 'react-router
 import { checkGithubUrlPublic, fetchGithubRepoDetails, type GithubRepoDetails } from './lib/utils'
 import { XIcon } from './components/icons/close_icon'
 import { ArrowRightIcon } from './components/icons/arrow_icon'
+import { LinkIcon } from './components/icons/url_icon'
 import DocumentationPage from './pages/documentation_page'
 import CommitDetailPage from './pages/commit_detail_page'
 import SignUpPage from './pages/signup_page'
@@ -121,10 +122,6 @@ function HomePage() {
     }
   }, [isError])
 
-
-
-
-
   function handleArrowClick() {
     if (repoData) {
       const slug = (repoData.fullName || '').toLowerCase()
@@ -133,7 +130,6 @@ function HomePage() {
       })
     }
   }
-
 
   function handleRepositorySelect(repository: GitHubRepository) {
     // When a repository is selected from autocomplete, automatically fetch its details
@@ -173,6 +169,7 @@ function HomePage() {
       <h1 className="home__title">AutoDocX</h1>
       <p className="home__subtitle">Enter your GitHub repository URL to get started</p>
       <div className="home__input-wrapper">
+        <LinkIcon className="home__input-icon--left" size={16} />
         <RepositoryAutocomplete
           value={repoUrl}
           onChange={(value) => {
