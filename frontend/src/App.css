@@ -99,14 +99,14 @@
 }
 
 .home__subtitle {
-  margin: 0 0 8px 0;
+  margin: 0 0 4px 0;
   color: #bdbdbd;
   text-align: center;
 }
 
 .home__input {
   width: 100%;
-  padding: 12px 14px;
+  padding: 6px 16px;
   border-radius: 8px;
   border: none;
   background: transparent;
@@ -117,6 +117,7 @@
 
 .home__input::placeholder {
   color: #8a8a8a;
+  font-size: 14px;
 }
 
 /* Hover and focus states for wrapper */
@@ -133,15 +134,12 @@
 .home__input:focus-visible {
   outline: none;
 }
-  box-shadow: 0 0 0 3px rgba(59, 59, 255, 0.18);
-  background: #191919;
-}
 
 /* Wrap input to position the icon at the right edge */
 .home__input-wrapper {
   position: relative !important;
   display: block;
-  width: min(420px, 90vw);
+  width: min(560px, 90vw);
   border-radius: 8px;
   border: 1px solid #2a2a2a;
   background: #1b1b1b;
@@ -183,15 +181,16 @@
 
 /* Left alignment and spacing */
 .home__input-wrapper .home__input-icon--left {
-  left: 12px !important;
+  left: 16px !important;
   z-index: 10;
+  color: #9ca3af;
 }
 
-/* Add right padding so text doesn't overlap the icon */
+/* Add padding so text doesn't overlap the icons */
 .home__input-wrapper .home__input,
 .home__input-wrapper .repo-autocomplete__input {
-  padding-right: 40px;
-  padding-left: 40px;
+  padding-right: 44px;
+  padding-left: 28px;
 }
 
 /* Loading animation for the search icon */
