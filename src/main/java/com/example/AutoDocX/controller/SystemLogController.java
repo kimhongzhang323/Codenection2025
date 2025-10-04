@@ -15,7 +15,7 @@ import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/logs")
-@CrossOrigin(origins = "http://localhost:3000")
+@CrossOrigin(origins = {"http://localhost:3000", "http://localhost:5173"})
 public class SystemLogController {
     
     @Autowired
@@ -197,6 +197,23 @@ public class SystemLogController {
     }
     
     /**
+     * Get latest logs (for refresh functionality)
+     */
+    @GetMapping("/latest")
+    public ResponseEntity<Page<SystemLog>> getLatestLogs(
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "50") int size,
+            @RequestParam(required = false) String level) {
+        Page<SystemLog> logs;
+        if (level != null && !level.isEmpty()) {
+            logs = systemLogService.getLogsByLevel(level.toUpperCase(), page, size);
+        } else {
+            logs = systemLogService.getAllLogs(page, size);
+        }
+        return ResponseEntity.ok(logs);
+    }
+    
+    /**
      * Get context logs around a specific time
      */
     @GetMapping("/context")
@@ -267,5 +284,28 @@ public class SystemLogController {
             @RequestParam(defaultValue = "24") int hours) {
         List<String> patterns = systemLogService.detectPatterns(hours);
         return ResponseEntity.ok(patterns);
+    }
+    
+    /**
+     * Generate test logs for testing real-time functionality
+     */
+    @PostMapping("/generate-test-logs")
+    public ResponseEntity<String> generateTestLogs() {
+        try {
+            // Generate some test logs
+            systemLogService.createLog("INFO", "TestController", "Test log message for real-time testing", 
+                null, "test-user", "test-session", "127.0.0.1", "Test User Agent", 100L);
+                
+            systemLogService.createLog("WARN", "TestController", "Test warning message", 
+                null, "test-user", "test-session", "127.0.0.1", "Test User Agent", 250L);
+                
+            systemLogService.createLog("ERROR", "TestController", "Test error message", 
+                "java.lang.RuntimeException: Test error\n\tat TestController.test(TestController.java:42)", 
+                "test-user", "test-session", "127.0.0.1", "Test User Agent", null);
+                
+            return ResponseEntity.ok("Test logs generated successfully");
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Failed to generate test logs: " + e.getMessage());
+        }
     }
 }
