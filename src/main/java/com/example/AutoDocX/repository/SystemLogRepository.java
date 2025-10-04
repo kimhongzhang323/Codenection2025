@@ -81,6 +81,6 @@ public interface SystemLogRepository extends JpaRepository<SystemLog, Long> {
     Page<SystemLog> findByIpAddress(String ipAddress, Pageable pageable);
     
     // Get logs around a specific time (for context analysis)
-    @Query("SELECT sl FROM SystemLog sl WHERE sl.timestamp BETWEEN :centerTime - INTERVAL 5 MINUTE AND :centerTime + INTERVAL 5 MINUTE ORDER BY sl.timestamp")
-    List<SystemLog> findLogsAroundTime(@Param("centerTime") LocalDateTime centerTime);
+    @Query("SELECT sl FROM SystemLog sl WHERE sl.timestamp BETWEEN :startTime AND :endTime ORDER BY sl.timestamp")
+    List<SystemLog> findLogsAroundTime(@Param("startTime") LocalDateTime startTime, @Param("endTime") LocalDateTime endTime);
 }

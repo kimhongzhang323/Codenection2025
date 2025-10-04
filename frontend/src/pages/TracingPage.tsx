@@ -1,4 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import rehypeHighlight from 'rehype-highlight';
+import rehypeRaw from 'rehype-raw';
+import 'highlight.js/styles/github-dark.css';
 import './tracing_page.css';
 
 interface SystemLog {
@@ -245,11 +250,94 @@ const TracingPage: React.FC = () => {
     setAnalyzingErrors(true);
     try {
       if (usingMockData) {
-        // Mock analysis for demo purposes
+        // Mock analysis for demo purposes with rich markdown content
         setErrorAnalysis({
-          summary: "Multiple database connection errors detected in the last 24 hours",
-          rootCause: "Database connection pool exhaustion due to high traffic load",
-          suggestedSolution: "Increase database connection pool size and implement connection retry logic",
+          summary: `## 🔍 Analysis Overview
+          
+**Critical database connectivity issues** have been detected across multiple service instances in the last 24 hours. The errors show a **consistent pattern** of connection timeouts and pool exhaustion.
+
+### Key Metrics:
+- **Error Rate**: 15 occurrences
+- **Peak Times**: 14:30-16:45 UTC  
+- **Affected Services**: \`user-service\`, \`order-service\`, \`payment-service\`
+- **Impact**: ~23% of user requests failed
+
+> 💡 **Quick Summary**: Database connection pool is overwhelmed during peak traffic periods, causing cascading failures across microservices.`,
+
+          rootCause: `## 🔬 Root Cause Analysis
+
+The investigation reveals **three primary contributing factors**:
+
+### 1. Database Connection Pool Exhaustion 📊
+- Current pool size: \`maxConnections: 10\`
+- Peak concurrent requests: **~25-30**
+- **Connection acquisition timeout**: 5 seconds
+
+### 2. Long-Running Queries 🐌  
+\`\`\`sql
+-- Problematic query detected:
+SELECT u.*, o.*, p.* FROM users u 
+JOIN orders o ON u.id = o.user_id 
+JOIN payments p ON o.id = p.order_id 
+WHERE u.created_date > '2024-01-01'
+-- Execution time: ~15-20 seconds
+\`\`\`
+
+### 3. Missing Connection Retry Logic ⚠️
+- **No exponential backoff** implemented
+- Failed connections are **not retried**
+- Error cascades to dependent services
+
+> ⚠️ **Root Cause**: Undersized connection pool + inefficient queries + poor error handling = system bottleneck`,
+
+          suggestedSolution: `## ✅ Recommended Solutions
+
+### 🚀 Immediate Actions (Priority: HIGH)
+
+#### 1. Scale Database Connection Pool
+\`\`\`yaml
+# database-config.yml
+database:
+  connection-pool:
+    maximum-pool-size: 50        # Increase from 10
+    minimum-idle: 10             # Set minimum idle connections
+    connection-timeout: 30000    # 30 seconds
+    idle-timeout: 600000         # 10 minutes
+\`\`\`
+
+#### 2. Implement Connection Retry Logic  
+\`\`\`java
+// Add to service configuration
+@Retryable(
+    value = {SQLException.class}, 
+    maxAttempts = 3,
+    backoff = @Backoff(delay = 1000, multiplier = 2)
+)
+public Connection getConnection() {
+    // Connection logic here
+}
+\`\`\`
+
+#### 3. Optimize Slow Queries
+- **Add database indexing** on frequently queried columns
+- **Implement pagination** for large result sets  
+- **Use connection pooling** with HikariCP
+
+### 📊 Medium-term Improvements
+
+| Solution | Timeline | Impact |
+|----------|----------|---------|
+| **Read Replicas** | 2-3 weeks | ⬇️ 40% load reduction |
+| **Query Caching** | 1 week | ⬇️ 60% query time |
+| **Circuit Breaker** | 3-4 days | 🛡️ Failure isolation |
+
+### 🔄 Long-term Strategy
+- **Database sharding** for horizontal scaling
+- **Microservice async communication** patterns
+- **Advanced monitoring** with real-time alerting
+
+> 💡 **Expected Outcome**: 95% reduction in connection errors, improved response times by 300ms average.`,
+          
           relatedIssues: ["Memory pressure warnings", "Slow query performance", "Timeout exceptions"],
           severity: "HIGH",
           occurrenceCount: 15
@@ -300,13 +388,33 @@ const TracingPage: React.FC = () => {
   const fetchPatterns = async () => {
     try {
       if (usingMockData) {
-        // Mock patterns for demo
+        // Mock patterns for demo with markdown formatting
         setPatterns([
-          "Repeated database timeout errors every 15-20 minutes",
-          "High memory usage spikes during document processing",
-          "Authentication failures increase during peak hours (2-4 PM)",
-          "File upload errors correlate with large file sizes (>10MB)",
-          "Cache invalidation issues in user session management"
+          `**Database Connection Timeouts** 🔄
+          
+Recurring pattern every **15-20 minutes** between 14:00-16:00 UTC. Peak correlation with \`user-service\` load balancer traffic.`,
+
+          `**Memory Pressure During Document Processing** 📊
+          
+Memory usage spikes to **85%+ capacity** when processing files larger than \`5MB\`. Pattern detected in \`document-processor\` service logs.`,
+
+          `**Authentication Failures During Peak Hours** 🔐
+          
+**23% increase** in auth failures during 2-4 PM UTC. Correlates with:
+- Redis session store timeouts  
+- OAuth provider rate limiting`,
+
+          `**Large File Upload Correlation** 📁
+          
+Files \`>10MB\` have **67% higher failure rate**. Error pattern:
+\`\`\`
+UPLOAD_TIMEOUT: Request timeout after 30s
+MEMORY_EXCEEDED: Heap space exhausted
+\`\`\``,
+
+          `**Cache Invalidation Issues** ⚡
+          
+User session cache showing **inconsistent state** across service instances. Pattern indicates distributed cache synchronization problems.`
         ]);
         return;
       }
@@ -793,37 +901,124 @@ const TracingPage: React.FC = () => {
           </div>
 
           {errorAnalysis && (
-            <div className="error-analysis">
-              <h3>AI Error Analysis</h3>
-              <div className="analysis-grid">
-                <div className="analysis-card">
-                  <h4>Summary</h4>
-                  <p>{errorAnalysis.summary}</p>
+            <div className="error-analysis-enhanced">
+              <div className="analysis-header">
+                <div className="analysis-title">
+                  <svg className="analysis-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M9 11H5a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2h-4m-4 0V9a2 2 0 0 1 4 0v2m-4 0h4"/>
+                  </svg>
+                  <h3>AI-Powered Error Analysis</h3>
                 </div>
-                <div className="analysis-card">
-                  <h4>Root Cause</h4>
-                  <p>{errorAnalysis.rootCause}</p>
+                <div className="severity-badge severity-{errorAnalysis.severity.toLowerCase()}">
+                  <span className="severity-dot"></span>
+                  {errorAnalysis.severity} Severity
                 </div>
-                <div className="analysis-card">
-                  <h4>Suggested Solution</h4>
-                  <p>{errorAnalysis.suggestedSolution}</p>
+              </div>
+              
+              <div className="analysis-stats">
+                <div className="stat-item">
+                  <span className="stat-value">{errorAnalysis.occurrenceCount}</span>
+                  <span className="stat-label">Occurrences</span>
                 </div>
-                <div className="analysis-card">
-                  <h4>Severity: {errorAnalysis.severity}</h4>
-                  <p>Occurred {errorAnalysis.occurrenceCount} times</p>
+                <div className="stat-divider"></div>
+                <div className="stat-item">
+                  <span className="stat-value">AI</span>
+                  <span className="stat-label">Analysis</span>
+                </div>
+              </div>
+
+              <div className="analysis-content">
+                <div className="analysis-section-card summary-card">
+                  <div className="card-header">
+                    <svg className="card-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                      <polyline points="14,2 14,8 20,8"/>
+                      <line x1="16" y1="13" x2="8" y2="13"/>
+                      <line x1="16" y1="17" x2="8" y2="17"/>
+                      <polyline points="10,9 9,9 8,9"/>
+                    </svg>
+                    <h4>Executive Summary</h4>
+                  </div>
+                  <div className="card-content">
+                    <div className="markdown-content">
+                      <ReactMarkdown 
+                        remarkPlugins={[remarkGfm]}
+                        rehypePlugins={[rehypeHighlight, rehypeRaw]}
+                      >
+                        {errorAnalysis.summary}
+                      </ReactMarkdown>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="analysis-section-card rootcause-card">
+                  <div className="card-header">
+                    <svg className="card-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <circle cx="12" cy="12" r="10"/>
+                      <line x1="15" y1="9" x2="9" y2="15"/>
+                      <line x1="9" y1="9" x2="15" y2="15"/>
+                    </svg>
+                    <h4>Root Cause Analysis</h4>
+                  </div>
+                  <div className="card-content">
+                    <div className="markdown-content">
+                      <ReactMarkdown 
+                        remarkPlugins={[remarkGfm]}
+                        rehypePlugins={[rehypeHighlight, rehypeRaw]}
+                      >
+                        {errorAnalysis.rootCause}
+                      </ReactMarkdown>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="analysis-section-card solution-card">
+                  <div className="card-header">
+                    <svg className="card-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <polyline points="20,6 9,17 4,12"/>
+                    </svg>
+                    <h4>Recommended Solution</h4>
+                  </div>
+                  <div className="card-content">
+                    <div className="markdown-content">
+                      <ReactMarkdown 
+                        remarkPlugins={[remarkGfm]}
+                        rehypePlugins={[rehypeHighlight, rehypeRaw]}
+                      >
+                        {errorAnalysis.suggestedSolution}
+                      </ReactMarkdown>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
           )}
 
           {patterns.length > 0 && (
-            <div className="patterns-section">
-              <h3>Detected Patterns</h3>
-              <ul className="patterns-list">
+            <div className="patterns-section-enhanced">
+              <div className="patterns-header">
+                <svg className="patterns-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+                </svg>
+                <h3>AI-Detected Patterns</h3>
+              </div>
+              <div className="patterns-grid">
                 {patterns.map((pattern, index) => (
-                  <li key={index} className="pattern-item">{pattern}</li>
+                  <div key={index} className="pattern-card">
+                    <div className="pattern-indicator">
+                      <span className="pattern-number">{index + 1}</span>
+                    </div>
+                    <div className="pattern-content">
+                      <ReactMarkdown 
+                        remarkPlugins={[remarkGfm]}
+                        rehypePlugins={[rehypeHighlight, rehypeRaw]}
+                      >
+                        {pattern}
+                      </ReactMarkdown>
+                    </div>
+                  </div>
                 ))}
-              </ul>
+              </div>
             </div>
           )}
         </div>

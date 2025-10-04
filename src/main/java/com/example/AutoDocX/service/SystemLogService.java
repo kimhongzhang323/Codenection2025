@@ -145,7 +145,9 @@ public class SystemLogService {
      * Get context logs around a specific time
      */
     public List<SystemLog> getLogsAroundTime(LocalDateTime centerTime) {
-        return systemLogRepository.findLogsAroundTime(centerTime);
+        LocalDateTime startTime = centerTime.minusMinutes(5);
+        LocalDateTime endTime = centerTime.plusMinutes(5);
+        return systemLogRepository.findLogsAroundTime(startTime, endTime);
     }
     
     /**
