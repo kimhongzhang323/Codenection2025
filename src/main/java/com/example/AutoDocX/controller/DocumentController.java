@@ -3,7 +3,7 @@ package com.example.AutoDocX.controller;
 import com.example.AutoDocX.model.Documentation;
 import com.example.AutoDocX.service.DocumentHandlingService;
 import com.example.AutoDocX.service.DocumentationHandler;
-import com.example.AutoDocX.service.Session;
+import com.example.AutoDocX.service.agent.data.Session;
 import com.example.AutoDocX.service.SessionManager;
 import com.example.AutoDocX.util.ApiResponse;
 import org.springframework.beans.factory.annotation.Autowired;

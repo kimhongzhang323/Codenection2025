@@ -1,10 +1,10 @@
 package com.example.AutoDocX.controller;
 
 import com.example.AutoDocX.service.ApiResponse;
-import com.example.AutoDocX.service.Agent;
-import com.example.AutoDocX.service.GeneralSummaryAgent;
-import com.example.AutoDocX.service.DocumentationAgent;
-import com.example.AutoDocX.service.SummaryAgent;
+import com.example.AutoDocX.service.agent.Agent;
+import com.example.AutoDocX.service.agent.GeneralSummaryAgent;
+import com.example.AutoDocX.service.agent.DocumentationAgent;
+import com.example.AutoDocX.service.agent.SummaryAgent;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;

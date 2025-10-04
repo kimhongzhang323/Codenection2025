@@ -1,10 +1,8 @@
-package com.example.AutoDocX.service;
+package com.example.AutoDocX.service.agent.memory;
 
 import lombok.Getter;
 
-import java.lang.reflect.Array;
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Getter
 public class EpisodicMemory implements MemoryInterface {

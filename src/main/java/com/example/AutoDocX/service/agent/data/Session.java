@@ -1,6 +1,8 @@
-package com.example.AutoDocX.service;
+package com.example.AutoDocX.service.agent.data;
 
 import com.example.AutoDocX.model.AgentConfig;
+import com.example.AutoDocX.service.DocumentationHandler;
+import com.example.AutoDocX.service.agent.memory.Memory;
 
 import java.util.concurrent.atomic.AtomicBoolean;
 

@@ -1,4 +1,4 @@
-package com.example.AutoDocX.service;
+package com.example.AutoDocX.service.agent.tools;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.genai.types.FunctionDeclaration;

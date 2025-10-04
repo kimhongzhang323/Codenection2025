@@ -1,4 +1,4 @@
-package com.example.AutoDocX.service;
+package com.example.AutoDocX.service.agent;
 
 import com.example.AutoDocX.model.ClonedRepo;
 import com.example.AutoDocX.model.ModelFinishReason;
@@ -6,6 +6,14 @@ import com.example.AutoDocX.model.ToolCallData;
 import com.example.AutoDocX.model.Model;
 import com.example.AutoDocX.model.SendMessageResult;
 import com.example.AutoDocX.parser.model.Graph;
+import com.example.AutoDocX.service.RepoHandler;
+import com.example.AutoDocX.service.SessionManager;
+import com.example.AutoDocX.service.agent.tools.ToolExecutionContext;
+import com.example.AutoDocX.service.agent.tools.McpToolKit;
+import com.example.AutoDocX.service.agent.tools.McpToolUtils;
+import com.example.AutoDocX.service.agent.data.Session;
+import com.example.AutoDocX.service.agent.memory.Memory;
+import com.example.AutoDocX.service.agent.memory.MemoryInterface;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.genai.types.*;
 import org.springframework.beans.factory.annotation.Qualifier;

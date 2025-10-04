@@ -1,4 +1,4 @@
-package com.example.AutoDocX.service;
+package com.example.AutoDocX.service.agent.memory;
 
 import lombok.Getter;
 

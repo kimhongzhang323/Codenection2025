@@ -1,5 +1,7 @@
-package com.example.AutoDocX.service;
+package com.example.AutoDocX.service.agent.util;
 
+import com.example.AutoDocX.service.agent.memory.EpisodicMemory;
+import com.example.AutoDocX.service.agent.memory.MemoryInterface;
 import com.google.genai.types.Content;
 import com.google.genai.types.Part;
 import com.google.genai.types.Tool;

@@ -1,7 +1,7 @@
 package com.example.AutoDocX.controller;
 
 import com.example.AutoDocX.model.AgentConfig;
-import com.example.AutoDocX.service.Session;
+import com.example.AutoDocX.service.agent.data.Session;
 import com.example.AutoDocX.service.SessionManager;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;

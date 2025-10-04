@@ -1,4 +1,4 @@
-package com.example.AutoDocX.service;
+package com.example.AutoDocX.service.agent.tools;
 
 import com.example.AutoDocX.model.ClonedRepo;
 import com.example.AutoDocX.model.Documentation;
@@ -8,7 +8,12 @@ import com.example.AutoDocX.parser.model.Graph;
 import com.example.AutoDocX.parser.model.GraphLink;
 import com.example.AutoDocX.parser.model.GraphNode;
 import com.example.AutoDocX.parser.model.GraphAlgo;
+import com.example.AutoDocX.service.DocumentHandlingService;
+import com.example.AutoDocX.service.DocumentationHandler;
+import com.example.AutoDocX.service.GitService;
+import com.example.AutoDocX.service.RepoHandler;
 import com.example.AutoDocX.service.RepoHandler.NodeNotFoundException;
+import com.example.AutoDocX.service.agent.data.Session;
 import com.google.genai.types.Tool;
 import com.google.genai.types.Content;
 import com.google.genai.types.Part;

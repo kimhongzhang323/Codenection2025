@@ -1,10 +1,16 @@
-package com.example.AutoDocX.service;
+package com.example.AutoDocX.service.agent;
 
 import com.example.AutoDocX.model.ClonedRepo;
 import com.example.AutoDocX.model.Model;
 import com.example.AutoDocX.model.SendMessageResult;
 import com.example.AutoDocX.model.ToolCallData;
 import com.example.AutoDocX.parser.model.Graph;
+import com.example.AutoDocX.service.*;
+import com.example.AutoDocX.service.agent.tools.McpToolKit;
+import com.example.AutoDocX.service.agent.data.Session;
+import com.example.AutoDocX.service.agent.tools.ToolExecutionContext;
+import com.example.AutoDocX.service.agent.memory.Memory;
+import com.example.AutoDocX.service.agent.memory.MemoryInterface;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.genai.types.Content;
 import com.google.genai.types.Part;

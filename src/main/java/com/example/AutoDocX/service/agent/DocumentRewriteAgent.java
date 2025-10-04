@@ -1,5 +1,6 @@
-package com.example.AutoDocX.service;
+package com.example.AutoDocX.service.agent;
 
+import com.example.AutoDocX.service.SummarizerService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
