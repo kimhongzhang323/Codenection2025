@@ -1,0 +1,257 @@
+/* Markdown Editor Styles */
+.markdown-editor {
+  position: relative;
+  width: 100%;
+  min-height: 400px;
+  border: 1px solid var(--docs-border, #e9ecef);
+  border-radius: 8px;
+  background: var(--docs-bg, #ffffff);
+  overflow: hidden;
+  transition: all 0.2s ease;
+}
+
+.markdown-editor:focus-within {
+  border-color: var(--docs-primary, #0066cc);
+  box-shadow: 0 0 0 3px rgba(0, 102, 204, 0.1);
+}
+
+/* Toolbar Styles */
+.markdown-editor__toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background: var(--docs-sidebar-bg, #f8f9fa);
+  border-bottom: 1px solid var(--docs-border, #e9ecef);
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.markdown-editor__toolbar-group {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.markdown-editor__toolbar-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  color: var(--docs-text, #333333);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 14px;
+}
+
+.markdown-editor__toolbar-button:hover {
+  background: var(--docs-hover-bg, rgba(0, 0, 0, 0.05));
+  border-color: var(--docs-border, #e9ecef);
+}
+
+.markdown-editor__toolbar-button:active {
+  background: var(--docs-active-bg, rgba(0, 0, 0, 0.1));
+}
+
+.markdown-editor__toolbar-button:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(0, 102, 204, 0.2);
+}
+
+.markdown-editor__toolbar-button--primary {
+  background: var(--docs-primary, #0066cc);
+  color: white;
+  font-weight: 500;
+  width: auto;
+  padding: 0 12px;
+}
+
+.markdown-editor__toolbar-button--primary:hover {
+  background: var(--docs-primary-hover, #0052a3);
+  border-color: transparent;
+}
+
+.markdown-editor__toolbar-button--secondary {
+  color: var(--docs-muted-text, #6c757d);
+}
+
+.markdown-editor__toolbar-button--secondary:hover {
+  color: var(--docs-text, #333333);
+}
+
+/* Collapsed Toolbar */
+.markdown-editor__toolbar-collapsed {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 10;
+  background: var(--docs-bg, #ffffff);
+  border: 1px solid var(--docs-border, #e9ecef);
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+/* Textarea Styles */
+.markdown-editor__textarea {
+  width: 100%;
+  min-height: 400px;
+  padding: 16px;
+  border: none;
+  outline: none;
+  resize: none;
+  background: transparent;
+  color: var(--docs-text, #333333);
+  font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+  font-size: 14px;
+  line-height: 1.6;
+  overflow-y: auto;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  tab-size: 4;
+}
+
+.markdown-editor__textarea::placeholder {
+  color: var(--docs-muted-text, #6c757d);
+  font-style: italic;
+}
+
+.markdown-editor__textarea::-webkit-scrollbar {
+  width: 8px;
+}
+
+.markdown-editor__textarea::-webkit-scrollbar-track {
+  background: var(--docs-bg, #f1f1f1);
+}
+
+.markdown-editor__textarea::-webkit-scrollbar-thumb {
+  background: var(--docs-border, #c1c1c1);
+  border-radius: 4px;
+}
+
+.markdown-editor__textarea::-webkit-scrollbar-thumb:hover {
+  background: var(--docs-muted-text, #a8a8a8);
+}
+
+/* Dark Mode Support */
+:root.dark .markdown-editor {
+  background: var(--docs-bg, #191919);
+  border-color: var(--docs-border, #2a2a2a);
+}
+
+:root.dark .markdown-editor:focus-within {
+  border-color: var(--docs-primary, #4a9eff);
+  box-shadow: 0 0 0 3px rgba(74, 158, 255, 0.1);
+}
+
+:root.dark .markdown-editor__toolbar {
+  background: var(--docs-sidebar-bg, #222222);
+  border-bottom-color: var(--docs-border, #2a2a2a);
+}
+
+:root.dark .markdown-editor__toolbar-button {
+  color: var(--docs-text, #e0e0e0);
+}
+
+:root.dark .markdown-editor__toolbar-button:hover {
+  background: var(--docs-hover-bg, rgba(255, 255, 255, 0.05));
+  border-color: var(--docs-border, #2a2a2a);
+}
+
+:root.dark .markdown-editor__toolbar-button:active {
+  background: var(--docs-active-bg, rgba(255, 255, 255, 0.1));
+}
+
+:root.dark .markdown-editor__toolbar-button--primary {
+  background: var(--docs-primary, #4a9eff);
+}
+
+:root.dark .markdown-editor__toolbar-button--primary:hover {
+  background: var(--docs-primary-hover, #3d8bdb);
+}
+
+:root.dark .markdown-editor__toolbar-button--secondary {
+  color: var(--docs-muted-text, #a3a3a3);
+}
+
+:root.dark .markdown-editor__toolbar-button--secondary:hover {
+  color: var(--docs-text, #e0e0e0);
+}
+
+:root.dark .markdown-editor__toolbar-collapsed {
+  background: var(--docs-bg, #191919);
+  border-color: var(--docs-border, #2a2a2a);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+:root.dark .markdown-editor__textarea {
+  color: var(--docs-text, #e0e0e0);
+}
+
+:root.dark .markdown-editor__textarea::placeholder {
+  color: var(--docs-muted-text, #a3a3a3);
+}
+
+:root.dark .markdown-editor__textarea::-webkit-scrollbar-track {
+  background: var(--docs-bg, #1a1a1a);
+}
+
+:root.dark .markdown-editor__textarea::-webkit-scrollbar-thumb {
+  background: var(--docs-border, #404040);
+}
+
+:root.dark .markdown-editor__textarea::-webkit-scrollbar-thumb:hover {
+  background: var(--docs-muted-text, #565656);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .markdown-editor__toolbar {
+    padding: 6px 8px;
+    gap: 4px;
+  }
+  
+  .markdown-editor__toolbar-button {
+    width: 28px;
+    height: 28px;
+  }
+  
+  .markdown-editor__textarea {
+    padding: 12px;
+    font-size: 13px;
+  }
+}
+
+@media (max-width: 480px) {
+  .markdown-editor__toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+  
+  .markdown-editor__toolbar-group {
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+}
+
+/* Animation for toolbar toggle */
+.markdown-editor__toolbar,
+.markdown-editor__toolbar-collapsed {
+  animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

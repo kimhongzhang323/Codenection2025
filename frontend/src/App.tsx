@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Routes, Route, useNavigate, useLocation, useParams } from 'react-router-dom'
 import { checkGithubUrlPublic, fetchGithubRepoDetails, type GithubRepoDetails } from './lib/utils'
-import { CheckIcon } from './components/icons/check_icon'
 import { XIcon } from './components/icons/close_icon'
 import { ArrowRightIcon } from './components/icons/arrow_icon'
 import { LinkIcon } from './components/icons/url_icon'
@@ -9,6 +8,7 @@ import DocumentationPage from './pages/documentation_page'
 import CommitDetailPage from './pages/commit_detail_page'
 import SignUpPage from './pages/signup_page'
 import SignInPage from './pages/signin_page'
+import TracingPage from './pages/TracingPage'
 import OAuthCallback from './components/oauth_callback'
 import ProtectedRoute from './components/protected_route'
 import UserProfile from './components/user_profile'
@@ -183,9 +183,7 @@ function HomePage() {
           placeholder="Search repositories or paste GitHub URL"
           className="home__input"
         />
-        {isSuccess ? (
-          <CheckIcon className="home__input-icon--right text-success" aria-label="Success" />
-        ) : isError ? (
+        {isError ? (
           <XIcon className="home__input-icon--right text-danger" aria-label="Not found" />
         ) : (
           isLoading ? (
@@ -261,6 +259,7 @@ function App() {
           <Route path="/sign-in" element={<SignInPage />} />
           <Route path="/dashboard" element={<HomePage />} />
           <Route path="/auth/callback" element={<OAuthCallback />} />
+          <Route path="/tracing" element={<ProtectedRoute><TracingPage /></ProtectedRoute>} />
           <Route path="/docs-flow/:repo" element={<ProtectedRoute><DocsFlowPage /></ProtectedRoute>} />
 
           <Route path="/:repo/commit/:sha" element={<ProtectedRoute><CommitDetailPage /></ProtectedRoute>} />

@@ -1,0 +1,103 @@
+# Development Configuration
+spring:
+  # H2 Database Configuration (for local development)
+  datasource:
+    url: jdbc:h2:mem:autodocx;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: ""
+  
+  h2:
+    console:
+      enabled: true
+      path: /h2-console
+  
+  # JPA Configuration
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.H2Dialect
+  
+  # Cache Configuration (Simple for development)
+  cache:
+    type: simple
+  
+  # Security Configuration - Development (localhost)
+  security:
+    oauth2:
+      client:
+        registration:
+          github:
+            client-id: ${GITHUB_CLIENT_ID:REPLACE_WITH_ACTUAL_CLIENT_ID}
+            client-secret: ${GITHUB_CLIENT_SECRET:REPLACE_WITH_ACTUAL_CLIENT_SECRET}
+            scope:
+              - read:user
+              - user:email
+              - public_repo
+            redirect-uri: http://localhost:8081/login/oauth2/code/github
+  
+  # Disable Redis and OpenAI auto-configuration in dev mode
+  data:
+    redis:
+      repositories:
+        enabled: false
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.redis.RedisRepositoriesAutoConfiguration
+      - org.springframework.ai.autoconfigure.openai.OpenAiAutoConfiguration
+
+# Server Configuration
+server:
+  port: ${SERVER_PORT:8081}
+  tomcat:
+    max-threads: 50
+    min-spare-threads: 5
+
+# CORS Configuration (Allow frontend development server)
+app:
+  cors:
+    allowed-origins: http://localhost:3000,http://localhost:5173,http://localhost:8081
+    allowed-methods: GET,POST,PUT,DELETE,OPTIONS
+    allowed-headers: "*"
+    allow-credentials: true
+
+# Logging Configuration
+logging:
+  level:
+    root: INFO
+    com.example.AutoDocX: DEBUG
+    org.springframework.web: INFO
+    org.springframework.security: INFO
+  pattern:
+    console: "%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
+
+# Actuator Configuration
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
+
+# Gemini Configuration
+gemini:
+  model:
+    name: gemini-2.0-flash-exp
+  api:
+    key: ${GEMINI_API_KEY:demo-key}
+    keyList: ${GEMINI_API_KEY_LIST:demo-key}
+
+# AI Configuration
+spring.ai:
+  openai:
+    enabled: false
+    api-key: disabled
+    chat:
+      enabled: false

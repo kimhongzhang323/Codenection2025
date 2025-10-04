@@ -220,7 +220,7 @@
 /* Repository Details Container */
 .home .repo-details {
   width: min(560px, 90vw);
-  margin-top: 24px;
+  margin-top: -13px;
   padding: 12px 16px;
   border-radius: 8px;
   border: 1px solid #2a2a2a;
@@ -271,6 +271,7 @@
   font-size: 13px;
   line-height: 1.4;
   color: #e0e0e0;
+  margin-top: -13px;
   margin-bottom: 16px;
   min-height: 60px;
   text-align: left !important;
