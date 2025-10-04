@@ -78,7 +78,16 @@ function DocumentationPage() {
   })
   const [activeLabel, setActiveLabel] = useState<string | null>(null)
   const [viewMode, setViewMode] = useState<'reading' | 'edit'>('reading')
+  const [documentationContent, setDocumentationContent] = useState<string>('')
   
+  // Content handlers for synchronization
+  const handleContentLoaded = useCallback((content: string) => {
+    setDocumentationContent(content)
+  }, [])
+
+  const handleContentChange = useCallback((content: string) => {
+    setDocumentationContent(content)
+  }, [])
 
   
 
@@ -459,7 +468,7 @@ function DocumentationPage() {
   }
 
   // Handle content loaded from DocumentationSection for export
-  const handleContentLoaded = (content: string, metadata: Record<string, unknown>) => {
+  const handleContentLoadedForExport = (content: string, metadata: Record<string, unknown>) => {
     setCurrentMarkdownContent(content)
     setCurrentDocumentationData(metadata)
   }
@@ -731,6 +740,24 @@ function DocumentationPage() {
                 <DiagramIcon size={16} />
                 <span>System Diagrams</span>
               </button>
+              
+              <button 
+                className={`docs-sidebar__nav-item ${activeLabel === 'System Tracing' ? 'is-active' : ''}`}
+                onClick={() => {
+                  // Check if we're already on the tracing page
+                  if (window.location.pathname === '/tracing') {
+                    // If already on tracing page, just reload to refresh content
+                    setTimeout(() => window.location.reload(), 100)
+                  } else {
+                    // Navigate to tracing page
+                    navigate('/tracing')
+                  }
+                }}
+                aria-label="View System Tracing & Logs"
+              >
+                <HistoryIcon size={16} />
+                <span>System Tracing</span>
+              </button>
             </div>
           </div>
 
@@ -828,7 +855,9 @@ function DocumentationPage() {
                     section="fullreadme" 
                     githubHref={githubHref}
                     showTOC={showTOC}
+                    viewMode={viewMode}
                     onContentLoaded={handleContentLoaded}
+                    onContentChange={handleContentChange}
                   />
                 ) : activeLabel === 'Overview' ? (
                   <DocumentationSection 
@@ -836,7 +865,9 @@ function DocumentationPage() {
                     section="overview" 
                     githubHref={githubHref}
                     showTOC={showTOC}
+                    viewMode={viewMode}
                     onContentLoaded={handleContentLoaded}
+                    onContentChange={handleContentChange}
                   />
                 ) : activeLabel === 'Quick Start' ? (
                   <DocumentationSection 
@@ -844,7 +875,9 @@ function DocumentationPage() {
                     section="quickstart" 
                     githubHref={githubHref}
                     showTOC={showTOC}
+                    viewMode={viewMode}
                     onContentLoaded={handleContentLoaded}
+                    onContentChange={handleContentChange}
                   />
                 ) : activeLabel === 'Requirements' ? (
                   <DocumentationSection 
@@ -852,7 +885,9 @@ function DocumentationPage() {
                     section="requirements" 
                     githubHref={githubHref}
                     showTOC={showTOC}
+                    viewMode={viewMode}
                     onContentLoaded={handleContentLoaded}
+                    onContentChange={handleContentChange}
                   />
                 ) : (
                   <div style={{ 
@@ -951,7 +986,7 @@ function DocumentationPage() {
       
       {/* Bottom Mini Dialog */}
       <BottomMiniDialog
-        content=""
+        content={documentationContent}
         mode={viewMode}
         onModeChange={(m) => setViewMode(m)}
       />

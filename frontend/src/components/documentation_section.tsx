@@ -1,12 +1,16 @@
 import React, { useState, useEffect } from 'react'
 import Markdown from './markdown'
 import TableOfContents from './ui/table_of_content'
+import MarkdownEditor from './ui/markdown_editor'
 import { documentationApi } from '../services/api'
 
 interface DocumentationSectionProps {
   section: 'overview' | 'quickstart' | 'requirements' | 'fullreadme'
   githubHref: string
   showTOC: boolean
+  viewMode?: 'reading' | 'edit'
+  onContentLoaded?: (content: string, metadata?: Record<string, unknown>) => void
+  onContentChange?: (content: string) => void
 }
 
 interface ApiDocFile {
@@ -248,10 +252,19 @@ const getSectionFallbackContent = (sectionName: string): string => {
 const DocumentationSection: React.FC<DocumentationSectionProps> = ({ 
   section, 
   githubHref, 
-  showTOC 
+  showTOC,
+  viewMode = 'reading',
+  onContentLoaded,
+  onContentChange 
 }) => {
   const [content, setContent] = useState<string>('')
   const [isLoading, setIsLoading] = useState(true)
+  const [editedContent, setEditedContent] = useState<string>('')
+
+  const handleContentChange = (newContent: string) => {
+    setEditedContent(newContent)
+    onContentChange?.(newContent)
+  }
 
   useEffect(() => {
     // Reset content immediately when section changes
@@ -266,9 +279,14 @@ const DocumentationSection: React.FC<DocumentationSectionProps> = ({
         const parsedContent = parseSectionFromApiResponse(docs, section)
         console.log(`[DocumentationSection] Parsed content for ${section}:`, parsedContent.substring(0, 200) + '...')
         setContent(parsedContent)
+        setEditedContent(parsedContent)
+        onContentLoaded?.(parsedContent)
       } catch (error) {
         console.error(`Error loading ${section} content:`, error)
-        setContent(getSectionFallbackContent(section))
+        const fallbackContent = getSectionFallbackContent(section)
+        setContent(fallbackContent)
+        setEditedContent(fallbackContent)
+        onContentLoaded?.(fallbackContent)
       } finally {
         setIsLoading(false)
       }
@@ -282,10 +300,13 @@ const DocumentationSection: React.FC<DocumentationSectionProps> = ({
       
       return () => clearTimeout(timeoutId)
     } else {
-      setContent(getSectionFallbackContent(section))
+      const fallbackContent = getSectionFallbackContent(section)
+      setContent(fallbackContent)
+      setEditedContent(fallbackContent)
+      onContentLoaded?.(fallbackContent)
       setIsLoading(false)
     }
-  }, [section, githubHref])
+  }, [section, githubHref, onContentLoaded])
 
   if (isLoading) {
     return (
@@ -306,8 +327,16 @@ const DocumentationSection: React.FC<DocumentationSectionProps> = ({
 
   return (
     <div className="documentation-section">
-      <Markdown content={content} />
-      {showTOC && <TableOfContents content={content} />}
+      {viewMode === 'edit' ? (
+        <MarkdownEditor
+          content={editedContent}
+          onContentChange={handleContentChange}
+          placeholder={`Edit ${section} documentation...`}
+        />
+      ) : (
+        <Markdown content={content} />
+      )}
+      {showTOC && viewMode !== 'edit' && <TableOfContents content={content} />}
     </div>
   )
 }
