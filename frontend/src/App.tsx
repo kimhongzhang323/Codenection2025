@@ -56,7 +56,7 @@ function HomePage() {
         window.history.replaceState(null, '', '/dashboard');
         
         // Validate token with backend
-        fetch('http://localhost:8081/api/auth/validate', {
+        fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8081/api'}/auth/validate`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -157,7 +157,7 @@ function HomePage() {
 
   return (
     <main className="home">
-      <div className="home__signup-container">
+      <div className="home__signin-container">
         <UserProfile />
         {showTooltip && (
           <div className="home__tooltip">

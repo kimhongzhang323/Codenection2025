@@ -21,8 +21,27 @@ public class WebConfig implements WebMvcConfigurer {
 
     @Override
     public void addCorsMappings(CorsRegistry registry) {
+        // Get allowed origins from environment variable or use defaults
+        String allowedOrigins = System.getenv("ALLOWED_ORIGINS");
+        String[] origins;
+        
+        if (allowedOrigins != null && !allowedOrigins.isEmpty()) {
+            origins = allowedOrigins.split(",");
+        } else {
+            // Default development origins
+            origins = new String[]{
+                "http://localhost:3000", 
+                "http://localhost:5173", 
+                "http://localhost:4173", 
+                "http://127.0.0.1:3000", 
+                "http://127.0.0.1:5173", 
+                "http://127.0.0.1:4173",
+                "https://autodocx-beta.vercel.app"
+            };
+        }
+        
         registry.addMapping("/api/**")
-                .allowedOrigins("http://localhost:3000", "http://localhost:5173", "http://localhost:4173", "http://127.0.0.1:3000", "http://127.0.0.1:5173", "http://127.0.0.1:4173")
+                .allowedOrigins(origins)
                 .allowedMethods("GET", "POST", "PUT", "DELETE", "OPTIONS")
                 .allowedHeaders("*")
                 .allowCredentials(true)

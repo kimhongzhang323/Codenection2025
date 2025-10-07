@@ -21,7 +21,7 @@ public class SecurityConfig {
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .oauth2Login(oauth2 -> oauth2
                         .loginPage("/login")
-                        .defaultSuccessUrl("/api/auth/success", true)
+                        .defaultSuccessUrl("/api/auth/oauth/success", true)
                         .failureUrl("/login?error=true")
                 );
 

@@ -18,15 +18,12 @@ import { DiagramIcon } from '../components/icons/diagram_icon'
 import ShareDialog from '../components/ui/share_dialog'
 import ViewCodeDialog from '../components/ui/view_code_dialog'
 import DocumentationSection from '../components/documentation_section'
-
 import ExportDialog from '../components/ui/export_dialog'
 import EmbeddedChangelog from '../components/embedded_changelog'
 import EmbeddedFlowchart from '../components/embedded_flowchart'
-
 import { ExportIcon } from '../components/icons/export_icon'
 import { FeedbackIcon } from '../components/icons/feedback_icon'
 import FeedbackModal from '../components/ui/feedback_modal'
-
 import TranslationDialog from '../components/ui/translation_dialog'
 import { useTranslation } from '../contexts/TranslationContext'
 import { usePageTranslation } from '../hooks/usePageTranslation'
@@ -35,11 +32,6 @@ import { useAutoUpdate } from '../hooks/useAutoUpdate'
 import AutoUpdateNotification from '../components/ui/auto_update_notification'
 import type { GitHubCommit } from '../services/api'
 import { gitHubWebhookService } from '../services/github-webhook-service'
-
-
-
-
-
 
 function DocumentationPage() {
   const location = useLocation()
