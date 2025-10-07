@@ -19,11 +19,11 @@
   box-sizing: border-box;
 }
 
-/* Logo within signin panel */
-.signin-section .top-logo {
+/* Top Left Logo */
+.top-logo {
   position: absolute;
   top: 32px;
-  left: 48px;
+  left: 32px;
   z-index: 10;
   display: flex;
   align-items: center;
@@ -32,13 +32,8 @@
   transition: opacity 0.2s ease;
 }
 
-.signin-section .top-logo:hover {
+.top-logo:hover {
   opacity: 0.8;
-}
-
-/* Hide global top logo when it's inside signin section */
-.top-logo {
-  display: none;
 }
 
 .logo-image {
@@ -56,19 +51,18 @@
   height: 34px;
 }
 
-/* Right Side - Sign In Form */
+/* Left Side - Sign In Form */
 .signin-section {
-  flex: 3.5;
-  max-width: 900px;
+  flex: 2.6;
+  max-width: 750px;
   padding: 48px;
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
   background: #171717;
-  border-left: 1px solid #2a2a2a;
+  border-right: 1px solid #2a2a2a;
   position: relative;
-  order: 2;
 }
 
 .signin-header {
@@ -348,7 +342,7 @@
   100% { transform: rotate(360deg); }
 }
 
-/* Left Side - Testimonial */
+/* Right Side - Testimonial */
 .testimonial-section {
   flex: 0.6;
   background: #0f0f0f;
@@ -357,7 +351,6 @@
   justify-content: center;
   padding: 48px;
   position: relative;
-  order: 1;
 }
 
 .testimonial-section::before {
@@ -441,13 +434,8 @@
 /* Large Desktop (1440px+) */
 @media (min-width: 1440px) {
   .signin-section {
-    flex: 3.5;
-    max-width: 900px;
+    max-width: 800px;
     padding: 56px;
-  }
-  
-  .testimonial-section {
-    flex: 0.6;
   }
   
   .signin-header,
@@ -468,12 +456,12 @@
 /* Desktop (1024px - 1439px) */
 @media (max-width: 1439px) and (min-width: 1024px) {
   .signin-section {
-    flex: 3.2;
-    max-width: 850px;
+    flex: 2.5;
+    max-width: 750px;
   }
   
   .testimonial-section {
-    flex: 0.8;
+    flex: 0.6;
   }
   
   .testimonial-text {

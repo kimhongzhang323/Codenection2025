@@ -1,7 +1,9 @@
 import { authService } from './auth';
 
 // API Configuration
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8081/api'
+import { API_CONFIG } from '../config/api'
+
+const API_BASE_URL = API_CONFIG.API_BASE_URL
 
 // Helper function to get authenticated headers
 const getAuthHeaders = (): Record<string, string> => {

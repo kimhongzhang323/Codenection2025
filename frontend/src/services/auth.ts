@@ -39,7 +39,7 @@ class AuthService {
       throw new Error('No authentication token');
     }
 
-    const response = await fetch('http://localhost:8081/api/auth/user', {
+    const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8081/api'}/auth/user`, {
       headers: {
         'Authorization': `Bearer ${token}`,
       },
