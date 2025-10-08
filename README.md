@@ -89,7 +89,7 @@ AutoDocX is a **web-based documentation platform** that revolutionizes how devel
 ## 👷🏼 Architecture
 
 ### System Overview
-<img src="static/system_architecture.png" alt="System Architecture" style="width: 100%; max-width: 800px; height: auto;"/>
+<img src="static/autodocx_system_architecture.png" alt="System Architecture" style="width: 100%; max-width: 800px; height: auto;"/>
 
 ### Tech Stack
 
