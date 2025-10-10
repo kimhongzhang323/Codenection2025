@@ -2,6 +2,7 @@
 echo Starting AutoDocX Application...
 echo.
 
+
 REM Start backend in a new window
 echo Starting Spring Boot backend...
 start "AutoDocX Backend" cmd /k ".\mvnw.cmd spring-boot:run"
