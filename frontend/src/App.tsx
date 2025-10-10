@@ -2,13 +2,14 @@ import { useState, useEffect } from 'react'
 import { Routes, Route, useNavigate, useLocation, useParams } from 'react-router-dom'
 import { checkGithubUrlPublic, fetchGithubRepoDetails, type GithubRepoDetails } from './lib/utils'
 import { XIcon } from './components/icons/close_icon'
+import { CheckIcon } from './components/icons/check_icon'
 import { ArrowRightIcon } from './components/icons/arrow_icon'
 import { LinkIcon } from './components/icons/url_icon'
 import DocumentationPage from './pages/documentation_page'
 import CommitDetailPage from './pages/commit_detail_page'
 import SignUpPage from './pages/signup_page'
 import SignInPage from './pages/signin_page'
-import TracingPage from './pages/TracingPage'
+import TracingPage from './pages/tracing_page'
 import OAuthCallback from './components/oauth_callback'
 import ProtectedRoute from './components/protected_route'
 import UserProfile from './components/user_profile'
@@ -19,9 +20,11 @@ import { TranslationProvider } from './contexts/TranslationContext'
 import DocumentationSystem from './components/docs_flow'
 import RepositoryAutocomplete from './components/repository_autocomplete'
 import { type GitHubRepository } from './services/api'
+import { useAuth } from './services/auth'
 import './App.css'
 
 function HomePage() {
+  const { isAuthenticated } = useAuth()
   const [repoUrl, setRepoUrl] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [isSuccess, setIsSuccess] = useState(false)
@@ -29,6 +32,7 @@ function HomePage() {
   const [showRepoDetails, setShowRepoDetails] = useState(false)
   const [repoData, setRepoData] = useState<GithubRepoDetails | null>(null)
   const [showTooltip, setShowTooltip] = useState(false)
+  const [isValidating, setIsValidating] = useState(false)
   const navigate = useNavigate()
   const location = useLocation()
   
@@ -42,6 +46,7 @@ function HomePage() {
       const token = urlParams.get('token');
       const userId = urlParams.get('user');
       const username = urlParams.get('username');
+      const githubToken = urlParams.get('github_token');
       const status = urlParams.get('status');
 
       if (status === 'success' && token && userId) {
@@ -50,6 +55,11 @@ function HomePage() {
         localStorage.setItem('user_id', userId);
         if (username) {
           localStorage.setItem('username', username);
+        }
+        
+        // Store GitHub access token
+        if (githubToken) {
+          localStorage.setItem('github_access_token', githubToken);
         }
 
         // Clear the fragment from URL for security
@@ -131,6 +141,41 @@ function HomePage() {
     }
   }
 
+  async function handleValidateUrl() {
+    if (!repoUrl.trim() || isValidating) return
+    
+    setIsValidating(true)
+    setIsLoading(true)
+    setIsError(false)
+    setIsSuccess(false)
+    
+    try {
+      // Check if URL is valid GitHub URL
+      const result = await checkGithubUrlPublic(repoUrl)
+      
+      if (result.valid && result.repo) {
+        // Public repo - fetch details and show success
+        const details = await fetchGithubRepoDetails(result.repo)
+        if (details) {
+          setRepoData(details)
+          setIsSuccess(true)
+          setShowRepoDetails(true)
+        }
+      } else {
+        // Invalid or private repo - show error and tooltip
+        setIsError(true)
+        setShowTooltip(true)
+      }
+    } catch (error) {
+      console.error('Error validating repo:', error)
+      setIsError(true)
+      setShowTooltip(true)
+    } finally {
+      setIsLoading(false)
+      setIsValidating(false)
+    }
+  }
+
   function handleRepositorySelect(repository: GitHubRepository) {
     // When a repository is selected from autocomplete, automatically fetch its details
     setIsSuccess(false)
@@ -178,20 +223,24 @@ function HomePage() {
             setIsSuccess(false)
             setIsLoading(false)
             setIsError(false)
+            setShowTooltip(false)
           }}
           onSelect={handleRepositorySelect}
-          placeholder="Search repositories or paste GitHub URL"
+          onValidate={handleValidateUrl}
+          placeholder={isAuthenticated 
+            ? "Search repositories or paste a Github repository URL" 
+            : "Paste a Github repository URL to start"}
           className="home__input"
         />
         {isError ? (
           <XIcon className="home__input-icon--right text-danger" aria-label="Not found" />
-        ) : (
-          isLoading ? (
-            <div className="home__input-icon home__input-icon--right" aria-label="Loading">
-              <div className="spinner" />
-            </div>
-          ) : null
-        )}
+        ) : isSuccess ? (
+          <CheckIcon className="home__input-icon--right text-success" aria-label="Valid repository" />
+        ) : isLoading ? (
+          <div className="home__input-icon home__input-icon--right" aria-label="Loading">
+            <div className="spinner" />
+          </div>
+        ) : null}
       </div>
       
       {/* Repository Details Container */}

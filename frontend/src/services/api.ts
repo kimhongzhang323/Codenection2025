@@ -351,15 +351,18 @@ export const userApi = {
       throw new Error(`Failed to fetch user: ${response.statusText}`)
     }
 
-    const userData = await response.json()
+    const result = await response.json()
+    
+    // Extract user data from the response
+    const userData = result.data?.user || result.user
     
     // Store GitHub access token if available
-    if (userData.user?.accessToken) {
-      localStorage.setItem('github_access_token', userData.user.accessToken)
+    if (userData?.accessToken) {
+      localStorage.setItem('github_access_token', userData.accessToken)
     }
 
     return {
-      user: userData.user,
+      user: userData,
       repositories: [] // Don't fetch repositories here to avoid circular dependency
     }
   },

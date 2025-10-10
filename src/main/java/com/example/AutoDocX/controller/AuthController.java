@@ -1,6 +1,8 @@
 package com.example.AutoDocX.controller;
 
+import com.example.AutoDocX.model.User;
 import com.example.AutoDocX.service.JwtService;
+import com.example.AutoDocX.service.UserService;
 import com.example.AutoDocX.util.ApiResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -12,6 +14,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.client.OAuth2AuthorizedClient;
+import org.springframework.security.oauth2.client.OAuth2AuthorizedClientService;
+import org.springframework.security.oauth2.client.authentication.OAuth2AuthenticationToken;
 import org.springframework.security.oauth2.core.user.OAuth2User;
 import org.springframework.security.web.authentication.logout.SecurityContextLogoutHandler;
 import org.springframework.web.bind.annotation.*;
@@ -19,6 +24,7 @@ import org.springframework.web.bind.annotation.*;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * Authentication Controller
@@ -31,6 +37,21 @@ public class AuthController {
     @Autowired
     private JwtService jwtService;
 
+    @Autowired
+    private UserService userService;
+
+    @Autowired
+    private OAuth2AuthorizedClientService authorizedClientService;
+
+    /**
+     * OAuth failure handler
+     */
+    @GetMapping("/oauth/failure")
+    public void handleOAuthFailure(HttpServletRequest request, HttpServletResponse response) throws IOException {
+        String redirectUrl = getFrontendUrl(request) + "#status=error&message=authentication_failed";
+        response.sendRedirect(redirectUrl);
+    }
+
     /**
      * OAuth success handler - called after successful GitHub OAuth
      */
@@ -41,22 +62,63 @@ public class AuthController {
         if (authentication != null && authentication.getPrincipal() instanceof OAuth2User) {
             OAuth2User oauth2User = (OAuth2User) authentication.getPrincipal();
             
-            // Extract user information
-            String userId = oauth2User.getAttribute("id").toString();
+            // Extract user information from OAuth2User
+            String githubId = oauth2User.getAttribute("id").toString();
             String email = oauth2User.getAttribute("email");
             String name = oauth2User.getAttribute("name");
             String username = oauth2User.getAttribute("login");
+            String avatarUrl = oauth2User.getAttribute("avatar_url");
+            
+            // Extract GitHub access token
+            String githubAccessToken = null;
+            if (authentication instanceof OAuth2AuthenticationToken) {
+                OAuth2AuthenticationToken oauthToken = (OAuth2AuthenticationToken) authentication;
+                OAuth2AuthorizedClient client = authorizedClientService.loadAuthorizedClient(
+                    oauthToken.getAuthorizedClientRegistrationId(),
+                    oauthToken.getName()
+                );
+                
+                if (client != null && client.getAccessToken() != null) {
+                    githubAccessToken = client.getAccessToken().getTokenValue();
+                }
+            }
+            
+            // Save or update user in database
+            Optional<User> existingUser = userService.findByGithubId(githubId);
+            User user;
+            
+            if (existingUser.isPresent()) {
+                // Update existing user
+                user = existingUser.get();
+                user.setEmail(email);
+                user.setName(name);
+                user.setUsername(username);
+                user.setAvatarUrl(avatarUrl);
+                user.setGithubAccessToken(githubAccessToken);
+                user = userService.updateUser(user);
+            } else {
+                // Create new user
+                user = new User();
+                user.setGithubId(githubId);
+                user.setEmail(email);
+                user.setName(name);
+                user.setUsername(username);
+                user.setAvatarUrl(avatarUrl);
+                user.setGithubAccessToken(githubAccessToken);
+                user = userService.saveUser(user);
+            }
             
             // Generate JWT token
-            String token = jwtService.generateToken(userId, email, name);
+            String jwtToken = jwtService.generateToken(githubId, email, name);
             
             // Redirect to frontend with authentication data in URL fragment
             String redirectUrl = String.format(
-                "%s#token=%s&user=%s&username=%s&status=success",
+                "%s#token=%s&user=%s&username=%s&github_token=%s&status=success",
                 getFrontendUrl(request),
-                token,
-                userId,
-                username != null ? username : ""
+                jwtToken,
+                githubId,
+                username != null ? username : "",
+                githubAccessToken != null ? githubAccessToken : ""
             );
             
             response.sendRedirect(redirectUrl);
@@ -103,7 +165,7 @@ public class AuthController {
             @RequestHeader("Authorization") String authHeader) {
         try {
             String token = authHeader.replace("Bearer ", "");
-            String userId = jwtService.extractUserId(token);
+            String githubId = jwtService.extractUserId(token);
             String email = jwtService.extractEmail(token);
             
             if (jwtService.isTokenExpired(token)) {
@@ -111,11 +173,26 @@ public class AuthController {
                         .body(ApiResponse.error("Token expired"));
             }
             
+            // Fetch user from database to get GitHub access token
+            Optional<User> userOpt = userService.findByGithubId(githubId);
+            
+            Map<String, Object> response = new HashMap<>();
             Map<String, Object> userData = new HashMap<>();
-            userData.put("userId", userId);
+            userData.put("id", githubId);
+            userData.put("githubId", githubId);
             userData.put("email", email);
             
-            return ResponseEntity.ok(ApiResponse.success("User data retrieved", userData));
+            if (userOpt.isPresent()) {
+                User user = userOpt.get();
+                userData.put("name", user.getName());
+                userData.put("username", user.getUsername());
+                userData.put("avatarUrl", user.getAvatarUrl());
+                userData.put("accessToken", user.getGithubAccessToken());
+            }
+            
+            response.put("user", userData);
+            
+            return ResponseEntity.ok(ApiResponse.success("User data retrieved", response));
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(ApiResponse.error("Invalid token"));
