@@ -31,10 +31,10 @@ const SignIn: React.FC = () => {
     
     try {
       // Redirect to Spring Boot OAuth2 authorization endpoint
-      const redirectUri = encodeURIComponent(`${window.location.origin}/auth/callback`);
       const backendUrl = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || 'http://localhost:8081';
-      const oauthUrl = `${backendUrl}/oauth2/authorization/github?redirect_uri=${redirectUri}`;
+      const oauthUrl = `${backendUrl}/oauth2/authorization/github`;
       
+      console.log('Redirecting to:', oauthUrl);
       window.location.href = oauthUrl;
     } catch (error) {
       setIsLoading(false);
