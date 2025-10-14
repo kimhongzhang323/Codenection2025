@@ -11,7 +11,6 @@ import SignUpPage from './pages/signup_page'
 import SignInPage from './pages/signin_page'
 import TracingPage from './pages/tracing_page'
 import OAuthCallback from './components/oauth_callback'
-import ProtectedRoute from './components/protected_route'
 import UserProfile from './components/user_profile'
 import TextSelectionDialog from './components/ui/text_selection_dialog'
 import { AIChatPanel } from './components/ui/ai_chat_panel'
@@ -36,7 +35,7 @@ function HomePage() {
   const navigate = useNavigate()
   const location = useLocation()
   
-  // Handle OAuth authentication when accessing /dashboard
+  // Handle OAuth authentication when accessing /dashboard (optional)
   useEffect(() => {
     if (location.pathname === '/dashboard') {
       // Check URL fragment for authentication data (from direct OAuth redirect)
@@ -83,16 +82,8 @@ function HomePage() {
         .catch(err => {
           console.error('Token validation error:', err);
         });
-      } else {
-        // Check if user has existing valid authentication
-        const existingToken = localStorage.getItem('auth_token');
-        const existingUserId = localStorage.getItem('user_id');
-        
-        if (!existingToken || !existingUserId) {
-          // No authentication data available, redirect to sign-in
-          navigate('/sign-in');
-        }
       }
+      // Note: Removed forced redirect to sign-in - users can now use dashboard without authentication
     }
   }, [location.pathname, navigate]);
   
@@ -308,10 +299,10 @@ function App() {
           <Route path="/sign-in" element={<SignInPage />} />
           <Route path="/dashboard" element={<HomePage />} />
           <Route path="/auth/callback" element={<OAuthCallback />} />
-          <Route path="/tracing" element={<ProtectedRoute><TracingPage /></ProtectedRoute>} />
-          <Route path="/docs-flow/:repo" element={<ProtectedRoute><DocsFlowPage /></ProtectedRoute>} />
+          <Route path="/tracing" element={<TracingPage />} />
+          <Route path="/docs-flow/:repo" element={<DocsFlowPage />} />
 
-          <Route path="/:repo/commit/:sha" element={<ProtectedRoute><CommitDetailPage /></ProtectedRoute>} />
+          <Route path="/:repo/commit/:sha" element={<CommitDetailPage />} />
           <Route path="/:repo/changelog" element={<DocumentationPage />} />
           <Route path="/:repo/flowchart" element={<DocumentationPage />} />
           <Route path="/:repo/documentation" element={<DocumentationPage />} />
@@ -320,7 +311,7 @@ function App() {
           <Route path="/:repo/docs/requirements" element={<DocumentationPage />} />
           <Route path="/:repo" element={<DocumentationPage />} />
           <Route path="/:repo/:file" element={<DocumentationPage />} />
-          <Route path="/documentation" element={<ProtectedRoute><DocumentationPage /></ProtectedRoute>} />
+          <Route path="/documentation" element={<DocumentationPage />} />
         </Routes>
         <TextSelectionDialog />
         <AIChatPanel />
