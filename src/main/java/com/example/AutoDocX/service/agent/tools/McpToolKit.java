@@ -543,8 +543,8 @@ public class McpToolKit {
             }
             case "read_doc": {
                 String key = (String) paramsMap.get("key");
-                int countdown = ((Number) paramsMap.get("countdown")).intValue();
-                return mcpToolUtils.readDoc(context.getSession(), key, countdown);
+//                int countdown = ((Number) paramsMap.get("countdown")).intValue();
+                return mcpToolUtils.readDoc(context.getSession(), key, 1);//countdown);
             }
             case "get_modified_nodes": {
                 String docKey = (String) paramsMap.get("doc_key");

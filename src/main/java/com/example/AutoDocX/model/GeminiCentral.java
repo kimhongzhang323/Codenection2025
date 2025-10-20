@@ -80,10 +80,6 @@ public class GeminiCentral implements Model {
                 tokenUsage.get(apiKey).addAndGet(FAILURE_PENALTY);
                 String err = result.getErrorMessage().orElse("unknown");
                 logger.warn("GeminiModel[{}]: api:{}...: FAIL reason={} finishReason={}", apiKeyIndex, apiKey.substring(0, 10), err, result.getModelFinishReason());
-                // Early stop on obvious auth/quota errors to avoid burning through keys
-                if (err.toLowerCase().contains("api key") || err.toLowerCase().contains("permission") || err.toLowerCase().contains("quota") || err.toLowerCase().contains("unauthorized")) {
-                    break;
-                }
             }
         }
         return new SendMessageResult(
