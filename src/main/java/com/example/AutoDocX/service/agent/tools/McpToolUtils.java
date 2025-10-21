@@ -178,6 +178,37 @@ public class McpToolUtils {
         return GraphAlgo.dfsTraversalToString(graph, startNodeId, depthLimit);
     }
 
+    public String searchNodes(Graph graph, String query, Integer limit) {
+        if (query == null || query.isBlank()) {
+            return "Query must not be empty.";
+        }
+
+        int resolvedLimit = limit == null ? 20 : limit;
+        List<GraphNode> matches = GraphAlgo.searchNodes(graph, query, resolvedLimit);
+
+        if (matches.isEmpty()) {
+            return "No nodes found for query '" + query + "'.";
+        }
+
+        StringBuilder builder = new StringBuilder();
+        for (GraphNode node : matches) {
+            builder.append(node.getLabel())
+                    .append(" (")
+                    .append(node.getId())
+                    .append(") [")
+                    .append(node.getType())
+                    .append("] - ")
+                    .append(Optional.ofNullable(node.getFilePath()).orElse("<unknown>"))
+                    .append("\n");
+        }
+
+        if (resolvedLimit > 0 && matches.size() == resolvedLimit) {
+            builder.append("...limited to ").append(resolvedLimit).append(" results\n");
+        }
+
+        return builder.toString().trim();
+    }
+
     /**
      * Assembles a structured JSON summary for a node, handling different node types.
      * This is a local operation with NO model call.

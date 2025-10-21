@@ -12,10 +12,10 @@ import com.example.AutoDocX.service.agent.tools.ToolExecutionContext;
 import com.example.AutoDocX.service.agent.memory.Memory;
 import com.example.AutoDocX.service.agent.memory.MemoryInterface;
 import com.example.AutoDocX.service.agent.util.AgentUtil;
+import com.example.AutoDocX.service.agent.util.MessageBuilder;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.genai.types.Content;
 import com.google.genai.types.Part;
-import com.google.genai.types.Tool;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -84,6 +84,10 @@ public class SummaryAgent {
         }
         ToolExecutionContext toolExecutionContext = new ToolExecutionContext(repo, graph, session, session.getMemory().getSumAgentLog());
 
+    session.getMemory().getSumAgentLog().newRound();
+    String initialFocus = (focusPrompt == null || focusPrompt.isBlank()) ? "General summary" : focusPrompt;
+    session.getMemory().getSumAgentLog().addEntry("user", initialFocus);
+
         if (!session.isInitialStructureLogged()) {
             session.getMemory().getStructure().addEntry("graph_structure", graph.toString());
             mcpToolKit.executeTool("find_central_nodes", Map.of("n", 10), toolExecutionContext);
@@ -94,18 +98,20 @@ public class SummaryAgent {
         int iterations = 0;
         int maxIterations = (iterationLimit == null || iterationLimit < 0) ? DEFAULT_MAX_ITERATIONS : iterationLimit;
 
-        while (iterations++ < maxIterations) {
-            List<Tool> summaryTools = mcpToolKit.getExplorationTools();
-            String basePrompt = "Explore the codebase to provide useful context that can help answer the user’s query. Expand understanding when needed using available tools.";
-            String loopPrompt = (focusPrompt != null && !focusPrompt.isBlank())
-                    ? basePrompt + "\nUSER QUERY/FOCUS: " + focusPrompt
-                    : basePrompt;
+    while (iterations++ < maxIterations) {
+        MessageBuilder messageBuilder = new MessageBuilder();
+        messageBuilder.addTools(mcpToolKit.getExplorationTools());
 
-            List<Content> contents = buildLoopContent(session.getMemory(), loopPrompt, docHandler);
+        String basePrompt = "Explore the codebase to provide useful context that can help answer the user’s query. Expand understanding when needed using available tools.";
+        String loopPrompt = (focusPrompt != null && !focusPrompt.isBlank())
+            ? basePrompt + "\nUSER QUERY/FOCUS: " + focusPrompt
+            : basePrompt;
 
-            SendMessageResult result;
-            try {
-                result = model.sendMessage(contents, summaryTools);
+        List<Content> contents = buildLoopContent(session, docHandler, loopPrompt, messageBuilder);
+
+        SendMessageResult result;
+        try {
+        result = model.sendMessage(contents, messageBuilder.getTools());
             } catch (Exception e) {
                 String msg = "Model invocation error: " + e.getMessage();
                 logger.warn("SUM[{}] {}", runId, msg);
@@ -135,7 +141,9 @@ public class SummaryAgent {
                 ? "Provide a final summary and context for the query. USER QUERY/FOCUS: " + focusPrompt
                 : "Provide a final summary and context for the user’s query.";
 
-        return generateFinalSummary(session, finalPrompt, docHandler);
+        String finalSummary = generateFinalSummary(session, finalPrompt, docHandler);
+        session.getMemory().getSumAgentLog().addEntry("model", finalSummary);
+        return finalSummary;
     }
 
     private String generateFinalSummary(Session session, String finalPrompt, DocumentationHandler docHandler) {
@@ -158,41 +166,44 @@ public class SummaryAgent {
         return result.getText().orElse("No summary generated.");
     }
 
-    private List<Content> buildLoopContent(Memory memory, String userPrompt, DocumentationHandler docHandler) {
-        List<Content> contents = new ArrayList<>();
+    private List<Content> buildLoopContent(Session session, DocumentationHandler docHandler, String userPrompt, MessageBuilder messageBuilder) {
+        Memory memory = session.getMemory();
 
         String systemInstruction = AgentUtil.loadSystemPrompt("summary_agent_loop_system.txt");
+        messageBuilder.addSystem(systemInstruction);
 
-        contents.add(Content.builder().role("user").parts(Part.builder().text(systemInstruction).build()).build());
+        StringBuilder context = new StringBuilder();
 
         String docContext = docHandler.toContextString();
         if (!docContext.isBlank()) {
-            contents.add(Content.builder().parts(Part.builder().text(docContext).build()).role("user").build());
+            context.append(docContext).append("\n\n");
         }
 
         List<MemoryInterface.MemoryEntry> structureEntries = memory.getStructure().getEntries();
         if (!structureEntries.isEmpty()) {
-            StringBuilder structureSection = new StringBuilder("STRUCTURE MEMORY:\n");
+            context.append("STRUCTURE MEMORY:\n");
             int start = Math.max(0, structureEntries.size() - 15);
             for (int i = start; i < structureEntries.size(); i++) {
                 MemoryInterface.MemoryEntry e = structureEntries.get(i);
-                structureSection.append("- ").append(e.getKey()).append(": ").append(e.getValue()).append("\n");
+                context.append("- ").append(e.getKey()).append(": ").append(e.getValue()).append("\n");
             }
-            contents.add(Content.builder().parts(Part.builder().text(structureSection.toString()).build()).role("user").build());
+            context.append("\n");
         }
 
         String codeSummary = memory.getCode().toString(20);
         if (!codeSummary.isBlank()) {
-            contents.add(Content.builder().parts(Part.builder().text("CODE MEMORY:\n" + codeSummary).build()).role("user").build());
+            context.append("CODE MEMORY:\n").append(codeSummary).append("\n\n");
         }
 
         String summary = memory.getSummary().toString();
         if (!summary.isBlank()) {
-            contents.add(Content.builder().parts(Part.builder().text("EXISTING CODE SUMMARY:\n" + summary).build()).role("user").build());
+            context.append("EXISTING CODE SUMMARY:\n").append(summary).append("\n\n");
         }
 
-        contents.add(Content.builder().role("user").parts(Part.builder().text(userPrompt).build()).build());
-        return contents;
+        context.append(userPrompt);
+        messageBuilder.addUser(context.toString());
+        messageBuilder.addMemory(memory.getSumAgentLog(), DEFAULT_MAX_ITERATIONS * 2 + 2);
+        return messageBuilder.build();
     }
 
     private List<Content> buildFinalSummaryContent(Memory memory, String userPrompt, Graph graph, DocumentationHandler docHandler) {

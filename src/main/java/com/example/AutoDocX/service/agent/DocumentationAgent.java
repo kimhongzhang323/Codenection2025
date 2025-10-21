@@ -201,22 +201,22 @@ public class DocumentationAgent {
         }
 
         Map<String, Documentation> currentDocs = docHandler.getAll();
-        if (currentDocs != null && !currentDocs.isEmpty()) {
-            context.append("CURRENT_DOCUMENTATION:\n");
-            for (Map.Entry<String, Documentation> entry : currentDocs.entrySet()) {
-                if (entry.getValue().isExpanded()) {
-                    context.append("--- START DOC: ").append(entry.getKey()).append(" ---\n");
-                    context.append(entry.getValue().toString());
-                    context.append("\n--- END DOC: ").append(entry.getKey()).append(" ---\n\n");
-                } else {
-                    String key = entry.getKey();
-                    Documentation doc = entry.getValue();
-                    long lineCount = doc.getContent() != null ? doc.getContent().lines().count() : 0;
-                    List<String> sections = docHandler.listSections(key);
-                    List<String> sectionPreview = sections.stream().limit(5).collect(Collectors.toList());
+       if (currentDocs != null && !currentDocs.isEmpty()) {
+           context.append("CURRENT_DOCUMENTATION:\n");
+           for (Map.Entry<String, Documentation> entry : currentDocs.entrySet()) {
+               if (false && entry.getValue().isExpanded()) {
+                   context.append("--- START DOC: ").append(entry.getKey()).append(" ---\n");
+                   context.append(entry.getValue().toString());
+                   context.append("\n--- END DOC: ").append(entry.getKey()).append(" ---\n\n");
+               } else {
+                   String key = entry.getKey();
+                   Documentation doc = entry.getValue();
+                   long lineCount = doc.getContent() != null ? doc.getContent().lines().count() : 0;
+                   List<String> sections = docHandler.listSections(key);
+                   List<String> sectionPreview = sections.stream().limit(5).collect(Collectors.toList());
 
-                    context.append("- ").append(key).append(" ");
-                    context.append("(collapsed, ").append(lineCount).append(" Lines), ");
+                   context.append("- ").append(key).append(" ");
+                   context.append("(collapsed, ").append(lineCount).append(" Lines), ");
 //                    context.append("Sections Preview (top 5): ");
 //                    if (sectionPreview.isEmpty()) {
 //                        context.append("No sections found");
@@ -224,11 +224,11 @@ public class DocumentationAgent {
 //                    else {
 //                        context.append(String.join(" | ", sectionPreview));
 //                    }
-                    context.append("\n");
-                }
-            }
-            context.append("\n");
-        }
+                   context.append("\n");
+               }
+           }
+           context.append("\n");
+       }
 
         if (memory.getSummary() != null && !memory.getSummary().isEmpty()) {
             context.append("EXISTING SUMMARY:\n").append(memory.getSummary().toString()).append("\n\n");

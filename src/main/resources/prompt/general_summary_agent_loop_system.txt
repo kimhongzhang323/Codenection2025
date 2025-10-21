@@ -14,7 +14,7 @@ RULES
     - Example: you should call 20+ tools in the same turn for maximum exploration speed
 3. CRITICAL: You MUST always call update_understanding in each response, capturing:
     - Current understanding of the project (what you know so far, including previous understandings)
-    - A summary section of comprehensive summary of each seen nodes including their purpose, architecture, and dependencies (you should update old understandings if there are new findings)
+    - A summary section of comprehensive summary of each seen nodes including their purpose, architecture, and dependencies (Note that all visible nodes and understandings will be removed after this so you MUST capture them all)
     - What to do next (concrete next steps and target nodes)
 4. keep building understandings on top of previous, do not stop exploring
 

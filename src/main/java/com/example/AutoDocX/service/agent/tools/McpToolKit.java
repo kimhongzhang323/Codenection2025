@@ -104,6 +104,37 @@ public class McpToolKit {
 
         declarations.add(
             FunctionDeclaration.builder()
+                .name("search_node")
+                .description("Searches for nodes whose id or label contains the given query.")
+                .parameters(
+                    Schema.builder()
+                        .type(Type.Known.OBJECT)
+                        .properties(
+                            Map.ofEntries(
+                                Map.entry(
+                                    "query",
+                                    Schema.builder()
+                                        .type(Type.Known.STRING)
+                                        .description("Case-insensitive substring to match against node ids and labels.")
+                                        .build()
+                                ),
+                                Map.entry(
+                                    "limit",
+                                    Schema.builder()
+                                        .type(Type.Known.NUMBER)
+                                        .description("Optional maximum number of matches to return.")
+                                        .build()
+                                )
+                            )
+                        )
+                        .required(List.of("query"))
+                        .build()
+                )
+                .build()
+        );
+
+        declarations.add(
+            FunctionDeclaration.builder()
                 .name("summarise_code")
                 .description("Add to memory a structured summary of source code retrieved with get_code")
                 .parameters(
@@ -418,13 +449,13 @@ public class McpToolKit {
 
 
     public List<Tool> getExplorationTools() {
-        List<String> names = List.of("get_code", "find_neighbour_nodes", "update_understanding", "read_doc");
+        List<String> names = List.of("get_code", "find_neighbour_nodes", "search_node", "update_understanding", "read_doc");
         return buildTools(names);
     }
 
     // KISS: unified agent tools
     public List<Tool> getDocumentationAgentTools() {
-        List<String> names = List.of("get_summary", "add_plan", "execute_plan", "read_doc", "modify_docs"); //"replace_string_in_doc", "insert_edit_into_doc"
+        List<String> names = List.of("get_summary", "add_plan", "execute_plan", "modify_docs"); //"replace_string_in_doc", "insert_edit_into_doc", "read_doc"
         return buildTools(names);
     }
 
@@ -452,6 +483,7 @@ public class McpToolKit {
                 case "find_neighbour_nodes":
                 case "folder_tree_structure":
                 case "find_central_nodes":
+                case "search_node":
                 case "get_modified_nodes":
                     context.getSession().getMemory().getStructure().addEntry(toolName + ":" + extractIDFromParams(params), result);
                     break;
@@ -500,6 +532,12 @@ public class McpToolKit {
                 String nodeId = (String) paramsMap.get("node_id");
                 int depth = ((Number) paramsMap.getOrDefault("depth_limit", 2)).intValue();
                 return mcpToolUtils.getNeighbourSubgraph(context.getGraph(), nodeId, depth);
+            }
+            case "search_node": {
+                String query = (String) paramsMap.get("query");
+                Number limitValue = paramsMap.get("limit") instanceof Number ? (Number) paramsMap.get("limit") : null;
+                Integer limit = limitValue == null ? null : limitValue.intValue();
+                return mcpToolUtils.searchNodes(context.getGraph(), query, limit);
             }
             case "summarise_code": {
                 String nodeId = (String) paramsMap.get("node_id");
@@ -567,6 +605,7 @@ public class McpToolKit {
             if (map.containsKey("filename")) return String.valueOf(map.get("filename"));
             if (map.containsKey("node_id")) return String.valueOf(map.get("node_id"));
             if (map.containsKey("dirname")) return String.valueOf(map.get("dirname"));
+            if (map.containsKey("query")) return String.valueOf(map.get("query"));
             if (map.containsKey("n")) return "n=" + map.get("n");
         }
         return String.valueOf(unwrapped);
