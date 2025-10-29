@@ -22,6 +22,33 @@ import { type GitHubRepository } from './services/api'
 import { useAuth } from './services/auth'
 import './App.css'
 
+// Utility function to get language color
+function getLanguageColor(language: string): string {
+  const colors: Record<string, string> = {
+    'JavaScript': '#f1e05a',
+    'TypeScript': '#3178c6',
+    'Python': '#3572A5',
+    'Java': '#b07219',
+    'C++': '#f34b7d',
+    'C#': '#239120',
+    'PHP': '#4F5D95',
+    'Ruby': '#701516',
+    'Go': '#00ADD8',
+    'Rust': '#dea584',
+    'Swift': '#ffac45',
+    'Kotlin': '#A97BFF',
+    'Dart': '#00B4AB',
+    'HTML': '#e34c26',
+    'CSS': '#563d7c',
+    'Vue': '#41b883',
+    'React': '#61dafb',
+    'Shell': '#89e051',
+    'Dockerfile': '#384d54',
+    'JSON': '#292929'
+  }
+  return colors[language] || '#8a8a8a'
+}
+
 function HomePage() {
   const { isAuthenticated } = useAuth()
   const [repoUrl, setRepoUrl] = useState('')
@@ -182,8 +209,7 @@ function HomePage() {
       fullName: repository.full_name,
       description: repository.description || '',
       stars: repository.stargazers_count.toString(),
-      language: repository.language || '',
-      lastUpdated: repository.updated_at
+      language: repository.language || ''
     }
     setRepoData(repoData)
     setIsSuccess(true)
@@ -239,13 +265,24 @@ function HomePage() {
         <div className="repo-details">
           <div className="repo-details__header">
             <div className="repo-details__name">{repoData.name}</div>
-            <div className="repo-details__full-name">{repoData.fullName}</div>
+            <div className="repo-details__owner">{repoData.fullName}</div>
           </div>
           <div className="repo-details__description">{repoData.description}</div>
-          <div className="repo-details__footer">
-            <div className="repo-details__stars">
-              <img src="/star.png" alt="Star" className="repo-details__star-icon" />
-              {repoData.stars}
+          <div className="repo-details__meta">
+            <div className="repo-details__info">
+              <div className="repo-details__stars">
+                <img src="/star.png" alt="Star" className="repo-details__star-icon" />
+                <span>{repoData.stars}</span>
+              </div>
+              {repoData.language && (
+                <div className="repo-details__language">
+                  <span 
+                    className="repo-details__language-dot"
+                    style={{ backgroundColor: getLanguageColor(repoData.language) }}
+                  ></span>
+                  <span>{repoData.language}</span>
+                </div>
+              )}
             </div>
             <ArrowRightIcon 
               className="repo-details__arrow-icon" 
