@@ -80,7 +80,6 @@ export interface GithubRepoDetails {
   stars: string;
   language?: string;
   topics?: string[];
-  lastUpdated: string;
 }
 
 // Fetch repository details from GitHub API
@@ -107,19 +106,6 @@ export async function fetchGithubRepoDetails(
       ? `${(starCount / 1000).toFixed(1)}k` 
       : starCount.toString();
 
-    // Format last updated date
-    const updatedDate = new Date(data.updated_at);
-    const now = new Date();
-    const diffInDays = Math.floor((now.getTime() - updatedDate.getTime()) / (1000 * 60 * 60 * 24));
-    
-    let lastUpdated: string;
-    if (diffInDays === 0) lastUpdated = 'today';
-    else if (diffInDays === 1) lastUpdated = 'yesterday';
-    else if (diffInDays < 7) lastUpdated = `${diffInDays} days ago`;
-    else if (diffInDays < 30) lastUpdated = `${Math.floor(diffInDays / 7)} weeks ago`;
-    else if (diffInDays < 365) lastUpdated = `${Math.floor(diffInDays / 30)} months ago`;
-    else lastUpdated = `${Math.floor(diffInDays / 365)} years ago`;
-
     return {
       name: `${repo.owner} / ${repo.name}`,
       fullName: data.name || repo.name,
@@ -127,7 +113,6 @@ export async function fetchGithubRepoDetails(
       stars,
       language: data.language,
       topics: data.topics || [],
-      lastUpdated,
     };
   } catch (error) {
     console.error('Error fetching repo details:', error);
