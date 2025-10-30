@@ -512,8 +512,6 @@ function DocumentationPage() {
       {/* Tools Dropdown - Contains all tools */}
       <div className="docs-tools-dropdown-container">
         <ToolsDropdown 
-          githubHref={githubHref}
-          pageContent={`Current page: ${activeLabel}`}
           onToggleSuggestions={() => setIsSuggestionPanelOpen(prev => !prev)}
           isMonitoring={isMonitoring}
           newCommitsCount={newCommitsCount}
