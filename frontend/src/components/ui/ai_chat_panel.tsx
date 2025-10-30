@@ -18,8 +18,6 @@ interface Message {
   timestamp: Date
 }
 
-
-
 export const AIChatPanel: React.FC = () => {
   const { isOpen, closeChat, initialMessage, clearInitialMessage, repositoryInfo } = useAIChat()
   const [messages, setMessages] = useState<Message[]>([])
@@ -41,8 +39,6 @@ export const AIChatPanel: React.FC = () => {
   useEffect(() => {
     scrollToBottom()
   }, [messages])
-
-
 
   useEffect(() => {
     if (isOpen && inputRef.current) {
@@ -175,11 +171,23 @@ export const AIChatPanel: React.FC = () => {
     setShowSearch(!showSearch)
   }
 
-
-
   return (
     <>
-      {/* Enhanced chat panel */}
+      {/* Toggle button for sidebar */}
+      {!isOpen && (
+        <button 
+          className="ai-chat-sidebar-toggle"
+          onClick={useAIChat().openChat}
+          aria-label="Open AI Assistant"
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+            <line x1="9" y1="3" x2="9" y2="21"/>
+          </svg>
+        </button>
+      )}
+
+      {/* Enhanced chat panel as right sidebar */}
       <div className={`ai-chat-panel ${isOpen ? 'is-open' : ''}`}>
         {/* Top controls */}
         <div className="ai-chat-top-controls">
