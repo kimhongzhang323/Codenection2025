@@ -2,7 +2,6 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import './documentation_page.css'
 import { GithubIcon } from '../components/icons/github_icon'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
-
 import { AnimatedThemeToggler } from '../components/theme'
 import { BottomMiniDialog } from '../components/ui/bottom_mini_dialog'
 import { useAIChat } from '../contexts/AIChatContext'
@@ -22,8 +21,6 @@ import ExportDialog from '../components/ui/export_dialog'
 import EmbeddedChangelog from '../components/embedded_changelog'
 import EmbeddedFlowchart from '../components/embedded_flowchart'
 import { ExportIcon } from '../components/icons/export_icon'
-import { FeedbackIcon } from '../components/icons/feedback_icon'
-import FeedbackModal from '../components/ui/feedback_modal'
 import TranslationDialog from '../components/ui/translation_dialog'
 import { useTranslation } from '../contexts/TranslationContext'
 import { usePageTranslation } from '../hooks/usePageTranslation'
@@ -81,11 +78,6 @@ function DocumentationPage() {
     setDocumentationContent(content)
   }, [])
 
-  
-
-
-
-
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
     if (typeof window === 'undefined') return false
     
@@ -130,7 +122,6 @@ function DocumentationPage() {
   const [isShareDialogOpen, setIsShareDialogOpen] = useState(false)
   const [isViewCodeDialogOpen, setIsViewCodeDialogOpen] = useState(false)
   const [isExportDialogOpen, setIsExportDialogOpen] = useState(false)
-  const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false)
   const [isTranslationDialogOpen, setIsTranslationDialogOpen] = useState(false)
   const [isDiscordConfigOpen, setIsDiscordConfigOpen] = useState(false)
   const [isDiscordMonitoringActive, setIsDiscordMonitoringActive] = useState(false)
@@ -138,13 +129,6 @@ function DocumentationPage() {
   
   // Auto-update functionality
   const [refreshKey, setRefreshKey] = useState(0)
-  const [lastContentUpdate, setLastContentUpdate] = useState<Date | null>(null)
-  
-  // Export functionality - store current content for export
-  const [currentMarkdownContent, setCurrentMarkdownContent] = useState('')
-  const [currentDocumentationData, setCurrentDocumentationData] = useState<Record<string, unknown>>({})
-  
-
   
   const {
     isMonitoring,
@@ -166,7 +150,6 @@ function DocumentationPage() {
     },
     onContentUpdate: () => {
       console.log('Content update triggered')
-      setLastContentUpdate(new Date())
       // This will trigger re-rendering of documentation content
       setRefreshKey(prev => prev + 1)
     },
@@ -206,7 +189,6 @@ function DocumentationPage() {
         if (event.detail.repoUrl === githubHref) {
           console.log('GitHub push detected, refreshing content...')
           setRefreshKey(prev => prev + 1)
-          setLastContentUpdate(new Date())
         }
       }
       
@@ -264,8 +246,6 @@ function DocumentationPage() {
       // ignore parse errors and keep default
     }
   }
-
-
 
   // On first load or URL changes, ensure we are at /:repo/:file and sync active label
   useEffect(() => {
@@ -341,10 +321,6 @@ function DocumentationPage() {
     }
   }, [location.pathname, repoSlug, subpage]) // eslint-disable-line react-hooks/exhaustive-deps
 
-
-
-
-
   const handleSidebarToggle = useCallback(() => {
     const newState = !isSidebarCollapsed
     setIsSidebarCollapsed(newState)
@@ -403,8 +379,6 @@ function DocumentationPage() {
     }
   }
 
-
-
   const handleFolderContextMenuClose = () => {
     setFolderContextMenu({ isVisible: false, x: 0, y: 0, itemType: null })
   }
@@ -459,35 +433,10 @@ function DocumentationPage() {
     setIsViewCodeDialogOpen(true)
   }
 
-  // Handle content loaded from DocumentationSection for export
-  const handleContentLoadedForExport = (content: string, metadata: Record<string, unknown>) => {
-    setCurrentMarkdownContent(content)
-    setCurrentDocumentationData(metadata)
-  }
-
   // Handle export functionality
   const handleExport = () => {
     setIsExportDialogOpen(true)
   }
-
-  // Handle feedback functionality
-  const handleFeedback = () => {
-    setIsFeedbackModalOpen(true)
-  }
-
-  // Global keyboard shortcut for screenshot feedback (Ctrl+Shift+S)
-  useEffect(() => {
-    const handleGlobalScreenshot = (event: KeyboardEvent) => {
-      if (event.ctrlKey && event.shiftKey && event.key === 'S') {
-        event.preventDefault()
-        // Open feedback modal for screenshot
-        setIsFeedbackModalOpen(true)
-      }
-    }
-
-    document.addEventListener('keydown', handleGlobalScreenshot)
-    return () => document.removeEventListener('keydown', handleGlobalScreenshot)
-  }, [])
 
   // Sync document class with theme state
   useEffect(() => {
@@ -639,18 +588,6 @@ function DocumentationPage() {
         >
           <ExportIcon size={16} />
           <span>Export</span>
-        </button>
-      </div>
-
-      {/* Feedback Button - Top Right Corner */}
-      <div className="docs-feedback-button-container">
-        <button
-          className="docs-feedback-button"
-          onClick={handleFeedback}
-          aria-label="Give feedback"
-        >
-          <FeedbackIcon size={16} />
-          <span>Feedback</span>
         </button>
       </div>
 
@@ -830,8 +767,7 @@ function DocumentationPage() {
         </aside>
         <main className={`docs-main ${isSidebarCollapsed ? 'is-collapsed' : ''}`}>
           <div className="docs-main__container">
-
-                {activeLabel === 'Changelog' ? (
+            {activeLabel === 'Changelog' ? (
                   <EmbeddedChangelog 
                     repo={repo} 
                     repoUrl={githubHref}
@@ -1039,20 +975,14 @@ function DocumentationPage() {
       <ExportDialog
         isOpen={isExportDialogOpen}
         onClose={() => setIsExportDialogOpen(false)}
-        markdownContent={currentMarkdownContent}
-        documentationData={currentDocumentationData}
+        markdownContent=""
+        documentationData={{}}
       />
 
       {/* Translation Dialog */}
       <TranslationDialog
         isOpen={isTranslationDialogOpen}
         onClose={() => setIsTranslationDialogOpen(false)}
-      />
-
-      {/* Feedback Modal */}
-      <FeedbackModal
-        isOpen={isFeedbackModalOpen}
-        onClose={() => setIsFeedbackModalOpen(false)}
       />
 
       {/* Discord Notification Config Dialog */}
