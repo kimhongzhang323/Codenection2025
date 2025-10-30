@@ -60,6 +60,9 @@ const DiscordNotificationConfig: React.FC<DiscordNotificationConfigProps> = ({
 
   useEffect(() => {
     if (isOpen) {
+      // Reset test result when dialog opens
+      setTestResult(null)
+      
       // Load existing configuration
       const existingWebhook = discordNotificationService.getWebhookUrl()
       if (existingWebhook) {
@@ -253,13 +256,14 @@ const DiscordNotificationConfig: React.FC<DiscordNotificationConfigProps> = ({
                 {isTestingConnection ? 'Testing...' : 'Test Connection'}
               </button>
               {testResult === 'success' && (
-                <span className="discord-config-status success">✅ Connection successful!</span>
+                <span className="discord-config-status success">Connection successful!</span>
               )}
               {testResult === 'failure' && (
-                <span className="discord-config-status failure">❌ Connection failed</span>
+                <span className="discord-config-status failure">Connection failed</span>
               )}
             </div>
             <p className="discord-config-help">
+              <span className="discord-config-help-icon">?</span>
               <a 
                 href="https://support.discord.com/hc/en-us/articles/228383668-Intro-to-Webhooks" 
                 target="_blank" 
@@ -300,7 +304,9 @@ const DiscordNotificationConfig: React.FC<DiscordNotificationConfigProps> = ({
                 className="discord-config-button secondary discord-refresh-branches"
                 title="Refresh branches"
               >
-                🔄
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M13.65 2.35C12.2 0.9 10.21 0 8 0 3.58 0 0 3.58 0 8s3.58 8 8 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L9 7h7V0l-2.35 2.35z" fill="currentColor"/>
+                </svg>
               </button>
             </div>
             <div className="discord-config-help">
@@ -308,7 +314,7 @@ const DiscordNotificationConfig: React.FC<DiscordNotificationConfigProps> = ({
             </div>
             {branch && (
               <div className="discord-branch-preview">
-                <strong>📋 Changelog URL for notifications:</strong>
+                <strong>Changelog URL for notifications:</strong>
                 <pre>{`${changelogUrl}?branch=${encodeURIComponent(branch)}`}</pre>
               </div>
             )}
@@ -383,20 +389,20 @@ Utils: src/utils/**/*.ts`}
           {isMonitoringActive && (
             <div className="discord-config-status-section">
               <div className="discord-config-status active">
-                ✅ Monitoring is active for this repository
+                Monitoring is active for this repository
               </div>
               <div className="discord-config-actions">
                 <button
                   onClick={handleForceCheck}
                   className="discord-config-button secondary"
                 >
-                  🔍 Check Now
+                  Check Now
                 </button>
                 <button
                   onClick={handleStopMonitoring}
                   className="discord-config-button danger"
                 >
-                  🛑 Stop Monitoring
+                  Stop Monitoring
                 </button>
               </div>
             </div>
