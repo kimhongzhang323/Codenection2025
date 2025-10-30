@@ -15,7 +15,6 @@ import UserProfile from './components/user_profile'
 import TextSelectionDialog from './components/ui/text_selection_dialog'
 import { AIChatPanel } from './components/ui/ai_chat_panel'
 import { AIChatProvider } from './contexts/AIChatContext'
-import { TranslationProvider } from './contexts/TranslationContext'
 import DocumentationSystem from './components/docs_flow'
 import RepositoryAutocomplete from './components/repository_autocomplete'
 import { type GitHubRepository } from './services/api'
@@ -328,32 +327,30 @@ function DocsFlowPage() {
 
 function App() {
   return (
-    <TranslationProvider>
-      <AIChatProvider>
-        <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/sign-up" element={<SignUpPage />} />
-          <Route path="/sign-in" element={<SignInPage />} />
-          <Route path="/dashboard" element={<HomePage />} />
-          <Route path="/auth/callback" element={<OAuthCallback />} />
-          <Route path="/tracing" element={<TracingPage />} />
-          <Route path="/docs-flow/:repo" element={<DocsFlowPage />} />
+    <AIChatProvider>
+      <Routes>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/sign-up" element={<SignUpPage />} />
+        <Route path="/sign-in" element={<SignInPage />} />
+        <Route path="/dashboard" element={<HomePage />} />
+        <Route path="/auth/callback" element={<OAuthCallback />} />
+        <Route path="/tracing" element={<TracingPage />} />
+        <Route path="/docs-flow/:repo" element={<DocsFlowPage />} />
 
-          <Route path="/:repo/commit/:sha" element={<CommitDetailPage />} />
-          <Route path="/:repo/changelog" element={<DocumentationPage />} />
-          <Route path="/:repo/flowchart" element={<DocumentationPage />} />
-          <Route path="/:repo/documentation" element={<DocumentationPage />} />
-          <Route path="/:repo/docs/overview" element={<DocumentationPage />} />
-          <Route path="/:repo/docs/quickstart" element={<DocumentationPage />} />
-          <Route path="/:repo/docs/requirements" element={<DocumentationPage />} />
-          <Route path="/:repo" element={<DocumentationPage />} />
-          <Route path="/:repo/:file" element={<DocumentationPage />} />
-          <Route path="/documentation" element={<DocumentationPage />} />
-        </Routes>
-        <TextSelectionDialog />
-        <AIChatPanel />
-      </AIChatProvider>
-    </TranslationProvider>
+        <Route path="/:repo/commit/:sha" element={<CommitDetailPage />} />
+        <Route path="/:repo/changelog" element={<DocumentationPage />} />
+        <Route path="/:repo/flowchart" element={<DocumentationPage />} />
+        <Route path="/:repo/documentation" element={<DocumentationPage />} />
+        <Route path="/:repo/docs/overview" element={<DocumentationPage />} />
+        <Route path="/:repo/docs/quickstart" element={<DocumentationPage />} />
+        <Route path="/:repo/docs/requirements" element={<DocumentationPage />} />
+        <Route path="/:repo" element={<DocumentationPage />} />
+        <Route path="/:repo/:file" element={<DocumentationPage />} />
+        <Route path="/documentation" element={<DocumentationPage />} />
+      </Routes>
+      <TextSelectionDialog />
+      <AIChatPanel />
+    </AIChatProvider>
   )
 }
 
