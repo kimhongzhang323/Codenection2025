@@ -1,15 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react'
-import TldrButton from './tldr_button'
-import TldrPanel from './tldr_panel'
 import './tools_dropdown.css'
 
 interface ToolsDropdownProps {
-  githubHref: string
-  pageContent?: string
-  // Translation props
-  isTranslationActive: boolean
-  currentLanguageCode: string
-  onOpenTranslation: () => void
   // Smart suggestions props
   onToggleSuggestions: () => void
   // Auto-update props
@@ -27,11 +19,6 @@ interface ToolsDropdownProps {
 }
 
 const ToolsDropdown: React.FC<ToolsDropdownProps> = ({ 
-  githubHref, 
-  pageContent,
-  isTranslationActive,
-  currentLanguageCode,
-  onOpenTranslation,
   onToggleSuggestions,
   isMonitoring,
   newCommitsCount,
@@ -43,7 +30,6 @@ const ToolsDropdown: React.FC<ToolsDropdownProps> = ({
   onToggleAIChat
 }) => {
   const [isOpen, setIsOpen] = useState(false)
-  const [isTldrOpen, setIsTldrOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
 
   // Close dropdown when clicking outside
@@ -101,31 +87,8 @@ const ToolsDropdown: React.FC<ToolsDropdownProps> = ({
       {/* Expanded tools menu - expands upward */}
       {isOpen && (
         <div className="tools-dropdown-menu">
-          {/* Translation Tool */}
-          <div className="tools-dropdown-item" style={{ '--item-index': 0 } as React.CSSProperties}>
-            <button 
-              className={`tools-dropdown-tool ${isTranslationActive ? 'active' : ''}`}
-              onClick={() => {
-                onOpenTranslation()
-                setIsOpen(false)
-              }}
-              title="Change Language"
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M5 8l6 6"/>
-                <path d="M4 14l6-6 2-3"/>
-                <path d="M2 5h12"/>
-                <path d="M7 2h1"/>
-                <path d="M22 22l-5-10-5 10"/>
-                <path d="M14 18h6"/>
-              </svg>
-              <span className="tools-dropdown-label">Translation ({currentLanguageCode})</span>
-              <span className="tools-dropdown-tooltip">Change Language</span>
-            </button>
-          </div>
-
           {/* Smart Suggestions Tool */}
-          <div className="tools-dropdown-item" style={{ '--item-index': 1 } as React.CSSProperties}>
+          <div className="tools-dropdown-item" style={{ '--item-index': 0 } as React.CSSProperties}>
             <button 
               className="tools-dropdown-tool"
               onClick={() => {
@@ -143,7 +106,7 @@ const ToolsDropdown: React.FC<ToolsDropdownProps> = ({
           </div>
 
           {/* Auto-Update Tool */}
-          <div className="tools-dropdown-item" style={{ '--item-index': 2 } as React.CSSProperties}>
+          <div className="tools-dropdown-item" style={{ '--item-index': 1 } as React.CSSProperties}>
             <button 
               className={`tools-dropdown-tool ${isMonitoring ? 'active' : ''}`}
               onClick={() => {
@@ -164,7 +127,7 @@ const ToolsDropdown: React.FC<ToolsDropdownProps> = ({
           </div>
 
           {/* GitHub Bot Tool */}
-          <div className="tools-dropdown-item" style={{ '--item-index': 3 } as React.CSSProperties}>
+          <div className="tools-dropdown-item" style={{ '--item-index': 2 } as React.CSSProperties}>
             <button 
               className={`tools-dropdown-tool ${isGitHubBotEnabled ? 'active' : ''}`}
               onClick={() => {
@@ -182,7 +145,7 @@ const ToolsDropdown: React.FC<ToolsDropdownProps> = ({
           </div>
 
           {/* Discord Tool */}
-          <div className="tools-dropdown-item" style={{ '--item-index': 4 } as React.CSSProperties}>
+          <div className="tools-dropdown-item" style={{ '--item-index': 3 } as React.CSSProperties}>
             <button 
               className={`tools-dropdown-tool ${isDiscordMonitoringActive ? 'active' : ''}`}
               onClick={() => {
@@ -200,7 +163,7 @@ const ToolsDropdown: React.FC<ToolsDropdownProps> = ({
           </div>
 
           {/* AI Assistant Tool */}
-          <div className="tools-dropdown-item" style={{ '--item-index': 5 } as React.CSSProperties}>
+          <div className="tools-dropdown-item" style={{ '--item-index': 4 } as React.CSSProperties}>
             <button 
               className="tools-dropdown-tool"
               onClick={() => {
@@ -216,100 +179,8 @@ const ToolsDropdown: React.FC<ToolsDropdownProps> = ({
               <span className="tools-dropdown-tooltip">AI Assistant</span>
             </button>
           </div>
-
-          {/* TL;DR / Summarize Tool */}
-          <div className="tools-dropdown-item" style={{ '--item-index': 6 } as React.CSSProperties}>
-            <div className="tools-dropdown-tool-wrapper" onClick={() => {
-              setIsTldrOpen(true)
-              setIsOpen(false)
-            }}>
-              <TldrButton 
-                onClick={() => {
-                  setIsTldrOpen(true)
-                  setIsOpen(false)
-                }}
-              />
-              <span className="tools-dropdown-label">TL;DR Summary</span>
-              <span className="tools-dropdown-tooltip">Generate AI-powered summary</span>
-            </div>
-          </div>
-          
-          {/* Copy URL Tool */}
-          <div className="tools-dropdown-item" style={{ '--item-index': 7 } as React.CSSProperties}>
-            <button 
-              className="tools-dropdown-tool"
-              onClick={() => {
-                navigator.clipboard?.writeText(window.location.href)
-                setIsOpen(false)
-              }}
-              title="Copy Page URL"
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
-                <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
-              </svg>
-              <span className="tools-dropdown-label">Copy URL</span>
-              <span className="tools-dropdown-tooltip">Copy URL</span>
-            </button>
-          </div>
-
-          {/* Print Tool */}
-          <div className="tools-dropdown-item" style={{ '--item-index': 8 } as React.CSSProperties}>
-            <button 
-              className="tools-dropdown-tool"
-              onClick={() => {
-                window.print()
-                setIsOpen(false)
-              }}
-              title="Print Page"
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <polyline points="6,9 6,2 18,2 18,9"/>
-                <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
-                <rect x="6" y="14" width="12" height="8"/>
-              </svg>
-              <span className="tools-dropdown-label">Print</span>
-              <span className="tools-dropdown-tooltip">Print</span>
-            </button>
-          </div>
-
-          {/* Export Tool */}
-          <div className="tools-dropdown-item" style={{ '--item-index': 9 } as React.CSSProperties}>
-            <button 
-              className="tools-dropdown-tool"
-              onClick={() => {
-                // Export as markdown or PDF
-                const content = document.querySelector('.docs-content')?.textContent || 'No content found'
-                const blob = new Blob([content], { type: 'text/plain' })
-                const url = URL.createObjectURL(blob)
-                const a = document.createElement('a')
-                a.href = url
-                a.download = 'documentation.txt'
-                a.click()
-                URL.revokeObjectURL(url)
-                setIsOpen(false)
-              }}
-              title="Export Content"
-            >
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                <polyline points="7,10 12,15 17,10"/>
-                <line x1="12" y1="15" x2="12" y2="3"/>
-              </svg>
-              <span className="tools-dropdown-label">Export</span>
-              <span className="tools-dropdown-tooltip">Export</span>
-            </button>
-          </div>
         </div>
       )}
-      
-      {/* TL;DR Panel */}
-      <TldrPanel
-        repoUrl={githubHref !== '#' ? githubHref : undefined}
-        pageContent={pageContent}
-        isOpen={isTldrOpen}
-        onClose={() => setIsTldrOpen(false)}
-      />
     </div>
   )
 }

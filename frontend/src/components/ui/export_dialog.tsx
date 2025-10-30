@@ -10,7 +10,7 @@ interface ExportDialogProps {
   documentationData: Record<string, unknown>;
 }
 
-export type ExportFormat = 'markdown' | 'html' | 'pdf' | 'json' | 'zip';
+export type ExportFormat = 'markdown' | 'html' | 'pdf' | 'json' | 'zip' | 'txt';
 
 // Icon components for export formats
 const MarkdownIcon = () => (
@@ -34,9 +34,7 @@ const PdfIcon = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
     <polyline points="14 2 14 8 20 8"/>
-    <path d="M9 15h6"/>
-    <path d="M9 18h6"/>
-    <path d="M12 12V9"/>
+    <text x="7" y="16" fontSize="8" fontWeight="bold" fill="currentColor" stroke="none">PDF</text>
   </svg>
 );
 
@@ -44,10 +42,10 @@ const JsonIcon = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
     <polyline points="14 2 14 8 20 8"/>
-    <path d="M9 13h1"/>
-    <path d="M14 13h1"/>
-    <circle cx="10.5" cy="16.5" r="0.5"/>
-    <circle cx="13.5" cy="16.5" r="0.5"/>
+    <path d="M9 11c-.5 0-.8.2-1 .5-.2.3-.3.7-.3 1.2v2.6c0 .5.1.9.3 1.2.2.3.5.5 1 .5" strokeWidth="1.5"/>
+    <path d="M15 11c.5 0 .8.2 1 .5.2.3.3.7.3 1.2v2.6c0 .5-.1.9-.3 1.2-.2.3-.5.5-1 .5" strokeWidth="1.5"/>
+    <circle cx="12" cy="13" r="0.5" fill="currentColor"/>
+    <circle cx="12" cy="16" r="0.5" fill="currentColor"/>
   </svg>
 );
 
@@ -55,7 +53,19 @@ const ZipIcon = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
     <polyline points="14 2 14 8 20 8"/>
-    <rect x="10" y="12" width="4" height="8" rx="1"/>
+    <line x1="12" y1="7" x2="12" y2="9"/>
+    <line x1="12" y1="11" x2="12" y2="13"/>
+    <line x1="12" y1="15" x2="12" y2="17"/>
+    <rect x="10.5" y="17" width="3" height="3" rx="0.5"/>
+  </svg>
+);
+
+const TxtIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+    <polyline points="14 2 14 8 20 8"/>
+    <line x1="9" y1="13" x2="15" y2="13"/>
+    <line x1="9" y1="17" x2="15" y2="17"/>
   </svg>
 );
 
@@ -97,6 +107,13 @@ const exportOptions: ExportOption[] = [
     available: true
   },
   {
+    format: 'txt',
+    label: 'Text (.txt)',
+    description: 'Export as plain text file',
+    icon: <TxtIcon />,
+    available: true
+  },
+  {
     format: 'zip',
     label: 'Archive (.zip)',
     description: 'Export all files in a ZIP archive',
@@ -131,6 +148,9 @@ export default function ExportDialog({ isOpen, onClose, markdownContent, documen
         break;
       case 'json':
         await exportAsJSON(data);
+        break;
+      case 'txt':
+        await exportAsTXT(content);
         break;
       case 'zip':
         await exportAsZIP(content, data);
@@ -488,6 +508,42 @@ export default function ExportDialog({ isOpen, onClose, markdownContent, documen
     };
     const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
     downloadFile(blob, 'documentation.json');
+  };
+
+  const exportAsTXT = async (content: string) => {
+    // Strip markdown formatting to create plain text
+    let plainText = content;
+    
+    // Remove code blocks
+    plainText = plainText.replace(/```[\s\S]*?```/g, (match) => {
+      // Keep the content but remove the backticks
+      return match.replace(/```/g, '');
+    });
+    
+    // Remove inline code formatting
+    plainText = plainText.replace(/`([^`]+)`/g, '$1');
+    
+    // Remove bold/italic formatting
+    plainText = plainText.replace(/\*\*([^*]+)\*\*/g, '$1');
+    plainText = plainText.replace(/\*([^*]+)\*/g, '$1');
+    plainText = plainText.replace(/__([^_]+)__/g, '$1');
+    plainText = plainText.replace(/_([^_]+)_/g, '$1');
+    
+    // Convert links to plain text with URL
+    plainText = plainText.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '$1 ($2)');
+    
+    // Remove headers formatting but keep the text
+    plainText = plainText.replace(/^#{1,6}\s+/gm, '');
+    
+    // Remove blockquote markers
+    plainText = plainText.replace(/^>\s+/gm, '');
+    
+    // Add header
+    const header = `Documentation Export\nGenerated on: ${new Date().toLocaleString()}\n${'='.repeat(60)}\n\n`;
+    const finalText = header + plainText;
+    
+    const blob = new Blob([finalText], { type: 'text/plain' });
+    downloadFile(blob, 'documentation.txt');
   };
 
   const exportAsZIP = async (content: string, data: Record<string, unknown>) => {

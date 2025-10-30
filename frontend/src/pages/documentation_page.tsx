@@ -21,9 +21,6 @@ import ExportDialog from '../components/ui/export_dialog'
 import EmbeddedChangelog from '../components/embedded_changelog'
 import EmbeddedFlowchart from '../components/embedded_flowchart'
 import { ExportIcon } from '../components/icons/export_icon'
-import TranslationDialog from '../components/ui/translation_dialog'
-import { useTranslation } from '../contexts/TranslationContext'
-import { usePageTranslation } from '../hooks/usePageTranslation'
 import DiscordNotificationConfig from '../components/ui/discord_notification_config'
 import { useAutoUpdate } from '../hooks/useAutoUpdate'
 import AutoUpdateNotification from '../components/ui/auto_update_notification'
@@ -122,7 +119,6 @@ function DocumentationPage() {
   const [isShareDialogOpen, setIsShareDialogOpen] = useState(false)
   const [isViewCodeDialogOpen, setIsViewCodeDialogOpen] = useState(false)
   const [isExportDialogOpen, setIsExportDialogOpen] = useState(false)
-  const [isTranslationDialogOpen, setIsTranslationDialogOpen] = useState(false)
   const [isDiscordConfigOpen, setIsDiscordConfigOpen] = useState(false)
   const [isDiscordMonitoringActive, setIsDiscordMonitoringActive] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -207,12 +203,6 @@ function DocumentationPage() {
       setRepositoryInfo(githubHref, 'main')
     }
   }, [githubHref, setRepositoryInfo])
-  
-  // Translation context
-  const { isTranslationActive, currentLanguageCode } = useTranslation()
-  
-  // Enable page translation
-  usePageTranslation()
 
   // Determine encoded repo slug for routing back to repo root
   const repoSlug = (() => {
@@ -524,9 +514,6 @@ function DocumentationPage() {
         <ToolsDropdown 
           githubHref={githubHref}
           pageContent={`Current page: ${activeLabel}`}
-          isTranslationActive={isTranslationActive}
-          currentLanguageCode={currentLanguageCode}
-          onOpenTranslation={() => setIsTranslationDialogOpen(true)}
           onToggleSuggestions={() => setIsSuggestionPanelOpen(prev => !prev)}
           isMonitoring={isMonitoring}
           newCommitsCount={newCommitsCount}
@@ -977,12 +964,6 @@ function DocumentationPage() {
         onClose={() => setIsExportDialogOpen(false)}
         markdownContent=""
         documentationData={{}}
-      />
-
-      {/* Translation Dialog */}
-      <TranslationDialog
-        isOpen={isTranslationDialogOpen}
-        onClose={() => setIsTranslationDialogOpen(false)}
       />
 
       {/* Discord Notification Config Dialog */}

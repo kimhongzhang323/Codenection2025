@@ -490,13 +490,11 @@ html:not(.dark) .docs-sidebar__collapse-icon {
 }
 
 .docs-main__container {
-  max-width: 720px;
+  max-width: 800px;
   margin: 0 auto;
   padding: 40px 1.5rem 80px 1.5rem;
   position: relative;
 }
-
-
 
 /* Responsive */
 @media (max-width: 1400px) {
@@ -710,9 +708,8 @@ html:not(.dark) .docs-sidebar__collapse-icon {
   }
 }
 
-
 /* Lightbulb Button - Above AI Chat Button */
-/* Translation Button - Above Smart Suggestions */
+/* Tools Dropdown - Contains all documentation tools */
 .docs-translate-button-container {
   display: none; /* Hidden - now in tools dropdown */
 }
@@ -758,7 +755,7 @@ html:not(.dark) .docs-sidebar__collapse-icon {
   text-transform: uppercase;
 }
 
-/* Tools Dropdown - Between Translation and Lightbulb */
+/* Tools Dropdown - Contains all documentation tools */
 .docs-tools-dropdown-container {
   position: fixed;
   bottom: 24px;
@@ -882,8 +879,6 @@ html:not(.dark) .docs-sidebar__collapse-icon {
     0 0 0 3px rgba(88, 101, 242, 0.3);
 }
 
-
-
 /* Auto-Update Button - Above GitHub Bot Button */
 .docs-auto-update-button-container {
   display: none; /* Hidden - now in tools dropdown */
@@ -970,8 +965,6 @@ html:not(.dark) .docs-sidebar__collapse-icon {
     0 0 0 3px rgba(16, 185, 129, 0.3);
 }
 
-
-
 .docs-auto-update-badge {
   position: absolute;
   top: -6px;
@@ -1006,7 +999,6 @@ html:not(.dark) .docs-sidebar__collapse-icon {
 
 /* Branch Selector Styling */
 
-
 /* Dark mode adjustments for auto-update button */
 [data-theme="dark"] .docs-auto-update-button:not(.active) {
   background: linear-gradient(135deg, #334155 0%, #1e293b 100%);
@@ -1030,8 +1022,6 @@ html:not(.dark) .docs-sidebar__collapse-icon {
     0 2px 4px rgba(0, 0, 0, 0.3),
     0 0 0 3px rgba(51, 65, 85, 0.3);
 }
-
-
 
 /* GitHub Bot Button - Above Discord Button */
 .docs-github-bot-button-container {
@@ -1112,8 +1102,6 @@ html:not(.dark) .docs-sidebar__collapse-icon {
     0 0 0 3px rgba(36, 41, 47, 0.3);
 }
 
-
-
 /* Dark mode adjustments for GitHub bot button */
 [data-theme="dark"] .docs-github-bot-button:not(.active) {
   background: linear-gradient(135deg, #24292f 0%, #1b1f23 100%);
@@ -1137,8 +1125,6 @@ html:not(.dark) .docs-sidebar__collapse-icon {
     0 4px 10px rgba(0, 0, 0, 0.2),
     0 0 0 3px rgba(36, 41, 47, 0.4);
 }
-
-
 
 /* AI Chat Button - Bottom Right Corner */
 .docs-ai-chat-button-container {
@@ -1176,7 +1162,7 @@ html:not(.dark) .docs-sidebar__collapse-icon {
 .docs-view-code-button-container {
   position: fixed;
   top: 20px;
-  right: 140px; /* positioned to the left of share button */
+  right: 130px; /* positioned to the left of share button - increased gap */
   z-index: 900;
 }
 
@@ -1322,7 +1308,7 @@ html:not(.dark) .docs-sidebar__collapse-icon {
 .docs-export-button-container {
   position: fixed;
   top: 20px;
-  right: 280px; /* positioned further left to avoid covering view code button */
+  right: 265px; /* positioned further left to avoid covering view code button - increased gap */
   z-index: 900;
 }
 
@@ -1423,15 +1409,11 @@ html:not(.dark) .docs-sidebar__collapse-icon {
     right: 16px;
   }
   
-
-  
   .docs-auto-update-button {
     width: 40px;
     height: 40px;
     border-radius: 10px;
   }
-  
-
   
   .docs-auto-update-badge {
     top: -4px;
@@ -1458,8 +1440,6 @@ html:not(.dark) .docs-sidebar__collapse-icon {
     border-radius: 10px;
   }
   
-
-
   .docs-discord-button-container {
     bottom: 68px;
     right: 16px;
@@ -1470,8 +1450,6 @@ html:not(.dark) .docs-sidebar__collapse-icon {
     height: 40px;
     border-radius: 10px;
   }
-  
-
 
   .docs-ai-chat-button-container {
     bottom: 20px;
@@ -1671,11 +1649,11 @@ html:not(.dark) .docs-sidebar__collapse-icon {
 /* Table of Contents Styles */
 .toc-container {
   position: fixed;
-  top: 60px;
+  top: 100px;
   /* Calculate position: center (50%) - half content width (360px) - TOC width (200px) - gap (1.5rem) */
   right: calc(50% - 360px - 200px - 1.5rem);
   width: 200px;
-  max-height: calc(100vh - 140px);
+  max-height: calc(100vh - 160px);
   z-index: 100;
   /* Hide TOC on smaller screens where there's not enough space */
   display: block;
@@ -1698,7 +1676,7 @@ html:not(.dark) .docs-sidebar__collapse-icon {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 16px 0 12px 16px;
+  padding: 16px 0 2px 16px;
 }
 
 .toc-hamburger {
