@@ -2,6 +2,7 @@ package com.example.AutoDocX.parser.model;
 
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class GraphAlgo {
 
@@ -32,6 +33,30 @@ public class GraphAlgo {
         Map<String, Double> pageRankScores = calculateOutgoingPageRank(graph, 0.85, 30);
 
         return graph.getNodes().stream().filter(node -> node.getType() == GraphNode.NodeType.CLASS).sorted((a, b) -> Double.compare(pageRankScores.getOrDefault(b.getId(), 0.0), pageRankScores.getOrDefault(a.getId(), 0.0))).limit(n).collect(Collectors.toList());
+    }
+
+    public static List<GraphNode> searchNodes(Graph graph, String query, int limit) {
+        if (graph == null || query == null || query.isBlank()) {
+            return List.of();
+        }
+
+        String lowered = query.toLowerCase(Locale.ROOT);
+        Stream<GraphNode> stream = graph.getNodes().stream()
+                .filter(node -> matches(lowered, node));
+
+        if (limit > 0) {
+            stream = stream.limit(limit);
+        }
+
+        return stream.collect(Collectors.toList());
+    }
+
+    private static boolean matches(String loweredQuery, GraphNode node) {
+        if (node == null) {
+            return false;
+        }
+        return Optional.ofNullable(node.getId()).map(id -> id.toLowerCase(Locale.ROOT).contains(loweredQuery)).orElse(false)
+                || Optional.ofNullable(node.getLabel()).map(label -> label.toLowerCase(Locale.ROOT).contains(loweredQuery)).orElse(false);
     }
 
     private static Map<String, Double> calculateOutgoingPageRank(Graph graph, double dampingFactor, int iterations) {

@@ -197,7 +197,7 @@ public class GeneralSummaryAgent {
         }
 
         // Code Memory (recent)
-        String codeSummary = memory.getCode().toString(10);
+        String codeSummary = memory.getCode().toString(7);
         if (!codeSummary.isBlank()) {
             contents.add(Content.builder().parts(Part.builder().text("CODE MEMORY:\n" + codeSummary).build()).role("user").build());
         }

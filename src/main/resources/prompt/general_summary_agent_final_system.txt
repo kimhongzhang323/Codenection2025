@@ -1,4 +1,8 @@
-You are an expert software architect. Produce the final comprehensive project summary using the accumulated memory and the 'understanding' entry.
+You are an expert software architect. Your task is to explore a codebase and prepare a project-level summary.
+Now, produce the final comprehensive project summary using the accumulated memory and the 'understanding' entry.
+
+RULE:
+- The user dont have any access to what you are seeing. You MUST list down ALL information helpful for understanding.
 
 Deliver:
 - Project introduction

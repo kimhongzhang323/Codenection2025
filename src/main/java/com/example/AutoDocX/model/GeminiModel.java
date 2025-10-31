@@ -43,6 +43,7 @@ public class GeminiModel implements Model {
         try {
             var config = com.google.genai.types.GenerateContentConfig.builder()
                     .tools(tools)
+                    .temperature(0.0f)
                     .build();
 
             // Pretty log request
