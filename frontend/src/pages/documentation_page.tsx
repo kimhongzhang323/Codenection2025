@@ -15,15 +15,16 @@ import { HistoryIcon } from '../components/icons/history_icon'
 import { DiagramIcon } from '../components/icons/diagram_icon'
 import ShareDialog from '../components/ui/share_dialog'
 import ViewCodeDialog from '../components/ui/view_code_dialog'
-import DocumentationSection from '../components/documentation_section'
+import Markdown from '../components/markdown'
 import ExportDialog from '../components/ui/export_dialog'
 import EmbeddedChangelog from '../components/embedded_changelog'
 import EmbeddedFlowchart from '../components/embedded_flowchart'
 import { ExportIcon } from '../components/icons/export_icon'
 import { useAutoUpdate } from '../hooks/useAutoUpdate'
 import AutoUpdateNotification from '../components/ui/auto_update_notification'
-import type { GitHubCommit } from '../services/api'
+import type { GitHubCommit, Documentation } from '../services/api'
 import { gitHubWebhookService } from '../services/github-webhook-service'
+import { documentationApi } from '../services/api'
 
 function DocumentationPage() {
   const location = useLocation()
@@ -38,6 +39,13 @@ function DocumentationPage() {
   // Construct GitHub URL from repo parameter if available
   const repoBasedUrl = repo ? `https://github.com/${decodeURIComponent(repo)}` : undefined
   const githubHref = repoUrl || fallbackUrl || repoBasedUrl || '#'
+  
+  // Document loading state
+  const [documents, setDocuments] = useState<Record<string, Documentation>>({})
+  const [documentKeys, setDocumentKeys] = useState<string[]>([])
+  const [selectedDocKey, setSelectedDocKey] = useState<string | null>(null)
+  const [isLoadingDocs, setIsLoadingDocs] = useState(false)
+  const [docsError, setDocsError] = useState<string | null>(null)
   
   // Debug GitHub URL construction
   console.log('[DocumentationPage] GitHub URL construction:', {
@@ -96,15 +104,6 @@ function DocumentationPage() {
   const [activeLabel, setActiveLabel] = useState<string | null>(computeInitialActiveLabel)
   const [viewMode, setViewMode] = useState<'reading' | 'edit'>('reading')
   const [documentationContent, setDocumentationContent] = useState<string>('')
-  
-  // Content handlers for synchronization
-  const handleContentLoaded = useCallback((content: string) => {
-    setDocumentationContent(content)
-  }, [])
-
-  const handleContentChange = useCallback((content: string) => {
-    setDocumentationContent(content)
-  }, [])
 
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
     if (typeof window === 'undefined') return false
@@ -152,7 +151,8 @@ function DocumentationPage() {
   const [isExportDialogOpen, setIsExportDialogOpen] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   
-  // Auto-update functionality
+  // Auto-update functionality (used by changelog/flowchart special pages)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [refreshKey, setRefreshKey] = useState(0)
   
   const {
@@ -226,6 +226,40 @@ function DocumentationPage() {
       setRepositoryInfo(githubHref, 'main')
     }
   }, [githubHref, setRepositoryInfo])
+
+  // Load all documents from API
+  useEffect(() => {
+    if (!githubHref || githubHref === '#') {
+      setDocuments({})
+      setDocumentKeys([])
+      setSelectedDocKey(null)
+      return
+    }
+
+    setIsLoadingDocs(true)
+    setDocsError(null)
+
+    documentationApi.getAll(githubHref, 'main')
+      .then((docs) => {
+        setDocuments(docs)
+        const keys = Object.keys(docs).sort()
+        setDocumentKeys(keys)
+        
+        // Auto-select first document if none selected
+        if (!selectedDocKey && keys.length > 0) {
+          setSelectedDocKey(keys[0])
+        }
+      })
+      .catch((err) => {
+        console.error('Failed to load documents:', err)
+        setDocsError(err.message || 'Failed to load documents')
+        setDocuments({})
+        setDocumentKeys([])
+      })
+      .finally(() => {
+        setIsLoadingDocs(false)
+      })
+  }, [githubHref]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Determine encoded repo slug for routing back to repo root
   const repoSlug = (() => {
@@ -675,64 +709,33 @@ function DocumentationPage() {
           {/* Documentation Tree Section */}
           <div className="docs-sidebar__section">
             <div className="docs-sidebar__section-header">
-              <h3>Documentation</h3>
+              <h3>Documentation Files</h3>
             </div>
             <div className="docs-sidebar__nav">
-              <button 
-                className={`docs-sidebar__nav-item ${activeLabel === 'Overview' ? 'is-active' : ''}`}
-                onClick={() => {
-                  const repoPath = window.location.pathname.split('/')[1]
-                  navigate(`/${repoPath}/docs/overview`, {
-                    state: location.state
-                  })
-                  setTimeout(() => window.location.reload(), 100)
-                }}
-                aria-label="View Overview"
-              >
-                <span>Overview</span>
-              </button>
-              
-              <button 
-                className={`docs-sidebar__nav-item ${activeLabel === 'Quick Start' ? 'is-active' : ''}`}
-                onClick={() => {
-                  const repoPath = window.location.pathname.split('/')[1]
-                  navigate(`/${repoPath}/docs/quickstart`, {
-                    state: location.state
-                  })
-                  setTimeout(() => window.location.reload(), 100)
-                }}
-                aria-label="View Quick Start"
-              >
-                <span>Quick Start</span>
-              </button>
-              
-              <button 
-                className={`docs-sidebar__nav-item ${activeLabel === 'Requirements' ? 'is-active' : ''}`}
-                onClick={() => {
-                  const repoPath = window.location.pathname.split('/')[1]
-                  navigate(`/${repoPath}/docs/requirements`, {
-                    state: location.state
-                  })
-                  setTimeout(() => window.location.reload(), 100)
-                }}
-                aria-label="View Requirements"
-              >
-                <span>Requirements</span>
-              </button>
-              
-              <button 
-                className={`docs-sidebar__nav-item ${activeLabel === 'Main Documentation' ? 'is-active' : ''}`}
-                onClick={() => {
-                  const repoPath = window.location.pathname.split('/')[1]
-                  navigate(`/${repoPath}/documentation`, {
-                    state: location.state
-                  })
-                  setTimeout(() => window.location.reload(), 100)
-                }}
-                aria-label="View Full Documentation"
-              >
-                <span>Full README</span>
-              </button>
+              {isLoadingDocs ? (
+                <div style={{ padding: '12px', textAlign: 'center', color: 'var(--docs-normal-text)' }}>
+                  <div className="spinner" style={{ margin: '0 auto' }} />
+                </div>
+              ) : docsError ? (
+                <div style={{ padding: '12px', color: 'var(--danger-color)', fontSize: '14px' }}>
+                  {docsError}
+                </div>
+              ) : documentKeys.length === 0 ? (
+                <div style={{ padding: '12px', color: 'var(--docs-normal-text)', fontSize: '14px' }}>
+                  No documentation files found
+                </div>
+              ) : (
+                documentKeys.map((key) => (
+                  <button
+                    key={key}
+                    className={`docs-sidebar__nav-item ${selectedDocKey === key ? 'is-active' : ''}`}
+                    onClick={() => setSelectedDocKey(key)}
+                    aria-label={`View ${key}`}
+                  >
+                    <span>{key}</span>
+                  </button>
+                ))
+              )}
             </div>
           </div>
           
@@ -750,146 +753,48 @@ function DocumentationPage() {
         <main className={`docs-main ${isSidebarCollapsed ? 'is-collapsed' : ''}`}>
           <div className="docs-main__container">
             {activeLabel === 'Changelog' ? (
-                  <EmbeddedChangelog 
-                    repo={repo} 
-                    repoUrl={githubHref}
-                    className="changelog-main"
-                  />
-                ) : activeLabel === 'System Diagrams' ? (
-                  <EmbeddedFlowchart 
-                    className="flowchart-main"
-                  />
-                ) : activeLabel === 'Main Documentation' ? (
-                  <DocumentationSection 
-                    key={`fullreadme-${refreshKey}`}
-                    section="fullreadme" 
-                    githubHref={githubHref}
-                    showTOC={showTOC}
-                    viewMode={viewMode}
-                    onContentLoaded={handleContentLoaded}
-                    onContentChange={handleContentChange}
-                  />
-                ) : activeLabel === 'Overview' ? (
-                  <DocumentationSection 
-                    key={`overview-${refreshKey}`}
-                    section="overview" 
-                    githubHref={githubHref}
-                    showTOC={showTOC}
-                    viewMode={viewMode}
-                    onContentLoaded={handleContentLoaded}
-                    onContentChange={handleContentChange}
-                  />
-                ) : activeLabel === 'Quick Start' ? (
-                  <DocumentationSection 
-                    key={`quickstart-${refreshKey}`}
-                    section="quickstart" 
-                    githubHref={githubHref}
-                    showTOC={showTOC}
-                    viewMode={viewMode}
-                    onContentLoaded={handleContentLoaded}
-                    onContentChange={handleContentChange}
-                  />
-                ) : activeLabel === 'Requirements' ? (
-                  <DocumentationSection 
-                    key={`requirements-${refreshKey}`}
-                    section="requirements" 
-                    githubHref={githubHref}
-                    showTOC={showTOC}
-                    viewMode={viewMode}
-                    onContentLoaded={handleContentLoaded}
-                    onContentChange={handleContentChange}
-                  />
-                ) : (
-                  <div style={{ 
-                    padding: '60px 40px', 
-                    textAlign: 'center', 
-                    color: 'var(--docs-normal-text)' 
+              <EmbeddedChangelog 
+                repo={repo} 
+                repoUrl={githubHref}
+                className="changelog-main"
+              />
+            ) : activeLabel === 'System Diagrams' ? (
+              <EmbeddedFlowchart 
+                className="flowchart-main"
+              />
+            ) : selectedDocKey && documents[selectedDocKey] ? (
+              <div className="documentation-section">
+                <Markdown content={documents[selectedDocKey].content || ''} />
+              </div>
+            ) : (
+              <div style={{ 
+                padding: '60px 40px', 
+                textAlign: 'center', 
+                color: 'var(--docs-normal-text)' 
+              }}>
+                <h2 style={{ 
+                  fontSize: '24px', 
+                  fontWeight: '600', 
+                  marginBottom: '16px',
+                  color: 'var(--docs-header-text)' 
+                }}>
+                  {isLoadingDocs ? 'Loading documentation...' : 
+                   docsError ? 'Error loading documentation' :
+                   documentKeys.length === 0 ? 'No documentation found' :
+                   'Select a file from the sidebar'}
+                </h2>
+                {docsError && (
+                  <p style={{ 
+                    fontSize: '14px', 
+                    color: 'var(--danger-color)',
+                    margin: '16px auto',
+                    maxWidth: '600px'
                   }}>
-                    <h2 style={{ 
-                      fontSize: '24px', 
-                      fontWeight: '600', 
-                      marginBottom: '16px',
-                      color: 'var(--docs-header-text)' 
-                    }}>
-                      Welcome to the Repository
-                    </h2>
-                    <p style={{ 
-                      fontSize: '16px', 
-                      lineHeight: '1.6', 
-                      maxWidth: '600px', 
-                      margin: '0 auto 24px auto' 
-                    }}>
-                      Select an option from the sidebar to view changelog, system diagrams, or documentation.
-                    </p>
-                    <div style={{ 
-                      display: 'flex', 
-                      gap: '16px', 
-                      justifyContent: 'center',
-                      flexWrap: 'wrap'
-                    }}>
-                      <button 
-                        onClick={() => {
-                          const repoPath = window.location.pathname.split('/')[1]
-                          navigate(`/${repoPath}/changelog`, { state: location.state })
-                          setTimeout(() => window.location.reload(), 100)
-                        }}
-                        style={{
-                          padding: '12px 24px',
-                          border: '1px solid var(--sidebar-border)',
-                          borderRadius: '8px',
-                          background: 'var(--docs-bg)',
-                          color: 'var(--docs-text)',
-                          cursor: 'pointer',
-                          fontSize: '14px',
-                          fontWeight: '500',
-                          transition: 'all 0.2s ease'
-                        }}
-                      >
-                        📋 View Changelog
-                      </button>
-                      <button 
-                        onClick={() => {
-                          const repoPath = window.location.pathname.split('/')[1]
-                          navigate(`/${repoPath}/flowchart`, { state: location.state })
-                          setTimeout(() => window.location.reload(), 100)
-                        }}
-                        style={{
-                          padding: '12px 24px',
-                          border: '1px solid var(--sidebar-border)',
-                          borderRadius: '8px',
-                          background: 'var(--docs-bg)',
-                          color: 'var(--docs-text)',
-                          cursor: 'pointer',
-                          fontSize: '14px',
-                          fontWeight: '500',
-                          transition: 'all 0.2s ease'
-                        }}
-                      >
-                        📊 View Diagrams
-                      </button>
-                      <button 
-                        onClick={() => {
-                          const repoPath = window.location.pathname.split('/')[1]
-                          navigate(`/${repoPath}/documentation`, { state: location.state })
-                          setTimeout(() => window.location.reload(), 100)
-                        }}
-                        style={{
-                          padding: '12px 24px',
-                          border: '1px solid var(--sidebar-border)',
-                          borderRadius: '8px',
-                          background: 'var(--docs-bg)',
-                          color: 'var(--docs-text)',
-                          cursor: 'pointer',
-                          fontSize: '14px',
-                          fontWeight: '500',
-                          transition: 'all 0.2s ease'
-                        }}
-                      >
-                        📚 View Documentation
-                      </button>
-                    </div>
-                  </div>
+                    {docsError}
+                  </p>
                 )}
+              </div>
+            )}
           </div>
         </main>
       </div>
