@@ -117,31 +117,14 @@
 .discord-config-content {
   padding: 20px 24px;
   overflow-y: auto;
-  scrollbar-width: thin;
-  scrollbar-color: #ccc transparent;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
   flex: 1;
   min-height: 0;
 }
 
-.dark .discord-config-content {
-  scrollbar-color: #444 transparent;
-}
-
 .discord-config-content::-webkit-scrollbar {
-  width: 6px;
-}
-
-.discord-config-content::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.discord-config-content::-webkit-scrollbar-thumb {
-  background: #ccc;
-  border-radius: 3px;
-}
-
-.dark .discord-config-content::-webkit-scrollbar-thumb {
-  background: #444;
+  display: none; /* Chrome, Safari, Opera */
 }
 
 .discord-config-section {

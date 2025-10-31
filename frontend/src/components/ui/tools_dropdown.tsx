@@ -14,6 +14,9 @@ interface ToolsDropdownProps {
   // Discord props
   isDiscordMonitoringActive: boolean
   onOpenDiscordConfig: () => void
+  // AI Chat props (optional)
+  isAIChatEnabled?: boolean
+  onToggleAIChat?: () => void
 }
 
 const ToolsDropdown: React.FC<ToolsDropdownProps> = ({ 
@@ -25,6 +28,7 @@ const ToolsDropdown: React.FC<ToolsDropdownProps> = ({
   onToggleGitHubBot,
   isDiscordMonitoringActive,
   onOpenDiscordConfig
+  ,isAIChatEnabled, onToggleAIChat
 }) => {
   const [isOpen, setIsOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
@@ -156,6 +160,24 @@ const ToolsDropdown: React.FC<ToolsDropdownProps> = ({
               </svg>
               <span className="tools-dropdown-label">Discord {isDiscordMonitoringActive ? '(Active)' : ''}</span>
               <span className="tools-dropdown-tooltip">Discord {isDiscordMonitoringActive ? '(Active)' : ''}</span>
+            </button>
+          </div>
+
+          {/* AI Chat Tool */}
+          <div className="tools-dropdown-item" style={{ '--item-index': 4 } as React.CSSProperties}>
+            <button
+              className={`tools-dropdown-tool ${isAIChatEnabled ? 'active' : ''}`}
+              onClick={() => {
+                onToggleAIChat && onToggleAIChat()
+                setIsOpen(false)
+              }}
+              title="AI Chat"
+            >
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+              </svg>
+              <span className="tools-dropdown-label">AI Chat {isAIChatEnabled ? '(ON)' : '(OFF)'}</span>
+              <span className="tools-dropdown-tooltip">Toggle AI Chat assistant</span>
             </button>
           </div>
         </div>

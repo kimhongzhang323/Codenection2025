@@ -326,6 +326,25 @@ function DocsFlowPage() {
 }
 
 function App() {
+  const location = useLocation()
+  
+  // Determine if we're on a documentation page
+  const isDocumentationPage = 
+    location.pathname === '/documentation' ||
+    location.pathname.includes('/changelog') ||
+    location.pathname.includes('/flowchart') ||
+    location.pathname.includes('/documentation') ||
+    location.pathname.includes('/docs/') ||
+    // Match routes like /:repo and /:repo/:file but exclude specific non-doc pages
+    (location.pathname.split('/').filter(Boolean).length >= 1 && 
+     !location.pathname.startsWith('/sign-') &&
+     !location.pathname.startsWith('/dashboard') &&
+     !location.pathname.startsWith('/auth/') &&
+     !location.pathname.startsWith('/tracing') &&
+     !location.pathname.startsWith('/docs-flow/') &&
+     !location.pathname.includes('/commit/') &&
+     location.pathname !== '/')
+
   return (
     <AIChatProvider>
       <Routes>
@@ -349,7 +368,7 @@ function App() {
         <Route path="/documentation" element={<DocumentationPage />} />
       </Routes>
       <TextSelectionDialog />
-      <AIChatPanel />
+      {isDocumentationPage && <AIChatPanel />}
     </AIChatProvider>
   )
 }

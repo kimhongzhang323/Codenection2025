@@ -231,7 +231,6 @@ const DiscordNotificationConfig: React.FC<DiscordNotificationConfigProps> = ({
       <div className="discord-config-dialog">
         <div className="discord-config-header">
           <div className="discord-config-title">
-            <span className="discord-icon">🔔</span>
             <h2>Discord Notifications</h2>
           </div>
           <button className="discord-config-close" onClick={onClose} aria-label="Close">
