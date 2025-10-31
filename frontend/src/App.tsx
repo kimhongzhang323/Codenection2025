@@ -17,7 +17,7 @@ import { AIChatPanel } from './components/ui/ai_chat_panel'
 import { AIChatProvider } from './contexts/AIChatContext'
 import DocumentationSystem from './components/docs_flow'
 import RepositoryAutocomplete from './components/repository_autocomplete'
-import { type GitHubRepository } from './services/api'
+import { type GitHubRepository, agentApi } from './services/api'
 import { useAuth } from './services/auth'
 import './App.css'
 
@@ -152,6 +152,12 @@ function HomePage() {
   function handleArrowClick() {
     if (repoData) {
       const slug = (repoData.fullName || '').toLowerCase()
+      
+      // Trigger model warmup in background (don't wait for result)
+      agentApi.runGeneralSummary(repoUrl, 'main').catch(err => {
+        console.warn('Model warmup failed:', err)
+      })
+      
       navigate(`/docs-flow/${encodeURIComponent(slug)}`, {
         state: { repoData, repoUrl },
       })

@@ -269,6 +269,30 @@ export const agentApi = {
     
     return result.data
   },
+
+  // Run general summary (for model warmup)
+  async runGeneralSummary(gitUrl: string, branch?: string): Promise<string> {
+    const request: AgentRequest = { gitUrl, userPrompt: '', branch: branch || 'main' }
+    
+    const response = await fetch(`${API_BASE_URL}/agent/run-general-summary`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(request),
+    })
+    
+    if (!response.ok) {
+      throw new Error(`Failed to run general summary: ${response.statusText}`)
+    }
+    
+    const result: ApiResponse<string> = await response.json()
+    if (result.status === 'ERROR') {
+      throw new Error(result.message)
+    }
+    
+    return result.data
+  },
 }
 
 // GitHub Repository Interface
