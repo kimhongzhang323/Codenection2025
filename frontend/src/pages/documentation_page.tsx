@@ -26,6 +26,7 @@ import AutoUpdateNotification from '../components/ui/auto_update_notification'
 import type { GitHubCommit, Documentation } from '../services/api'
 import { gitHubWebhookService } from '../services/github-webhook-service'
 import { documentationApi } from '../services/api'
+import { findNewestDocument, detectNewDocuments, parseDocumentContent } from '../utils/documentUtils'
 
 function DocumentationPage() {
   const location = useLocation()
@@ -47,6 +48,10 @@ function DocumentationPage() {
   const [selectedDocKey, setSelectedDocKey] = useState<string | null>(null)
   const [isLoadingDocs, setIsLoadingDocs] = useState(false)
   const [docsError, setDocsError] = useState<string | null>(null)
+  const [retryCount, setRetryCount] = useState(0)
+  const retryTimerRef = useRef<number | null>(null)
+  const maxRetries = 10 // Max retry attempts
+  const retryInterval = 5000 // 5 seconds between retries
   
   // Editing state
   const [isEditMode, setIsEditMode] = useState(false)
@@ -239,55 +244,83 @@ function DocumentationPage() {
     }
   }, [githubHref, setRepositoryInfo])
 
-  // Load all documents from API
+  // Load all documents from API with retry logic
   useEffect(() => {
     if (!githubHref || githubHref === '#') {
       setDocuments({})
       setDocumentKeys([])
       setSelectedDocKey(null)
+      setRetryCount(0)
+      if (retryTimerRef.current) {
+        window.clearTimeout(retryTimerRef.current)
+        retryTimerRef.current = null
+      }
       return
     }
 
-    setIsLoadingDocs(true)
-    setDocsError(null)
+    const loadDocuments = () => {
+      setIsLoadingDocs(true)
+      setDocsError(null)
 
-    documentationApi.getAll(githubHref, 'main')
-      .then((docs) => {
-        setDocuments(docs)
-        const keys = Object.keys(docs).sort()
-        setDocumentKeys(keys)
-        
-        // Auto-select first document if none selected
-        if (!selectedDocKey && keys.length > 0) {
-          setSelectedDocKey(keys[0])
-        }
-      })
-      .catch((err) => {
-        console.error('Failed to load documents:', err)
-        setDocsError(err.message || 'Failed to load documents')
-        setDocuments({})
-        setDocumentKeys([])
-      })
-      .finally(() => {
-        setIsLoadingDocs(false)
-      })
+      documentationApi.getAll(githubHref, 'main')
+        .then((docs) => {
+          setDocuments(docs)
+          const keys = Object.keys(docs).sort()
+          setDocumentKeys(keys)
+          
+          // Auto-select first document if none selected
+          if (!selectedDocKey && keys.length > 0) {
+            setSelectedDocKey(keys[0])
+          }
+          
+          // Success: reset retry count and clear timer
+          setRetryCount(0)
+          if (retryTimerRef.current) {
+            window.clearTimeout(retryTimerRef.current)
+            retryTimerRef.current = null
+          }
+        })
+        .catch((err) => {
+          console.error('Failed to load documents:', err)
+          const errorMessage = err.message || 'Failed to load documents'
+          setDocsError(errorMessage)
+          setDocuments({})
+          setDocumentKeys([])
+          
+          // Schedule retry if within limits
+          if (retryCount < maxRetries) {
+            const nextRetry = retryCount + 1
+            setRetryCount(nextRetry)
+            
+            console.log(`Documentation fetch failed. Retrying in ${retryInterval}ms... (Attempt ${nextRetry}/${maxRetries})`)
+            
+            retryTimerRef.current = window.setTimeout(() => {
+              loadDocuments()
+            }, retryInterval)
+          } else {
+            console.error(`Max retry attempts (${maxRetries}) reached. Stopped retrying.`)
+          }
+        })
+        .finally(() => {
+          setIsLoadingDocs(false)
+        })
+    }
+
+    loadDocuments()
+
+    // Cleanup on unmount or when githubHref changes
+    return () => {
+      if (retryTimerRef.current) {
+        window.clearTimeout(retryTimerRef.current)
+        retryTimerRef.current = null
+      }
+    }
   }, [githubHref]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Sync edited content when document changes (but NOT during agent activity to prevent overwriting)
   useEffect(() => {
     if (selectedDocKey && documents[selectedDocKey] && !isAgentActive) {
-      // Defensive: if content is double-encoded JSON string, parse it
-      let actualContent = documents[selectedDocKey].content || ''
-      try {
-        // Check if it's a stringified string (starts and ends with quotes)
-        if (actualContent.startsWith('"') && actualContent.endsWith('"')) {
-          actualContent = JSON.parse(actualContent)
-        }
-      } catch (e) {
-        // If parsing fails, use as-is
-      }
-      
-      setEditedContent(actualContent)
+      setEditedContent(parseDocumentContent(documents[selectedDocKey].content || ''))
       setIsEditMode(false) // Exit edit mode when switching documents
       setSaveError(null)
     }
@@ -348,27 +381,39 @@ function DocumentationPage() {
       return
     }
 
+    // Store previous keys before polling
+    let previousKeys = Object.keys(documents)
+
     // Poll every 2 seconds - fetch ALL documents to catch new ones
     pollTimerRef.current = window.setInterval(() => {
       documentationApi.getAll(githubHref, 'main')
         .then((docs) => {
-          setDocuments(docs)
           const keys = Object.keys(docs).sort()
+          
+          // Detect new documents using utility
+          const newKeys = detectNewDocuments(keys, previousKeys)
+          
+          setDocuments(docs)
           setDocumentKeys(keys)
           
-          // Update edited content if we're still on a document
-          if (selectedDocKey && docs[selectedDocKey]) {
-            // Defensive: if content is double-encoded JSON string, parse it
-            let actualContent = docs[selectedDocKey].content || ''
-            try {
-              if (actualContent.startsWith('"') && actualContent.endsWith('"')) {
-                actualContent = JSON.parse(actualContent)
-              }
-            } catch (e) {
-              // If parsing fails, use as-is
+          if (newKeys.length > 0) {
+            // Focus on the newest document using utility
+            const newestKey = findNewestDocument(docs, newKeys)
+            
+            if (newestKey) {
+              console.log(`[Polling] Auto-focusing newest document: ${newestKey}`)
+              setSelectedDocKey(newestKey)
+              setEditedContent(parseDocumentContent(docs[newestKey].content || ''))
             }
-            setEditedContent(actualContent)
+          } else {
+            // No new documents, update edited content if we're still on a document
+            if (selectedDocKey && docs[selectedDocKey]) {
+              setEditedContent(parseDocumentContent(docs[selectedDocKey].content || ''))
+            }
           }
+          
+          // Update previousKeys for next iteration
+          previousKeys = keys
         })
         .catch((err: Error) => {
           console.error('Failed to poll documents:', err)
@@ -381,7 +426,7 @@ function DocumentationPage() {
         pollTimerRef.current = null
       }
     }
-  }, [isAgentActive, githubHref, selectedDocKey])
+  }, [isAgentActive, githubHref, selectedDocKey, documents])
 
   // Listen for agent activity from AI chat
   useEffect(() => {
@@ -394,24 +439,31 @@ function DocumentationPage() {
       setIsAgentActive(false)
       // Refresh ALL documents (in case agent created new ones)
       if (githubHref) {
+        const previousKeys = Object.keys(documents)
+        
         documentationApi.getAll(githubHref, 'main')
           .then((docs) => {
             setDocuments(docs)
             const keys = Object.keys(docs).sort()
             setDocumentKeys(keys)
             
-            // Update edited content if we're still on a document
-            if (selectedDocKey && docs[selectedDocKey]) {
-              // Defensive: if content is double-encoded JSON string, parse it
-              let actualContent = docs[selectedDocKey].content || ''
-              try {
-                if (actualContent.startsWith('"') && actualContent.endsWith('"')) {
-                  actualContent = JSON.parse(actualContent)
-                }
-              } catch (e) {
-                // If parsing fails, use as-is
+            // Detect new documents using utility
+            const newKeys = detectNewDocuments(keys, previousKeys)
+            
+            if (newKeys.length > 0) {
+              // Focus on the newest document using utility
+              const newestKey = findNewestDocument(docs, newKeys)
+              
+              if (newestKey) {
+                console.log(`Auto-focusing newest document: ${newestKey}`)
+                setSelectedDocKey(newestKey)
+                setEditedContent(parseDocumentContent(docs[newestKey].content || ''))
               }
-              setEditedContent(actualContent)
+            } else {
+              // No new documents, just update current content if we're still on a document
+              if (selectedDocKey && docs[selectedDocKey]) {
+                setEditedContent(parseDocumentContent(docs[selectedDocKey].content || ''))
+              }
             }
           })
           .catch((err: Error) => {
@@ -427,7 +479,7 @@ function DocumentationPage() {
       window.removeEventListener('agent-started', handleAgentStart)
       window.removeEventListener('agent-completed', handleAgentComplete)
     }
-  }, [githubHref, selectedDocKey])
+  }, [githubHref, selectedDocKey, documents])
 
   // Handle Esc key to exit edit mode
   useEffect(() => {
@@ -1033,14 +1085,25 @@ function DocumentationPage() {
                    'Select a file from the sidebar'}
                 </h2>
                 {docsError && (
-                  <p style={{ 
+                  <div style={{ 
                     fontSize: '14px', 
                     color: 'var(--danger-color)',
                     margin: '16px auto',
-                    maxWidth: '600px'
+                    maxWidth: '600px',
+                    textAlign: 'center'
                   }}>
-                    {docsError}
-                  </p>
+                    <p style={{ marginBottom: '8px' }}>{docsError}</p>
+                    {retryCount > 0 && retryCount < maxRetries && (
+                      <p style={{ fontSize: '12px', opacity: 0.8 }}>
+                        Retrying... (Attempt {retryCount}/{maxRetries})
+                      </p>
+                    )}
+                    {retryCount >= maxRetries && (
+                      <p style={{ fontSize: '12px', opacity: 0.8 }}>
+                        Maximum retry attempts reached. Please refresh the page.
+                      </p>
+                    )}
+                  </div>
                 )}
               </div>
             )}
