@@ -193,7 +193,7 @@ public class DocumentationAgent {
             context.append("CURRENT_PLAN:\n").append(memory.getPlan().toString()).append("\n\n");
         }
 
-        context.append("CONFIG:\n").append(session.getAgentConfig()).append("\n\n");
+        context.append("USER CONFIG:\n").append(session.getAgentConfig()).append("\n\n");
 
         String defaultDocKey = docHandler.getDefaultDocumentationKey();
         if (defaultDocKey != null) {
