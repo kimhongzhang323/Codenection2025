@@ -972,7 +972,7 @@ function DocumentationPage() {
                   
                   {isAgentActive && (
                     <span style={{ fontSize: '14px', color: 'var(--primary-color)' }}>
-                      🤖 Agent is updating document...
+                      🤖 Agent is working...
                     </span>
                   )}
                   
