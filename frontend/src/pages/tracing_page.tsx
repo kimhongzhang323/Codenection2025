@@ -118,7 +118,7 @@ const TracingPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [currentPage, setCurrentPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
-  const [pageSize, setPageSize] = useState(20);
+  const [pageSize] = useState(20);
   const [usingMockData, setUsingMockData] = useState(false);
   const [pageLoading, setPageLoading] = useState(true); // For initial page load animation
   

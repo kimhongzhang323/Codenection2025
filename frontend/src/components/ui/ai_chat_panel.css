@@ -214,8 +214,6 @@
   color: var(--sidebar-text);
 }
 
-
-
 /* Enhanced content area */
 .ai-chat-content {
   flex: 1;
@@ -622,8 +620,6 @@
   }
 }
 
-
-
 /* Send icon animations */
 .square-arrow-up-icon {
   transition: all 0.2s ease;
@@ -684,8 +680,6 @@
     stroke-dasharray: 50 0;
   }
 }
-
-
 
 /* Removed placeholderFadeIn animation since placeholder content was removed */
 
