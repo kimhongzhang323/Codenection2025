@@ -4,7 +4,6 @@ import remarkGfm from 'remark-gfm';
 import rehypeRaw from 'rehype-raw';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import { tomorrow, prism } from 'react-syntax-highlighter/dist/cjs/styles/prism';
-import Mermaid from './mermaid.tsx';
 import FilesRenderer from './files_renderer';
 import Callout from './ui/callout';
 import CopyMarkdownButton from './ui/copy_markdown_button';
@@ -330,18 +329,6 @@ const Markdown: React.FC<MarkdownProps> = ({ content }) => {
         if (filesMatch) {
           return <FilesRenderer>{filesMatch[1]}</FilesRenderer>;
         }
-      }
-
-      // Handle Mermaid diagrams
-      if (!inline && match && match[1] === 'mermaid') {
-        return (
-          <div className="my-8 bg-gray-50 dark:bg-gray-800 rounded-md overflow-visible shadow-sm">
-            <Mermaid
-              chart={codeContent}
-              className="w-full max-w-full"
-            />
-          </div>
-        );
       }
 
       // Handle code blocks
