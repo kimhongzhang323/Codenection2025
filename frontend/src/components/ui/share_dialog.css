@@ -367,18 +367,27 @@
 }
 
 .share-dialog__done-btn {
-  background: #104464;
+  background: #e0f2fe;
   border: none;
   border-radius: 28px;
   padding: 10px 24px;
   font-size: 14px;
   font-weight: 400;
-  color: white;
+  color: #104464;
   cursor: pointer;
   transition: background-color 0.2s;
 }
 
 .share-dialog__done-btn:hover {
+  background: #bae6fd;
+}
+
+.dark .share-dialog__done-btn {
+  background: #104464;
+  color: white;
+}
+
+.dark .share-dialog__done-btn:hover {
   background: #0d3851;
 }
 
