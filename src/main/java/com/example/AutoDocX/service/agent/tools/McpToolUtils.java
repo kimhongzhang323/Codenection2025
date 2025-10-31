@@ -179,6 +179,10 @@ public class McpToolUtils {
     }
 
     public String searchNodes(Graph graph, String query, Integer limit) {
+        return searchNodes(graph, null, query, limit);
+    }
+
+    public String searchNodes(Graph graph, ClonedRepo repo, String query, Integer limit) {
         if (query == null || query.isBlank()) {
             return "Query must not be empty.";
         }
@@ -190,16 +194,29 @@ public class McpToolUtils {
             return "No nodes found for query '" + query + "'.";
         }
 
+        String loweredQuery = query.toLowerCase(Locale.ROOT);
         StringBuilder builder = new StringBuilder();
         for (GraphNode node : matches) {
+            boolean contentHit = false;
+            if (repo != null) {
+                contentHit = repoHandler.getCodeChunkSafe(repo, node.getId())
+                        .map(code -> code.toLowerCase(Locale.ROOT).contains(loweredQuery))
+                        .orElse(false);
+            }
+
             builder.append(node.getLabel())
                     .append(" (")
                     .append(node.getId())
                     .append(") [")
                     .append(node.getType())
                     .append("] - ")
-                    .append(Optional.ofNullable(node.getFilePath()).orElse("<unknown>"))
-                    .append("\n");
+                    .append(Optional.ofNullable(node.getFilePath()).orElse("<unknown>"));
+
+            if (contentHit) {
+                builder.append(" (content match)");
+            }
+
+            builder.append("\n");
         }
 
         if (resolvedLimit > 0 && matches.size() == resolvedLimit) {

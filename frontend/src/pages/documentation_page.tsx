@@ -5,7 +5,6 @@ import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { AnimatedThemeToggler } from '../components/theme'
 import { BottomMiniDialog } from '../components/ui/bottom_mini_dialog'
 import { useAIChat } from '../contexts/AIChatContext'
-import ToolsDropdown from '../components/ui/tools_dropdown'
 import SearchDialog from '../components/ui/search_dialog'
 import SuggestionPanel from '../components/ui/suggestion_panel'
 import ContextMenu from '../components/ui/context_menu'
@@ -21,7 +20,6 @@ import ExportDialog from '../components/ui/export_dialog'
 import EmbeddedChangelog from '../components/embedded_changelog'
 import EmbeddedFlowchart from '../components/embedded_flowchart'
 import { ExportIcon } from '../components/icons/export_icon'
-import DiscordNotificationConfig from '../components/ui/discord_notification_config'
 import { useAutoUpdate } from '../hooks/useAutoUpdate'
 import AutoUpdateNotification from '../components/ui/auto_update_notification'
 import type { GitHubCommit } from '../services/api'
@@ -132,7 +130,7 @@ function DocumentationPage() {
     // On larger screens, use saved preference or default to open
     return saved ? JSON.parse(saved) : false
   })
-  const { toggleChat, setRepositoryInfo } = useAIChat()
+  const { setRepositoryInfo } = useAIChat()
 
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [isSuggestionPanelOpen, setIsSuggestionPanelOpen] = useState(false)
@@ -152,20 +150,15 @@ function DocumentationPage() {
   const [isShareDialogOpen, setIsShareDialogOpen] = useState(false)
   const [isViewCodeDialogOpen, setIsViewCodeDialogOpen] = useState(false)
   const [isExportDialogOpen, setIsExportDialogOpen] = useState(false)
-  const [isDiscordConfigOpen, setIsDiscordConfigOpen] = useState(false)
-  const [isDiscordMonitoringActive, setIsDiscordMonitoringActive] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   
   // Auto-update functionality
   const [refreshKey, setRefreshKey] = useState(0)
   
   const {
-    isMonitoring,
     lastUpdate,
     newCommitsCount,
     latestCommits,
-    startMonitoring,
-    stopMonitoring,
     forceCheck,
     clearNotifications
   } = useAutoUpdate({
@@ -187,12 +180,9 @@ function DocumentationPage() {
     }
   })
 
-
   // GitHub webhook integration
-  const [isGitHubBotEnabled, setIsGitHubBotEnabled] = useState(false)
+  const [, setIsGitHubBotEnabled] = useState(false)
   
-
-
   useEffect(() => {
     // Set up GitHub webhook integration when repo URL is available
     if (githubHref !== '#') {
@@ -356,10 +346,6 @@ function DocumentationPage() {
     setIsSidebarCollapsed(newState)
     localStorage.setItem('sidebarCollapsed', JSON.stringify(newState))
   }, [isSidebarCollapsed])
-
-  const handleDiscordMonitoringStateChange = useCallback((isActive: boolean) => {
-    setIsDiscordMonitoringActive(isActive)
-  }, [])
 
   // Handle clicking on overlay to close sidebar on smaller screens
   const handleOverlayClick = () => {
@@ -549,36 +535,7 @@ function DocumentationPage() {
         </div>
       )}
 
-      {/* Tools Dropdown - Contains all tools */}
-      <div className="docs-tools-dropdown-container">
-        <ToolsDropdown 
-          onToggleSuggestions={() => setIsSuggestionPanelOpen(prev => !prev)}
-          isMonitoring={isMonitoring}
-          newCommitsCount={newCommitsCount}
-          onToggleAutoUpdate={() => {
-            if (isMonitoring) {
-              stopMonitoring()
-            } else {
-              startMonitoring()
-            }
-          }}
-          isGitHubBotEnabled={isGitHubBotEnabled}
-          onToggleGitHubBot={() => {
-            if (isGitHubBotEnabled) {
-              gitHubWebhookService.stopWebhookSimulation()
-              setIsGitHubBotEnabled(false)
-            } else {
-              if (githubHref !== '#') {
-                gitHubWebhookService.startWebhookSimulation(githubHref, 3)
-                setIsGitHubBotEnabled(true)
-              }
-            }
-          }}
-          isDiscordMonitoringActive={isDiscordMonitoringActive}
-          onOpenDiscordConfig={() => setIsDiscordConfigOpen(true)}
-          onToggleAIChat={toggleChat}
-        />
-      </div>
+      {/* Tools dropdown removed (user request) */}
 
       {/* View Code Button - Top Right Corner */}
       <div className="docs-view-code-button-container">
@@ -1002,16 +959,6 @@ function DocumentationPage() {
         onClose={() => setIsExportDialogOpen(false)}
         markdownContent=""
         documentationData={{}}
-      />
-
-      {/* Discord Notification Config Dialog */}
-      <DiscordNotificationConfig
-        isOpen={isDiscordConfigOpen}
-        onClose={() => setIsDiscordConfigOpen(false)}
-        repoUrl={githubHref}
-        repoName={repo || 'Repository'}
-        changelogUrl={`${window.location.origin}/changelog/${encodeURIComponent(githubHref)}`}
-        onMonitoringStateChange={handleDiscordMonitoringStateChange}
       />
 
       {/* Auto Update Notification */}
