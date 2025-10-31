@@ -36,16 +36,19 @@ DOCUMENTATION GENERATE STEPS:
         b) formatting & focus on eg. (usage, architecture, dependencies, purpose)
 3. Use `execute_plan` AFTER all sections have been completed. to run all those subtasks using dedicated agents.
     - Tips: avoid replacing original docs unless requested.
-4. use `get_summary` again to check the generated documentation.
+4. use `read_doc` to check the generated documentation, mention you want to check for errors or misalignment
+    - It does not have any context of the project, provide explicitly
+    - Use at least 4 sentences in the prompt
 4. Use the `modify_docs` to refine the NEW documentation, or merge it with EXISTING documentations (Optional).
 5. Respond to user's input, describing what you did in detail (the documentation is visible to user)
 
 DOCUMENTATION READ STEPS:
-1. use `get_summary(query)` to read the document (tell exactly what and why you want to read)
+1. use `read_doc` to read the document (tell exactly what and why you want to read)
+2. use `get_summary{prompt}` to check if doc content is outdated (Optional, takes longer time)
 2. Respond to user's input
 
 DOCUMENTATION EDIT STEPS:
-1. use `get_summary(query)` to read the document (tell exactly what and why you want to read)
+1. use `read_doc` to read the document (tell exactly what and why you want to read)
 2. use `modify_docs` to make changes (small changes one at a time to prevent hallucination)
 3. Respond to user's input, describing what you did in detail
 

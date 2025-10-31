@@ -425,7 +425,39 @@ public class McpToolUtils {
         return "OK: The document modification task was completed and the result was saved to '" + saveKey + "'.";
     }
 
-    public String readDoc(Session session, String key, int countdown) {
+    public String readDoc(Session session, String key, String focusPrompt) {
+        DocumentationHandler docHandler = documentHandlingService.getDocumentHandler(session);
+        String resolvedKey = (key == null || key.isBlank()) ? docHandler.getDefaultDocumentationKey() : key;
+        if (resolvedKey == null || resolvedKey.isBlank()) {
+            resolvedKey = docHandler.getMostRecentDocumentationKey();
+        }
+
+        if (resolvedKey == null || resolvedKey.isBlank()) {
+            throw new IllegalArgumentException("No documentation key provided and no default document available.");
+        }
+
+        Documentation doc = docHandler.get(resolvedKey);
+        if (doc == null) {
+            throw new IllegalArgumentException("Document with key '" + resolvedKey + "' not found.");
+        }
+
+        String documentContent = Optional.ofNullable(doc.getContent()).orElse("");
+        String directive = (focusPrompt == null || focusPrompt.isBlank())
+                ? "Provide a concise, high-signal summary of the document. Only include the most important takeaways."
+                : "Provide a concise, high-signal summary that focuses on: " + focusPrompt.trim() + ". Omit unrelated details.";
+
+        String prompt = "You are an expert technical summariser. Respond with a single tight paragraph or bullet list (under ~120 words).\n\n"
+                + directive + "\n\n"
+                + "--- DOCUMENT: " + resolvedKey + " ---\n"
+                + documentContent;
+
+        List<Content> contents = List.of(Content.builder().role("user").parts(Part.builder().text(prompt).build()).build());
+        SendMessageResult result = model.sendMessage(contents, List.of());
+
+        return result.getText().orElseThrow(() -> new RuntimeException("Model failed to generate the document summary."));
+    }
+
+    public String expandDoc(Session session, String key, int countdown) {
         DocumentationHandler docHandler = documentHandlingService.getDocumentHandler(session);
         docHandler.setExpandedCounter(key, countdown);
         return "OK: Document '" + key + "' will be expanded for the next " + countdown + " turns.";

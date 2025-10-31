@@ -365,7 +365,7 @@ public class McpToolKit {
 
         declarations.add(
             FunctionDeclaration.builder()
-                .name("read_doc")
+                .name("expand_doc")
                 .description("Expands a collapsed document for reading.")
                 .parameters(
                     Schema.builder()
@@ -385,6 +385,33 @@ public class McpToolKit {
                             )
                         )
                         .required(List.of("key", "countdown"))
+                        .build()
+                )
+                .build()
+        );
+
+        declarations.add(
+            FunctionDeclaration.builder()
+                .name("read_doc")
+                .description("Summarises a documentation entry with the LLM. Provide a prompt to steer what to focus on explicitly.")
+                .parameters(
+                    Schema.builder()
+                        .type(Type.Known.OBJECT)
+                        .properties(
+                            Map.of(
+                                "key",
+                                Schema.builder()
+                                    .type(Type.Known.STRING)
+                                    .description("The key of the documentation entry to summarise.")
+                                    .build(),
+                                "prompt",
+                                Schema.builder()
+                                    .type(Type.Known.STRING)
+                                    .description("Full sentence.Explicit focus or questions the summary must address. Use this to steer the LLM.")
+                                    .build()
+                            )
+                        )
+                        .required(List.of("key", "prompt"))
                         .build()
                 )
                 .build()
@@ -449,13 +476,13 @@ public class McpToolKit {
 
 
     public List<Tool> getExplorationTools() {
-        List<String> names = List.of("get_code", "find_neighbour_nodes", "search_node", "update_understanding", "read_doc");
+        List<String> names = List.of("get_code", "find_neighbour_nodes", "search_node", "update_understanding", "expand_doc");
         return buildTools(names);
     }
 
     // KISS: unified agent tools
     public List<Tool> getDocumentationAgentTools() {
-        List<String> names = List.of("get_summary", "add_plan", "execute_plan", "modify_docs"); //"replace_string_in_doc", "insert_edit_into_doc", "read_doc"
+        List<String> names = List.of("get_summary", "add_plan", "execute_plan", "read_doc", "modify_docs"); //"replace_string_in_doc", "insert_edit_into_doc", "expand_doc"
         return buildTools(names);
     }
 
@@ -498,6 +525,7 @@ public class McpToolKit {
                 case "replace_string_in_doc":
                 case "insert_edit_into_doc":
                 case "read_doc":
+                case "expand_doc":
                 case "modify_docs":
                     // handled internally; nothing to store synchronously here
                     break;
@@ -581,8 +609,16 @@ public class McpToolKit {
             }
             case "read_doc": {
                 String key = (String) paramsMap.get("key");
+                String prompt = (String) paramsMap.get("prompt");
+                String summary = mcpToolUtils.readDoc(context.getSession(), key, prompt);
+                String memoryKey = (key == null || key.isBlank()) ? "default" : key;
+                context.getSession().getMemory().getSummary().addEntry("read_doc{" + memoryKey + "}", summary);
+                return summary;
+            }
+            case "expand_doc": {
+                String key = (String) paramsMap.get("key");
 //                int countdown = ((Number) paramsMap.get("countdown")).intValue();
-                return mcpToolUtils.readDoc(context.getSession(), key, 1);//countdown);
+                return mcpToolUtils.expandDoc(context.getSession(), key, 1);//countdown);
             }
             case "get_modified_nodes": {
                 String docKey = (String) paramsMap.get("doc_key");
