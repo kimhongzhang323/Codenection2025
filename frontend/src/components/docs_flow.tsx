@@ -38,9 +38,11 @@ export default function DocumentationSystem({
   // Configuration state
   const [showConfigStep, setShowConfigStep] = useState(false);
   const [config, setConfig] = useState<DocumentConfig>({
-    audience: 'technical project managers',
-    tone: 'formal',
-    documentationTemplate: '# Project: {{projectName}}\n\n## Section: {{sectionName}}\n\n{{content}}',
+    audience: 'developers',
+    tone: 'professional',
+    depth: 'detailed',
+    format: 'markdown',
+    documentationTemplate: '',
     extra: {
       include_diagrams: 'true'
     }
@@ -129,7 +131,15 @@ export default function DocumentationSystem({
   };
 
   const handleOutlineSelect = (outline: SuggestedOutline) => {
-    setSelectedOutline(outline);
+    // Mark all blocks as accepted by default
+    const outlineWithDefaults = {
+      ...outline,
+      blocks: outline.blocks.map(block => ({
+        ...block,
+        accepted: true  // Accept by default for smoother UX
+      }))
+    };
+    setSelectedOutline(outlineWithDefaults);
   };
 
   const handleBlockAction = (blockId: string, action: 'accept' | 'reject' | 'edit') => {
@@ -245,10 +255,41 @@ export default function DocumentationSystem({
     });
   };
 
-  const finalizeOutline = () => {
+  const buildTemplateFromBlocks = (blocks: SuggestedBlock[], outlineTitle: string): string => {
+    const acceptedBlocks = blocks.filter(b => b.accepted);
+    
+    if (acceptedBlocks.length === 0) {
+      return `# {{projectName}}\n\n*No sections were selected for this documentation.*`;
+    }
+    
+    // Create template structure with actual content (not placeholders)
+    const sections = acceptedBlocks.map(block => 
+      `## ${block.title}\n\n${block.content}`
+    ).join('\n\n');
+    
+    return `# {{projectName}} - ${outlineTitle}\n\n${sections}`;
+  };
+
+  const finalizeOutline = async () => {
     if (!selectedOutline) return;
 
     const acceptedBlocks = selectedOutline.blocks.filter(block => block.accepted);
+
+    // Build template from selected blocks
+    const template = buildTemplateFromBlocks(selectedOutline.blocks, selectedOutline.title);
+    
+    // Save template to backend config using POST (not PATCH)
+    try {
+      const updatedConfig = {
+        ...config,
+        documentationTemplate: template
+      };
+      await configApi.set(repoUrl, 'main', updatedConfig);
+      console.log('Template saved successfully:', template);
+    } catch (error) {
+      console.error('Failed to save template to config:', error);
+      // Continue anyway - we'll use the template locally
+    }
 
     // Handle case when no sections are accepted
     if (acceptedBlocks.length === 0) {
@@ -540,8 +581,9 @@ export default function DocumentationSystem({
                   value={config.audience}
                   onChange={(e) => setConfig({ ...config, audience: e.target.value })}
                 >
-                  <option value="technical project managers">Technical Project Managers</option>
                   <option value="developers">Developers</option>
+                  <option value="technical project managers">Technical Project Managers</option>
+                  <option value="engineers">Engineers</option>
                   <option value="end users">End Users</option>
                   <option value="business stakeholders">Business Stakeholders</option>
                 </select>
@@ -554,10 +596,38 @@ export default function DocumentationSystem({
                   value={config.tone}
                   onChange={(e) => setConfig({ ...config, tone: e.target.value })}
                 >
+                  <option value="professional">Professional</option>
+                  <option value="concise">Concise</option>
                   <option value="formal">Formal</option>
                   <option value="casual">Casual</option>
                   <option value="technical">Technical</option>
                   <option value="friendly">Friendly</option>
+                </select>
+              </div>
+
+              <div className="config-field">
+                <label htmlFor="depth">Documentation Depth</label>
+                <select
+                  id="depth"
+                  value={config.depth || 'detailed'}
+                  onChange={(e) => setConfig({ ...config, depth: e.target.value })}
+                >
+                  <option value="brief">Brief</option>
+                  <option value="detailed">Detailed</option>
+                  <option value="comprehensive">Comprehensive</option>
+                </select>
+              </div>
+
+              <div className="config-field">
+                <label htmlFor="format">Output Format</label>
+                <select
+                  id="format"
+                  value={config.format || 'markdown'}
+                  onChange={(e) => setConfig({ ...config, format: e.target.value })}
+                >
+                  <option value="markdown">Markdown</option>
+                  <option value="html">HTML</option>
+                  <option value="plain">Plain Text</option>
                 </select>
               </div>
 

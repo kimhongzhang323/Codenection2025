@@ -107,6 +107,8 @@ export interface DocAgentRequest extends AgentRequest {
 export interface DocumentConfig {
   audience: string
   tone: string
+  depth?: string
+  format?: string
   documentationTemplate: string
   extra?: Record<string, unknown>
 }
