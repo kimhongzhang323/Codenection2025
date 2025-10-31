@@ -218,7 +218,7 @@ class GitHubWebhookService {
           for (const change of componentChanges) {
             await discordNotificationService.notifyComponentChange({
               ...change,
-              documentationUrl: `${window.location.origin}/${encodeURIComponent(repoUrl)}/documentation?branch=${branch}`
+              changelogUrl: `${window.location.origin}/changelog/${encodeURIComponent(repoUrl)}?branch=${branch}`
             })
           }
         }

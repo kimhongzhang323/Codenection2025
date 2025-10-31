@@ -368,7 +368,276 @@ export const userApi = {
   },
 }
 
+// Changelog API Service
+export const changelogApi = {
+  // Get commit history for a repository
+  async getCommits(gitUrl: string, branch = 'main', page = 1, perPage = 20): Promise<GitHubCommit[]> {
+    const { owner, name } = parseGitUrl(gitUrl)
+    const accessToken = localStorage.getItem('github_access_token')
+    
+    if (!accessToken) {
+      throw new Error('No GitHub access token available')
+    }
 
+    const response = await fetch(
+      `https://api.github.com/repos/${owner}/${name}/commits?sha=${branch}&page=${page}&per_page=${perPage}`, 
+      {
+        headers: {
+          'Authorization': `token ${accessToken}`,
+          'Accept': 'application/vnd.github.v3+json',
+        },
+      }
+    )
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch commits: ${response.statusText}`)
+    }
+
+    const commits: GitHubCommit[] = await response.json()
+    
+    // For the first page, fetch detailed stats for each commit
+    if (page === 1) {
+      const detailedCommits = await Promise.all(
+        commits.slice(0, Math.min(10, commits.length)).map(async (commit) => {
+          try {
+            const detailedCommit = await this.getCommit(gitUrl, commit.sha)
+            return detailedCommit
+          } catch (error) {
+            // If we can't get detailed info for a commit, return the basic info
+            console.warn(`Failed to get detailed info for commit ${commit.sha}:`, error)
+            return commit
+          }
+        })
+      )
+      
+      // Replace the first commits with detailed versions, keep the rest as basic
+      return [
+        ...detailedCommits,
+        ...commits.slice(detailedCommits.length)
+      ]
+    }
+    
+    return commits
+  },
+
+  // Search commits by message, author, or SHA
+  async searchCommits(gitUrl: string, query: string): Promise<GitHubCommit[]> {
+    const { owner, name } = parseGitUrl(gitUrl)
+    const accessToken = localStorage.getItem('github_access_token')
+    
+    if (!accessToken) {
+      throw new Error('No GitHub access token available')
+    }
+
+    const searchQuery = `repo:${owner}/${name} ${query}`
+    const response = await fetch(
+      `https://api.github.com/search/commits?q=${encodeURIComponent(searchQuery)}`, 
+      {
+        headers: {
+          'Authorization': `token ${accessToken}`,
+          'Accept': 'application/vnd.github.cloak-preview+json',
+        },
+      }
+    )
+
+    if (!response.ok) {
+      throw new Error(`Failed to search commits: ${response.statusText}`)
+    }
+
+    const data: GitHubCommitSearchResult = await response.json()
+    return data.items || []
+  },
+
+  // Validate repository access before making other API calls
+  async validateRepository(gitUrl: string): Promise<boolean> {
+    try {
+      const { owner, name } = parseGitUrl(gitUrl)
+      const accessToken = localStorage.getItem('github_access_token')
+      
+      if (!accessToken) {
+        throw new Error('No GitHub access token available')
+      }
+
+      const response = await fetch(
+        `https://api.github.com/repos/${owner}/${name}`,
+        {
+          headers: {
+            'Authorization': `token ${accessToken}`,
+            'Accept': 'application/vnd.github.v3+json',
+          },
+        }
+      )
+
+      if (response.ok) {
+        console.log(`Repository ${owner}/${name} is accessible`)
+        return true
+      } else {
+        console.error(`Repository ${owner}/${name} is not accessible: ${response.status} ${response.statusText}`)
+        return false
+      }
+    } catch (error) {
+      console.error('Error validating repository:', error)
+      return false
+    }
+  },
+
+  // Get detailed commit information
+  async getCommit(gitUrl: string, sha: string): Promise<GitHubCommit> {
+    const { owner, name } = parseGitUrl(gitUrl)
+    const accessToken = localStorage.getItem('github_access_token')
+    
+    if (!accessToken) {
+      throw new Error('No GitHub access token available')
+    }
+
+    // Validate SHA format
+    if (!sha || sha.length < 7) {
+      throw new Error(`Invalid commit SHA: "${sha}". SHA must be at least 7 characters long.`)
+    }
+
+    console.log(`Fetching commit ${sha} from repository ${owner}/${name}`);
+
+    const response = await fetch(
+      `https://api.github.com/repos/${owner}/${name}/commits/${sha}`, 
+      {
+        headers: {
+          'Authorization': `token ${accessToken}`,
+          'Accept': 'application/vnd.github.v3+json',
+        },
+      }
+    )
+
+    if (!response.ok) {
+      const errorText = await response.text()
+      console.error(`GitHub API Error ${response.status}:`, errorText)
+      console.error(`Request URL: https://api.github.com/repos/${owner}/${name}/commits/${sha}`)
+      
+      if (response.status === 422) {
+        throw new Error(`Invalid request to GitHub API. This usually means the repository "${owner}/${name}" doesn't exist, the commit SHA "${sha}" is invalid, or you don't have access to this repository.`)
+      } else if (response.status === 404) {
+        throw new Error(`Repository "${owner}/${name}" or commit "${sha}" not found.`)
+      } else if (response.status === 401 || response.status === 403) {
+        throw new Error(`Access denied to repository "${owner}/${name}". Please check your GitHub access token permissions.`)
+      } else {
+        throw new Error(`Failed to fetch commit: ${response.status} ${response.statusText}`)
+      }
+    }
+
+    return response.json()
+  },
+
+  // Get commit diffs
+  async getCommitDiffs(gitUrl: string, sha: string): Promise<Array<{ filename: string; status: string; additions: number; deletions: number; patch?: string }>> {
+    const { owner, name } = parseGitUrl(gitUrl)
+    const accessToken = localStorage.getItem('github_access_token')
+    
+    if (!accessToken) {
+      throw new Error('No GitHub access token available')
+    }
+
+    const response = await fetch(
+      `https://api.github.com/repos/${owner}/${name}/commits/${sha}`, 
+      {
+        headers: {
+          'Authorization': `token ${accessToken}`,
+          'Accept': 'application/vnd.github.v3+json',
+        },
+      }
+    )
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch commit diffs: ${response.statusText}`)
+    }
+
+    const commit: GitHubCommit = await response.json()
+    return commit.files || []
+  },
+
+  // Get commits filtered by author and date range
+  async getFilteredCommits(
+    gitUrl: string, 
+    filters: {
+      author?: string
+      since?: string
+      until?: string
+      branch?: string
+    }
+  ): Promise<GitHubCommit[]> {
+    const { owner, name } = parseGitUrl(gitUrl)
+    const accessToken = localStorage.getItem('github_access_token')
+    
+    if (!accessToken) {
+      throw new Error('No GitHub access token available')
+    }
+
+    const params = new URLSearchParams()
+    if (filters.author) params.append('author', filters.author)
+    if (filters.since) params.append('since', filters.since)
+    if (filters.until) params.append('until', filters.until)
+    if (filters.branch) params.append('sha', filters.branch)
+
+    const response = await fetch(
+      `https://api.github.com/repos/${owner}/${name}/commits?${params}`, 
+      {
+        headers: {
+          'Authorization': `token ${accessToken}`,
+          'Accept': 'application/vnd.github.v3+json',
+        },
+      }
+    )
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch filtered commits: ${response.statusText}`)
+    }
+
+    const commits: GitHubCommit[] = await response.json()
+    
+    // Fetch detailed stats for up to 10 commits
+    const detailedCommits = await Promise.all(
+      commits.slice(0, Math.min(10, commits.length)).map(async (commit) => {
+        try {
+          const detailedCommit = await this.getCommit(gitUrl, commit.sha)
+          return detailedCommit
+        } catch (error) {
+          console.warn(`Failed to get detailed info for commit ${commit.sha}:`, error)
+          return commit
+        }
+      })
+    )
+    
+    return [
+      ...detailedCommits,
+      ...commits.slice(detailedCommits.length)
+    ]
+  },
+
+  // Get repository branches
+  async getBranches(gitUrl: string): Promise<string[]> {
+    const { owner, name } = parseGitUrl(gitUrl)
+    const accessToken = localStorage.getItem('github_access_token')
+    
+    if (!accessToken) {
+      throw new Error('No GitHub access token available')
+    }
+
+    const response = await fetch(
+      `https://api.github.com/repos/${owner}/${name}/branches`, 
+      {
+        headers: {
+          'Authorization': `token ${accessToken}`,
+          'Accept': 'application/vnd.github.v3+json',
+        },
+      }
+    )
+
+    if (!response.ok) {
+      throw new Error(`Failed to fetch branches: ${response.statusText}`)
+    }
+
+    const branches: Array<{ name: string }> = await response.json()
+    return branches.map(branch => branch.name)
+  },
+}
 
 // Utility function to parse GitHub URL
 export function parseGitUrl(gitUrl: string): { owner: string; name: string } {

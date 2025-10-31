@@ -1,0 +1,248 @@
+.flowchart-page {
+  min-height: 100vh;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  padding: 2rem;
+}
+
+.flowchart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 2rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.flowchart-title h1 {
+  margin: 0 0 0.5rem 0;
+  font-size: 2rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.flowchart-subtitle {
+  margin: 0;
+  color: var(--text-secondary);
+  font-size: 1.1rem;
+}
+
+.flowchart-actions {
+  display: flex;
+  gap: 1rem;
+}
+
+.back-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  border: 1px solid var(--border-light);
+  border-radius: 0.375rem;
+  text-decoration: none;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.back-button:hover {
+  background: var(--bg-hover);
+  border-color: var(--border-dark);
+}
+
+.flowchart-content {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  gap: 2rem;
+  height: calc(100vh - 180px);
+}
+
+.diagram-selector {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-light);
+  border-radius: 0.5rem;
+  padding: 1.5rem;
+  height: fit-content;
+}
+
+.diagram-selector h3 {
+  margin: 0 0 1rem 0;
+  font-size: 1.2rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.diagram-tabs {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.diagram-tab {
+  display: block;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--border-light);
+  border-radius: 0.375rem;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-size: 0.9rem;
+}
+
+.diagram-tab:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+  border-color: var(--border-dark);
+}
+
+.diagram-tab.active {
+  background: var(--accent-blue);
+  color: white;
+  border-color: var(--accent-blue);
+}
+
+.diagram-container {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-light);
+  border-radius: 0.5rem;
+  padding: 1.5rem;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.diagram-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.diagram-header h2 {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.diagram-meta {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.diagram-type {
+  padding: 0.25rem 0.75rem;
+  background: var(--accent-green);
+  color: white;
+  border-radius: 1rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.diagram-content {
+  flex: 1;
+  min-height: 400px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: white;
+  border: 1px solid var(--border-light);
+  border-radius: 0.375rem;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+  overflow: auto;
+}
+
+.diagram-info {
+  border-top: 1px solid var(--border-light);
+  padding-top: 1rem;
+}
+
+.diagram-info p {
+  margin: 0 0 1rem 0;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.diagram-actions {
+  display: flex;
+  gap: 1rem;
+}
+
+.export-button {
+  padding: 0.5rem 1rem;
+  background: var(--accent-green);
+  color: white;
+  border: none;
+  border-radius: 0.375rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+}
+
+.export-button:hover {
+  background: var(--accent-green-dark);
+  transform: translateY(-1px);
+}
+
+/* Dark mode adjustments */
+[data-theme="dark"] .diagram-content {
+  background: var(--bg-primary);
+  border-color: var(--border-dark);
+}
+
+/* Responsive design */
+@media (max-width: 1024px) {
+  .flowchart-content {
+    grid-template-columns: 1fr;
+    gap: 1.5rem;
+  }
+  
+  .diagram-selector {
+    order: 2;
+  }
+  
+  .diagram-container {
+    order: 1;
+  }
+  
+  .diagram-tabs {
+    flex-direction: row;
+    flex-wrap: wrap;
+  }
+  
+  .diagram-tab {
+    flex: 1;
+    min-width: 120px;
+  }
+}
+
+@media (max-width: 768px) {
+  .flowchart-page {
+    padding: 1rem;
+  }
+  
+  .flowchart-header {
+    flex-direction: column;
+    gap: 1rem;
+    align-items: flex-start;
+  }
+  
+  .flowchart-title h1 {
+    font-size: 1.5rem;
+  }
+  
+  .diagram-content {
+    min-height: 300px;
+  }
+}

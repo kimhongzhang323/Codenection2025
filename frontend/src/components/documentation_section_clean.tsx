@@ -1,16 +1,12 @@
 import React, { useState, useEffect } from 'react'
 import Markdown from './markdown'
 import TableOfContents from './ui/table_of_content'
-import MarkdownEditor from './ui/markdown_editor'
 import { documentationApi } from '../services/api'
 
 interface DocumentationSectionProps {
-  section: 'overview' | 'quickstart' | 'requirements' | 'fullreadme'
+  section: 'overview' | 'quickstart' | 'requirements'
   githubHref: string
   showTOC: boolean
-  viewMode?: 'reading' | 'edit'
-  onContentLoaded?: (content: string, metadata?: Record<string, unknown>) => void
-  onContentChange?: (content: string) => void
 }
 
 interface ApiDocFile {
@@ -22,6 +18,7 @@ interface ApiResponse {
   [key: string]: ApiDocFile
 }
 
+// Helper functions moved outside component to avoid redeclaration
 const cleanContent = (content: string): string => {
   return content.replace(/\r\n/g, '\n').replace(/\r/g, '\n')
 }
@@ -32,6 +29,7 @@ const extractOverviewFromReadme = (readmeContent: string): string => {
   
   let overviewContent = '# Project Overview\n\n'
   
+  // Find overview or description section
   const overviewSection = sections.find(section => 
     section.toLowerCase().includes('overview') || 
     section.toLowerCase().includes('🚀 overview') ||
@@ -44,6 +42,7 @@ const extractOverviewFromReadme = (readmeContent: string): string => {
     overviewContent += `## ${sectionTitle}\n\n${sectionBody}\n\n`
   }
   
+  // Add key features
   const featuresSection = sections.find(section => 
     section.toLowerCase().includes('key features') ||
     section.toLowerCase().includes('features') ||
@@ -56,6 +55,7 @@ const extractOverviewFromReadme = (readmeContent: string): string => {
     overviewContent += `## ${sectionTitle}\n\n${sectionBody}\n\n`
   }
   
+  // Add architecture/tech stack
   const archSection = sections.find(section => 
     section.toLowerCase().includes('architecture') ||
     section.toLowerCase().includes('tech stack') ||
@@ -77,6 +77,7 @@ const extractQuickStartFromReadme = (readmeContent: string): string => {
   
   let quickStartContent = '# Quick Start Guide\n\n'
   
+  // Find quick start section
   const quickStartSection = sections.find(section => 
     section.toLowerCase().includes('quick start') ||
     section.toLowerCase().includes('getting started') ||
@@ -89,6 +90,7 @@ const extractQuickStartFromReadme = (readmeContent: string): string => {
     quickStartContent += `## ${sectionTitle}\n\n${sectionBody}\n\n`
   }
   
+  // Add prerequisites
   const prereqSection = sections.find(section => 
     section.toLowerCase().includes('prerequisites') ||
     section.toLowerCase().includes('requirements')
@@ -100,6 +102,7 @@ const extractQuickStartFromReadme = (readmeContent: string): string => {
     quickStartContent += `## ${sectionTitle}\n\n${sectionBody}\n\n`
   }
   
+  // Add environment configuration
   const envSection = sections.find(section => 
     section.toLowerCase().includes('environment') ||
     section.toLowerCase().includes('configuration')
@@ -120,6 +123,7 @@ const extractRequirementsFromReadme = (readmeContent: string): string => {
   
   let requirementsContent = '# System Requirements\n\n'
   
+  // Find prerequisites section
   const prereqSection = sections.find(section => 
     section.toLowerCase().includes('prerequisites') ||
     section.toLowerCase().includes('requirements')
@@ -131,6 +135,7 @@ const extractRequirementsFromReadme = (readmeContent: string): string => {
     requirementsContent += `## ${sectionTitle}\n\n${sectionBody}\n\n`
   }
   
+  // Add tech stack as requirements
   const techSection = sections.find(section => 
     section.toLowerCase().includes('tech stack') ||
     section.toLowerCase().includes('technology') ||
@@ -142,6 +147,7 @@ const extractRequirementsFromReadme = (readmeContent: string): string => {
     requirementsContent += `## Technology Stack\n\n${sectionBody}\n\n`
   }
   
+  // Add project structure as additional info
   const structureSection = sections.find(section => 
     section.toLowerCase().includes('project structure') ||
     section.toLowerCase().includes('structure') ||
@@ -159,6 +165,7 @@ const extractRequirementsFromReadme = (readmeContent: string): string => {
 
 const parseSectionFromApiResponse = (apiResponse: ApiResponse, targetSection: string): string => {
   try {
+    // Get README content first for primary source
     const readmeFile = apiResponse['README.md']
     const readmeContent = readmeFile?.content || ''
 
@@ -166,6 +173,7 @@ const parseSectionFromApiResponse = (apiResponse: ApiResponse, targetSection: st
       if (readmeContent) {
         return extractOverviewFromReadme(readmeContent)
       }
+      // Fallback to overview.md if available
       const overviewFile = apiResponse['frontend\\src\\pages\\docs\\overview.md'] || 
                            apiResponse['frontend/src/pages/docs/overview.md']
       if (overviewFile?.content) {
@@ -177,6 +185,7 @@ const parseSectionFromApiResponse = (apiResponse: ApiResponse, targetSection: st
       if (readmeContent) {
         return extractQuickStartFromReadme(readmeContent)
       }
+      // Fallback to quickstart.md if available
       const quickstartFile = apiResponse['frontend\\src\\pages\\docs\\quickstart.md'] || 
                              apiResponse['frontend/src/pages/docs/quickstart.md']
       if (quickstartFile?.content) {
@@ -188,38 +197,11 @@ const parseSectionFromApiResponse = (apiResponse: ApiResponse, targetSection: st
       if (readmeContent) {
         return extractRequirementsFromReadme(readmeContent)
       }
+      // Fallback to requirements.md if available
       const requirementsFile = apiResponse['frontend\\src\\pages\\docs\\requirements.md'] || 
                                apiResponse['frontend/src/pages/docs/requirements.md']
       if (requirementsFile?.content) {
         return cleanContent(requirementsFile.content)
-      }
-    }
-    
-    else if (targetSection === 'fullreadme') {
-      if (readmeContent) {
-        const cleanedContent = cleanContent(readmeContent)
-        // Ensure the content starts with an H1 header for button rendering
-        if (!cleanedContent.trim().startsWith('#')) {
-          return `# Full README\n\n${cleanedContent}`
-        }
-        return cleanedContent
-      }
-      
-      // If no README.md, generate comprehensive documentation from all files
-      const allContent: string[] = []
-      
-      Object.entries(apiResponse).forEach(([key, file]) => {
-        if (file?.content) {
-          const title = key.replace(/\.(md|txt)$/i, '').split(/[-_]/).map(word => 
-            word.charAt(0).toUpperCase() + word.slice(1)
-          ).join(' ')
-          
-          allContent.push(`## ${title}\n\n${cleanContent(file.content)}`)
-        }
-      })
-      
-      if (allContent.length > 0) {
-        return allContent.join('\n\n---\n\n')
       }
     }
     
@@ -233,16 +215,13 @@ const parseSectionFromApiResponse = (apiResponse: ApiResponse, targetSection: st
 const getSectionFallbackContent = (sectionName: string): string => {
   switch (sectionName) {
     case 'overview':
-      return '# Project Overview\n\nWelcome to the project overview.\n\n## Description\n\nThis is a comprehensive documentation system.\n\n## Key Features\n\n- Interactive documentation\n- Code analysis\n- File tree navigation\n- Export functionality\n- AI-powered summaries'
+      return `# Project Overview\n\nWelcome to the project overview. This section provides a high-level introduction to the project.\n\n## Description\n\nThis is a comprehensive documentation system that allows you to explore and understand codebases.\n\n## Key Features\n\n- Interactive documentation\n- Code analysis\n- File tree navigation\n- Export functionality\n- AI-powered summaries`
     
     case 'quickstart':
-      return '# Quick Start Guide\n\nGet up and running with the project quickly.\n\n## Prerequisites\n\n- Node.js (v16 or higher)\n- Java 11 or higher\n- Maven\n\n## Installation\n\n1. Clone the repository\n2. Install dependencies\n3. Configure environment\n4. Run the application'
+      return `# Quick Start Guide\n\nGet up and running with the project quickly.\n\n## Prerequisites\n\n- Node.js (v16 or higher)\n- Java 11 or higher\n- Maven\n\n## Installation\n\n1. Clone the repository\n2. Install dependencies\n3. Configure environment\n4. Run the application`
     
     case 'requirements':
-      return '# System Requirements\n\nSystem requirements and dependencies for the project.\n\n## Software Requirements\n\n- Node.js v16+\n- Java 11+\n- Maven 3.6+\n\n## Hardware Requirements\n\n- Minimum 4GB RAM\n- 2GB available disk space'
-    
-    case 'fullreadme':
-      return '# Full Documentation\n\nComplete documentation and README content.\n\n## Project Overview\n\nThis is the main documentation for the project.\n\n## Getting Started\n\nTo get started with this project, please refer to the installation and setup instructions.\n\n## Features\n\n- Comprehensive documentation system\n- Interactive file exploration\n- Code analysis and visualization\n- Export functionality'
+      return `# System Requirements\n\nSystem requirements and dependencies for the project.\n\n## Software Requirements\n\n- Node.js v16+\n- Java 11+\n- Maven 3.6+\n\n## Hardware Requirements\n\n- Minimum 4GB RAM\n- 2GB available disk space`
     
     default:
       return `# ${sectionName.charAt(0).toUpperCase() + sectionName.slice(1)}\n\nContent for this section is being prepared.`
@@ -252,61 +231,34 @@ const getSectionFallbackContent = (sectionName: string): string => {
 const DocumentationSection: React.FC<DocumentationSectionProps> = ({ 
   section, 
   githubHref, 
-  showTOC,
-  viewMode = 'reading',
-  onContentLoaded,
-  onContentChange 
+  showTOC 
 }) => {
   const [content, setContent] = useState<string>('')
   const [isLoading, setIsLoading] = useState(true)
-  const [editedContent, setEditedContent] = useState<string>('')
-
-  const handleContentChange = (newContent: string) => {
-    setEditedContent(newContent)
-    onContentChange?.(newContent)
-  }
 
   useEffect(() => {
-    // Reset content immediately when section changes
-    setContent('')
-    setIsLoading(true)
-
     const loadSectionContent = async () => {
+      setIsLoading(true)
       try {
-        console.log(`[DocumentationSection] Loading ${section} content from:`, githubHref)
+        // Load documentation from API
         const docs = await documentationApi.getAll(githubHref)
-        console.log(`[DocumentationSection] API response for ${section}:`, docs)
         const parsedContent = parseSectionFromApiResponse(docs, section)
-        console.log(`[DocumentationSection] Parsed content for ${section}:`, parsedContent.substring(0, 200) + '...')
         setContent(parsedContent)
-        setEditedContent(parsedContent)
-        onContentLoaded?.(parsedContent)
       } catch (error) {
         console.error(`Error loading ${section} content:`, error)
-        const fallbackContent = getSectionFallbackContent(section)
-        setContent(fallbackContent)
-        setEditedContent(fallbackContent)
-        onContentLoaded?.(fallbackContent)
+        setContent(getSectionFallbackContent(section))
       } finally {
         setIsLoading(false)
       }
     }
 
     if (githubHref && githubHref !== '#') {
-      // Add a small delay to ensure the loading state is visible
-      const timeoutId = setTimeout(() => {
-        loadSectionContent()
-      }, 50)
-      
-      return () => clearTimeout(timeoutId)
+      loadSectionContent()
     } else {
-      const fallbackContent = getSectionFallbackContent(section)
-      setContent(fallbackContent)
-      setEditedContent(fallbackContent)
-      onContentLoaded?.(fallbackContent)
+      setContent(getSectionFallbackContent(section))
       setIsLoading(false)
     }
-  }, [section, githubHref, onContentLoaded])
+  }, [section, githubHref])
 
   if (isLoading) {
     return (
@@ -327,16 +279,8 @@ const DocumentationSection: React.FC<DocumentationSectionProps> = ({
 
   return (
     <div className="documentation-section">
-      {viewMode === 'edit' ? (
-        <MarkdownEditor
-          content={editedContent}
-          onContentChange={handleContentChange}
-          placeholder={`Edit ${section} documentation...`}
-        />
-      ) : (
-        <Markdown content={content} />
-      )}
-      {showTOC && viewMode !== 'edit' && <TableOfContents content={content} />}
+      <Markdown content={content} repoUrl={githubHref} />
+      {showTOC && <TableOfContents content={content} />}
     </div>
   )
 }

@@ -6,8 +6,10 @@ import { CheckIcon } from './components/icons/check_icon'
 import { ArrowRightIcon } from './components/icons/arrow_icon'
 import { LinkIcon } from './components/icons/url_icon'
 import DocumentationPage from './pages/documentation_page'
+import CommitDetailPage from './pages/commit_detail_page'
 import SignUpPage from './pages/signup_page'
 import SignInPage from './pages/signin_page'
+import TracingPage from './pages/tracing_page'
 import OAuthCallback from './components/oauth_callback'
 import UserProfile from './components/user_profile'
 import TextSelectionDialog from './components/ui/text_selection_dialog'
@@ -293,13 +295,44 @@ function HomePage() {
   )
 }
 
+function DocsFlowPage() {
+  const location = useLocation() as { state?: { repoData?: GithubRepoDetails; repoUrl?: string } }
+  const navigate = useNavigate()
+  const { repo } = useParams<{ repo: string }>()
+  const repoData = location.state?.repoData
+  const repoUrl = location.state?.repoUrl
+
+  const handleDocumentationCreated = () => {
+    // Navigate to the actual documentation page
+    if (repo) {
+      navigate(`/${repo}`, {
+        state: { repoData, repoUrl },
+      })
+    }
+  }
+
+  const handleBackToApp = () => {
+    // Navigate back to home page
+    navigate('/')
+  }
+
+  return (
+    <DocumentationSystem
+      onDocumentationCreated={handleDocumentationCreated}
+      onBackToApp={handleBackToApp}
+      repoUrl={repoUrl || ''}
+    />
+  )
+}
+
 function App() {
   const location = useLocation()
   
   // Determine if we're on a documentation page
   const isDocumentationPage = 
     location.pathname === '/documentation' ||
-
+    location.pathname.includes('/changelog') ||
+    location.pathname.includes('/flowchart') ||
     location.pathname.includes('/documentation') ||
     location.pathname.includes('/docs/') ||
     // Match routes like /:repo and /:repo/:file but exclude specific non-doc pages
@@ -320,7 +353,12 @@ function App() {
         <Route path="/sign-in" element={<SignInPage />} />
         <Route path="/dashboard" element={<HomePage />} />
         <Route path="/auth/callback" element={<OAuthCallback />} />
+        <Route path="/tracing" element={<TracingPage />} />
+        <Route path="/docs-flow/:repo" element={<DocsFlowPage />} />
 
+        <Route path="/:repo/commit/:sha" element={<CommitDetailPage />} />
+        <Route path="/:repo/changelog" element={<DocumentationPage />} />
+        <Route path="/:repo/flowchart" element={<DocumentationPage />} />
         <Route path="/:repo/documentation" element={<DocumentationPage />} />
         <Route path="/:repo/docs/overview" element={<DocumentationPage />} />
         <Route path="/:repo/docs/quickstart" element={<DocumentationPage />} />

@@ -208,7 +208,7 @@ class AutoUpdateMonitor {
     try {
       console.log(`Checking for updates in ${repoUrl} (branch: ${config.branch})`)
       
-      const commits = await githubApi.getCommits(repoUrl, config.branch, 1, 10)
+      const commits = await changelogApi.getCommits(repoUrl, config.branch, 1, 10)
       
       if (commits.length === 0) {
         console.log(`No commits found in ${repoUrl}`)
