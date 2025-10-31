@@ -284,7 +284,12 @@ export const AIChatPanel: React.FC = () => {
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
             onKeyDown={(e) => {
-              if (e.key === 'Enter' && !e.shiftKey) {
+              if (e.key === 'Enter' && e.shiftKey) {
+                // Shift+Enter: allow new line (default behavior)
+                return
+              }
+              if (e.key === 'Enter') {
+                // Enter alone: send message
                 e.preventDefault()
                 handleSendMessage()
               }

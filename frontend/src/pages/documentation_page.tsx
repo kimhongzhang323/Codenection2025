@@ -427,6 +427,20 @@ function DocumentationPage() {
     }
   }, [githubHref, selectedDocKey])
 
+  // Handle Esc key to exit edit mode
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isEditMode) {
+        setIsEditMode(false)
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [isEditMode])
+
   // Determine encoded repo slug for routing back to repo root
   const repoSlug = (() => {
     if (repo) return repo
@@ -994,7 +1008,9 @@ function DocumentationPage() {
                     placeholder="Start editing your documentation..."
                   />
                 ) : (
-                  <Markdown content={editedContent || documents[selectedDocKey]?.content || ''} />
+                  <div onDoubleClick={() => !isAgentActive && setIsEditMode(true)}>
+                    <Markdown content={editedContent || documents[selectedDocKey]?.content || ''} />
+                  </div>
                 )}
               </div>
             ) : (
