@@ -69,8 +69,13 @@ public class GeminiCentral implements Model {
             GeminiModel model = geminiModels.get(apiKey);
             SendMessageResult result = model.sendMessage(contents, tools);
 
-            if (result.getModelFinishReason() != ModelFinishReason.OUTPUT_ERROR &&
-                    !result.getErrorMessage().map(m -> m.contains("token exceeded")).orElse(false)) {
+            // Check if error message contains retryable errors
+            boolean isRetryableError = result.getErrorMessage()
+                    .map(msg -> msg.toLowerCase().contains("token exceeded") || 
+                                msg.toLowerCase().contains("overloaded"))
+                    .orElse(false);
+
+            if (result.getModelFinishReason() != ModelFinishReason.OUTPUT_ERROR || !isRetryableError) {
                 long tokens = result.getTotalTokens();
                 tokenUsage.get(apiKey).addAndGet(tokens);
                 logger.info("GeminiModel[{}]: api:{}...: tokens: {}", apiKeyIndex, apiKey.substring(0, 10), tokens);
@@ -79,7 +84,7 @@ public class GeminiCentral implements Model {
                 // Penalize the failing key to take it out of rotation for a while.
                 tokenUsage.get(apiKey).addAndGet(FAILURE_PENALTY);
                 String err = result.getErrorMessage().orElse("unknown");
-                logger.warn("GeminiModel[{}]: api:{}...: FAIL reason={} finishReason={}", apiKeyIndex, apiKey.substring(0, 10), err, result.getModelFinishReason());
+                logger.warn("GeminiModel[{}]: api:{}...: FAIL reason={} finishReason={} - retrying with different key", apiKeyIndex, apiKey.substring(0, 10), err, result.getModelFinishReason());
             }
         }
         return new SendMessageResult(
