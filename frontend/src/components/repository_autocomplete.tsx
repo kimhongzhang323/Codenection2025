@@ -17,7 +17,7 @@ export default function RepositoryAutocomplete({
   onChange,
   onSelect,
   onValidate,
-  placeholder = "Paste a Github repository URL to start",
+  placeholder = "Paste a GitHub URL or owner/repo to start",
   className = ""
 }: RepositoryAutocompleteProps) {
   const { isAuthenticated } = useAuth()

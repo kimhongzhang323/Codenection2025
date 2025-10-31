@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Routes, Route, useNavigate, useLocation, useParams } from 'react-router-dom'
-import { checkGithubUrlPublic, fetchGithubRepoDetails, type GithubRepoDetails } from './lib/utils'
+import { checkGithubUrlPublic, fetchGithubRepoDetails, normalizeGithubRepoUrl, type GithubRepoDetails } from './lib/utils'
 import { XIcon } from './components/icons/close_icon'
 import { CheckIcon } from './components/icons/check_icon'
 import { ArrowRightIcon } from './components/icons/arrow_icon'
@@ -153,13 +153,16 @@ function HomePage() {
     if (repoData) {
       const slug = (repoData.fullName || '').toLowerCase()
       
+      // Normalize the repoUrl to ensure consistency
+      const normalizedUrl = normalizeGithubRepoUrl(repoUrl) || repoUrl
+      
       // Trigger model warmup in background (don't wait for result)
-      agentApi.runGeneralSummary(repoUrl, 'main').catch(err => {
+      agentApi.runGeneralSummary(normalizedUrl, 'main').catch(err => {
         console.warn('Model warmup failed:', err)
       })
       
       navigate(`/docs-flow/${encodeURIComponent(slug)}`, {
-        state: { repoData, repoUrl },
+        state: { repoData, repoUrl: normalizedUrl },
       })
     }
   }
@@ -173,8 +176,22 @@ function HomePage() {
     setIsSuccess(false)
     
     try {
+      // Normalize the URL first (supports both "owner/repo" and full URLs)
+      const normalizedUrl = normalizeGithubRepoUrl(repoUrl)
+      
+      if (!normalizedUrl) {
+        setIsError(true)
+        setShowTooltip(true)
+        setIsLoading(false)
+        setIsValidating(false)
+        return
+      }
+      
+      // Update repoUrl with normalized version
+      setRepoUrl(normalizedUrl)
+      
       // Check if URL is valid GitHub URL
-      const result = await checkGithubUrlPublic(repoUrl)
+      const result = await checkGithubUrlPublic(normalizedUrl)
       
       if (result.valid && result.repo) {
         // Public repo - fetch details and show success
@@ -234,7 +251,7 @@ function HomePage() {
       </div>
       <img src="/logo.png" alt="App logo" className="home__logo" />
       <h1 className="home__title">AutoDocX</h1>
-      <p className="home__subtitle">Enter your GitHub repository URL to get started</p>
+      <p className="home__subtitle">Enter your GitHub repository URL or owner/repo to get started</p>
       <div className="home__input-wrapper">
         <LinkIcon className="home__input-icon--left" size={16} />
         <RepositoryAutocomplete
@@ -250,8 +267,8 @@ function HomePage() {
           onSelect={handleRepositorySelect}
           onValidate={handleValidateUrl}
           placeholder={isAuthenticated 
-            ? "Search repositories or paste a Github repository URL" 
-            : "Paste a Github repository URL to start"}
+            ? "Search repositories or paste URL/owner/repo" 
+            : "Paste a GitHub URL or owner/repo to start"}
           className="home__input"
         />
         {isError ? (

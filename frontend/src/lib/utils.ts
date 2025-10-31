@@ -11,10 +11,21 @@ export interface GithubRepoRef {
   name: string;
 }
 
-// Parse a GitHub repository URL into a GithubRepoRef. Returns null if invalid.
+// Parse a GitHub repository URL or owner/repo string into a GithubRepoRef. Returns null if invalid.
 export function parseGithubRepoUrl(input: string): GithubRepoRef | null {
   if (!input) return null;
 
+  // First, try to parse as "owner/repo" format (raw text)
+  const rawMatch = input.trim().match(/^([a-zA-Z0-9_-]+)\/([a-zA-Z0-9_.-]+?)(?:\.git)?$/);
+  if (rawMatch) {
+    const owner = rawMatch[1];
+    const name = rawMatch[2];
+    if (owner && name) {
+      return { owner, name };
+    }
+  }
+
+  // If not raw format, try parsing as URL
   try {
     const url = new URL(input);
     const hostname = url.hostname.toLowerCase();
@@ -40,8 +51,19 @@ export function parseGithubRepoUrl(input: string): GithubRepoRef | null {
 
     return { owner, name };
   } catch {
+    // Not a valid URL, return null
     return null;
   }
+}
+
+// Normalize GitHub repository input to standard URL format
+// Converts "owner/repo" → "https://github.com/owner/repo"
+// Keeps full URLs as-is
+export function normalizeGithubRepoUrl(input: string): string | null {
+  const parsed = parseGithubRepoUrl(input);
+  if (!parsed) return null;
+  
+  return `https://github.com/${parsed.owner}/${parsed.name}`;
 }
 
 // Check via GitHub API whether a repo exists and is public.
