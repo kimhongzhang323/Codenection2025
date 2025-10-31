@@ -62,7 +62,40 @@ function DocumentationPage() {
     }
     return true // Default to dark mode
   })
-  const [activeLabel, setActiveLabel] = useState<string | null>(null)
+  // Compute initial active label from current pathname to avoid flashing the welcome screen
+  const computeInitialActiveLabel = (): string | null => {
+    try {
+      const pathname = (location && location.pathname ? location.pathname : window.location.pathname).replace(/\/+/g, '/')
+      const parts = pathname.replace(/\/+$/, '').split('/').filter(Boolean)
+      const repoPart = parts[0]
+      const filePart = parts[1]
+
+      if (repoPart && !filePart) {
+        // Default to showing the first documentation file instead of the welcome screen
+        return 'Overview'
+      }
+
+      if (filePart) {
+        const targetSlug = filePart.toLowerCase()
+        if (targetSlug === 'changelog') return 'Changelog'
+        if (targetSlug === 'flowchart') return 'System Diagrams'
+        if (targetSlug === 'documentation') return 'Main Documentation'
+        if (targetSlug === 'docs') {
+          const docsIndex = parts.indexOf('docs')
+          const subSection = parts[docsIndex + 1]
+          if (subSection === 'overview') return 'Overview'
+          if (subSection === 'quickstart') return 'Quick Start'
+          if (subSection === 'requirements') return 'Requirements'
+        }
+      }
+    } catch (err) {
+      // If anything goes wrong, fall back to null so the existing effects handle it
+      console.error('computeInitialActiveLabel error', err)
+    }
+    return null
+  }
+
+  const [activeLabel, setActiveLabel] = useState<string | null>(computeInitialActiveLabel)
   const [viewMode, setViewMode] = useState<'reading' | 'edit'>('reading')
   const [documentationContent, setDocumentationContent] = useState<string>('')
   
@@ -252,11 +285,18 @@ function DocumentationPage() {
       currentActiveLabel: activeLabel
     })
 
-    // Handle root repo path - show welcome screen
+    // Handle root repo path - navigate directly to first documentation file (Overview)
     if (repoPart && !filePart) {
-      console.log('Setting activeLabel to Welcome (root path)')
-      setActiveLabel('Welcome')
-      setRefreshKey(prev => prev + 1) // Force refresh
+      try {
+        const target = `/${repoPart}/docs/overview`
+        console.log('No file specified; redirecting to first documentation page:', target)
+        // Use replace to avoid adding an extra history entry for the welcome page
+        navigate(target, { state: location.state, replace: true })
+      } catch (err) {
+        console.error('Redirect to overview failed, falling back to welcome state', err)
+        setActiveLabel('Welcome')
+        setRefreshKey(prev => prev + 1) // Force refresh
+      }
       return
     }
 
