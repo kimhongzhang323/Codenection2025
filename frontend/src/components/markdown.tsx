@@ -8,6 +8,7 @@ import Mermaid from './mermaid.tsx';
 import FilesRenderer from './files_renderer';
 import Callout from './ui/callout';
 import CopyMarkdownButton from './ui/copy_markdown_button';
+import TldrButton from './ui/tldr_button';
 import './markdown.css';
 import { CopyIcon, type CopyIconHandle } from './icons/copy_icon';
 
@@ -114,6 +115,13 @@ const Markdown: React.FC<MarkdownProps> = ({ content }) => {
           </h1>
           <div style={{ marginTop: '0.9rem', marginBottom: '1rem', display: 'flex', gap: '16px', alignItems: 'center' }}>
             <CopyMarkdownButton content={raw} />
+            <TldrButton onClick={() => {
+              console.log('[Markdown] TL;DR button clicked for content:', raw.substring(0, 100))
+              // Dispatch a custom event that can be caught by parent components
+              window.dispatchEvent(new CustomEvent('tldr-requested', { 
+                detail: { content: raw } 
+              }))
+            }} />
           </div>
         </div>
       );

@@ -1,11 +1,13 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
-import { githubApi, userApi, type GitHubRepository } from '../services/api'
+import { githubApi, type GitHubRepository } from '../services/api'
+import { useAuth } from '../services/auth'
 import './ui/repository_autocomplete.css'
 
 interface RepositoryAutocompleteProps {
   value: string
   onChange: (value: string) => void
   onSelect: (repository: GitHubRepository) => void
+  onValidate?: () => void
   placeholder?: string
   className?: string
 }
@@ -14,9 +16,11 @@ export default function RepositoryAutocomplete({
   value,
   onChange,
   onSelect,
-  placeholder = "https://github.com/owner/repo",
+  onValidate,
+  placeholder = "Paste a Github repository URL to start",
   className = ""
 }: RepositoryAutocompleteProps) {
+  const { isAuthenticated } = useAuth()
   const [isOpen, setIsOpen] = useState(false)
   const [repositories, setRepositories] = useState<GitHubRepository[]>([])
   const [filteredRepos, setFilteredRepos] = useState<GitHubRepository[]>([])
@@ -30,37 +34,25 @@ export default function RepositoryAutocomplete({
 
   // Extracted loadRepositories function to reuse
   const loadRepositories = useCallback(async () => {
+    // Only load if user is authenticated
+    if (!isAuthenticated) {
+      setError('Sign in to search your repositories')
+      return
+    }
+
     try {
       setIsLoading(true)
       setError(null)
       
       // Check if GitHub access token is available
-      let accessToken = localStorage.getItem('github_access_token')
+      const accessToken = localStorage.getItem('github_access_token')
       if (!accessToken) {
-        // Try to fetch user data first to get the GitHub token
-        try {
-          await userApi.getCurrentUser()
-          // Token should now be available
-          accessToken = localStorage.getItem('github_access_token')
-          if (!accessToken) {
-            // Fallback: Use personal access token from environment variable
-            // In production, this should be handled through proper OAuth2 flow
-            accessToken = import.meta.env.VITE_GITHUB_ACCESS_TOKEN || ''
-            if (accessToken) {
-              localStorage.setItem('github_access_token', accessToken)
-              console.log('Using fallback personal access token from environment')
-            }
-          }
-        } catch (err) {
-          console.warn('Failed to get user data:', err)
-          // Still try fallback token
-          accessToken = ''
-          localStorage.setItem('github_access_token', accessToken)
-          console.log('Using fallback personal access token after user fetch failed')
-        }
+        setError('Sign in with GitHub to access your repositories')
+        setIsLoading(false)
+        return
       }
 
-      // Now fetch repositories with the available token
+      // Fetch repositories with the available token
       const repos = await githubApi.getUserRepositories()
       setRepositories(repos)
     } catch (err) {
@@ -69,15 +61,10 @@ export default function RepositoryAutocomplete({
     } finally {
       setIsLoading(false)
     }
-  }, [])
+  }, [isAuthenticated])
 
-  // Load user repositories on component mount (only if GitHub token is already available)
-  useEffect(() => {
-    const accessToken = localStorage.getItem('github_access_token')
-    if (accessToken) {
-      loadRepositories()
-    }
-  }, [loadRepositories])
+  // Don't auto-load repositories on mount - only load when user focuses the input
+  // This prevents unnecessary API calls when user is not authenticated
 
   // Filter repositories based on input value
   useEffect(() => {
@@ -97,6 +84,11 @@ export default function RepositoryAutocomplete({
 
   // Handle input focus - show dropdown
   const handleFocus = () => {
+    // Only show dropdown with repositories if user is authenticated
+    if (!isAuthenticated) {
+      return
+    }
+    
     setIsOpen(true)
     
     // If repositories haven't been loaded yet and no error, try loading them
@@ -116,14 +108,30 @@ export default function RepositoryAutocomplete({
 
   // Handle keyboard navigation
   const handleKeyDown = (e: React.KeyboardEvent) => {
+    // Handle Enter key even when dropdown is closed (for unauthenticated users pasting URLs)
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      if (isOpen && selectedIndex >= 0 && filteredRepos[selectedIndex]) {
+        // Repo selected from dropdown
+        handleRepositorySelect(filteredRepos[selectedIndex])
+      } else if (value.trim() && onValidate) {
+        // User pasted URL or typed - validate it
+        onValidate()
+        setIsOpen(false)
+      }
+      return
+    }
+
+    // Dropdown not open - only handle ArrowDown to open it
     if (!isOpen) {
-      if (e.key === 'ArrowDown') {
+      if (e.key === 'ArrowDown' && isAuthenticated) {
         e.preventDefault()
         setIsOpen(true)
       }
       return
     }
 
+    // Dropdown is open - handle navigation
     switch (e.key) {
       case 'ArrowDown':
         e.preventDefault()
@@ -134,12 +142,6 @@ export default function RepositoryAutocomplete({
       case 'ArrowUp':
         e.preventDefault()
         setSelectedIndex(prev => prev > 0 ? prev - 1 : -1)
-        break
-      case 'Enter':
-        e.preventDefault()
-        if (selectedIndex >= 0 && filteredRepos[selectedIndex]) {
-          handleRepositorySelect(filteredRepos[selectedIndex])
-        }
         break
       case 'Escape':
         e.preventDefault()

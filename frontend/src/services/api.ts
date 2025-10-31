@@ -1,7 +1,9 @@
 import { authService } from './auth';
 
 // API Configuration
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8081/api'
+import { API_CONFIG } from '../config/api'
+
+const API_BASE_URL = API_CONFIG.API_BASE_URL
 
 // Helper function to get authenticated headers
 const getAuthHeaders = (): Record<string, string> => {
@@ -349,15 +351,18 @@ export const userApi = {
       throw new Error(`Failed to fetch user: ${response.statusText}`)
     }
 
-    const userData = await response.json()
+    const result = await response.json()
+    
+    // Extract user data from the response
+    const userData = result.data?.user || result.user
     
     // Store GitHub access token if available
-    if (userData.user?.accessToken) {
-      localStorage.setItem('github_access_token', userData.user.accessToken)
+    if (userData?.accessToken) {
+      localStorage.setItem('github_access_token', userData.accessToken)
     }
 
     return {
-      user: userData.user,
+      user: userData,
       repositories: [] // Don't fetch repositories here to avoid circular dependency
     }
   },

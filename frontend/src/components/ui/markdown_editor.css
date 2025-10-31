@@ -8,6 +8,7 @@
   background: var(--docs-bg, #ffffff);
   overflow: hidden;
   transition: all 0.2s ease;
+  box-sizing: border-box;
 }
 
 .markdown-editor:focus-within {
@@ -110,9 +111,13 @@
   font-size: 14px;
   line-height: 1.6;
   overflow-y: auto;
+  overflow-x: auto;
   white-space: pre-wrap;
   word-wrap: break-word;
+  word-break: break-word;
   tab-size: 4;
+  box-sizing: border-box;
+  max-width: 100%;
 }
 
 .markdown-editor__textarea::placeholder {

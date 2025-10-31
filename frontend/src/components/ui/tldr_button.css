@@ -3,20 +3,26 @@
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 0;
-  border: none;
-  background: transparent;
-  color: inherit;
+  padding: 6px 12px 6px 10px;
+  border: 1px solid var(--bottom-dialog-border);
+  border-radius: 8px;
+  background: var(--search-input-bg);
+  color: var(--docs-normal-text);
   cursor: pointer;
-  font-size: 14px;
-  font-weight: 500;
+  font-size: 12px;
+  font-weight: 400;
   transition: all 0.2s ease;
-  width: 100%;
-  justify-content: flex-start;
+  outline: none;
+  user-select: none;
 }
 
 .tldr-button:hover:not(:disabled) {
-  color: var(--accent-color, #4a90e2);
+  opacity: 0.8;
+  transform: translateY(-1px);
+}
+
+.tldr-button:active:not(:disabled) {
+  transform: translateY(0);
 }
 
 .tldr-button:disabled {
@@ -26,6 +32,8 @@
 
 .tldr-button-icon {
   flex-shrink: 0;
+  width: 16px;
+  height: 16px;
   transition: transform 0.2s ease;
 }
 

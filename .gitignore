@@ -38,6 +38,7 @@ dist/
 build/
 *.log
 .env
+.env.production
 .env.*.local
 
 ### Tooling ###

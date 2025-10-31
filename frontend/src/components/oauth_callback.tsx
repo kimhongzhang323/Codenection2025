@@ -36,8 +36,14 @@ const OAuthCallback: React.FC = () => {
             localStorage.setItem('username', username);
           }
           
+          // Store GitHub access token
+          const githubToken = searchParams.get('github_token');
+          if (githubToken) {
+            localStorage.setItem('github_access_token', githubToken);
+          }
+          
           // Validate token with backend (recommended by GitHub docs)
-          const response = await fetch('http://localhost:8081/api/auth/validate', {
+          const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8081/api'}/auth/validate`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',

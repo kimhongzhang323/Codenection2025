@@ -11,17 +11,18 @@
   border-radius: 8px;
   border: none;
   background: transparent;
-  color: #ffffff;
+  color: rgba(255, 255, 255, 0.8);
   transition: border-color 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
   box-sizing: border-box;
-  font-size: 16px;
+  font-size: 14px;
+  font-weight: 300;
   font-family: inherit;
 }
 
 .repo-autocomplete__input::placeholder {
-  color: #9ca3af;
-  font-size: 15px;
-  font-weight: 400;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 14px;
+  font-weight: 300;
 }
 
 .repo-autocomplete__input:focus,
@@ -32,13 +33,12 @@
 
 .repo-autocomplete__dropdown {
   position: absolute;
-  top: 100%;
+  top: calc(100% + 8px);
   left: 0;
   right: 0;
   background: #1b1b1b;
   border: 1px solid #2a2a2a;
-  border-top: none;
-  border-radius: 0 0 8px 8px;
+  border-radius: 8px;
   max-height: 300px;
   overflow-y: auto;
   z-index: 1000;
