@@ -16,6 +16,7 @@ import { DiagramIcon } from '../components/icons/diagram_icon'
 import ShareDialog from '../components/ui/share_dialog'
 import ViewCodeDialog from '../components/ui/view_code_dialog'
 import Markdown from '../components/markdown'
+import MarkdownEditor from '../components/ui/markdown_editor'
 import ExportDialog from '../components/ui/export_dialog'
 import EmbeddedChangelog from '../components/embedded_changelog'
 import EmbeddedFlowchart from '../components/embedded_flowchart'
@@ -46,6 +47,17 @@ function DocumentationPage() {
   const [selectedDocKey, setSelectedDocKey] = useState<string | null>(null)
   const [isLoadingDocs, setIsLoadingDocs] = useState(false)
   const [docsError, setDocsError] = useState<string | null>(null)
+  
+  // Editing state
+  const [isEditMode, setIsEditMode] = useState(false)
+  const [editedContent, setEditedContent] = useState<string>('')
+  const [isSaving, setIsSaving] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
+  const saveTimerRef = useRef<number | null>(null)
+  
+  // Agent activity tracking
+  const [isAgentActive, setIsAgentActive] = useState(false)
+  const pollTimerRef = useRef<number | null>(null)
   
   // Debug GitHub URL construction
   console.log('[DocumentationPage] GitHub URL construction:', {
@@ -260,6 +272,160 @@ function DocumentationPage() {
         setIsLoadingDocs(false)
       })
   }, [githubHref]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Sync edited content when document changes (but NOT during agent activity to prevent overwriting)
+  useEffect(() => {
+    if (selectedDocKey && documents[selectedDocKey] && !isAgentActive) {
+      // Defensive: if content is double-encoded JSON string, parse it
+      let actualContent = documents[selectedDocKey].content || ''
+      try {
+        // Check if it's a stringified string (starts and ends with quotes)
+        if (actualContent.startsWith('"') && actualContent.endsWith('"')) {
+          actualContent = JSON.parse(actualContent)
+        }
+      } catch (e) {
+        // If parsing fails, use as-is
+      }
+      
+      setEditedContent(actualContent)
+      setIsEditMode(false) // Exit edit mode when switching documents
+      setSaveError(null)
+    }
+  }, [selectedDocKey, documents, isAgentActive])
+
+  // Auto-save with debouncing
+  const handleContentEdit = useCallback((newContent: string) => {
+    setEditedContent(newContent)
+    setSaveError(null)
+    
+    // Clear existing timer
+    if (saveTimerRef.current) {
+      window.clearTimeout(saveTimerRef.current)
+    }
+    
+    // Set new timer for auto-save (2 seconds debounce)
+    saveTimerRef.current = window.setTimeout(() => {
+      if (!githubHref || !selectedDocKey) return
+      
+      setIsSaving(true)
+      documentationApi.update(githubHref, selectedDocKey, newContent, 'main')
+        .then(() => {
+          // Update local state
+          setDocuments(prev => ({
+            ...prev,
+            [selectedDocKey]: {
+              ...prev[selectedDocKey],
+              content: newContent,
+              lastUpdated: new Date().toISOString()
+            }
+          }))
+          setIsSaving(false)
+        })
+        .catch((err) => {
+          console.error('Failed to save document:', err)
+          setSaveError(err.message || 'Failed to save changes')
+          setIsSaving(false)
+        })
+    }, 2000)
+  }, [githubHref, selectedDocKey])
+
+  // Cleanup save timer
+  useEffect(() => {
+    return () => {
+      if (saveTimerRef.current) {
+        window.clearTimeout(saveTimerRef.current)
+      }
+    }
+  }, [])
+
+  // Poll for document updates when agent is active
+  useEffect(() => {
+    if (!isAgentActive || !githubHref || !selectedDocKey) {
+      if (pollTimerRef.current) {
+        window.clearInterval(pollTimerRef.current)
+        pollTimerRef.current = null
+      }
+      return
+    }
+
+    // Poll every 2 seconds
+    pollTimerRef.current = window.setInterval(() => {
+      documentationApi.get(githubHref, selectedDocKey, 'main')
+        .then((doc: Documentation) => {
+          // Defensive: if content is double-encoded JSON string, parse it
+          let actualContent = doc.content || ''
+          try {
+            // Check if it's a stringified string (starts and ends with quotes)
+            if (actualContent.startsWith('"') && actualContent.endsWith('"')) {
+              actualContent = JSON.parse(actualContent)
+            }
+          } catch (e) {
+            // If parsing fails, use as-is
+          }
+          
+          setDocuments(prev => ({
+            ...prev,
+            [selectedDocKey]: { ...doc, content: actualContent }
+          }))
+          setEditedContent(actualContent)
+        })
+        .catch((err: Error) => {
+          console.error('Failed to poll document:', err)
+        })
+    }, 2000)
+
+    return () => {
+      if (pollTimerRef.current) {
+        window.clearInterval(pollTimerRef.current)
+        pollTimerRef.current = null
+      }
+    }
+  }, [isAgentActive, githubHref, selectedDocKey])
+
+  // Listen for agent activity from AI chat
+  useEffect(() => {
+    const handleAgentStart = () => {
+      setIsAgentActive(true)
+      setIsEditMode(false) // Disable editing when agent starts
+    }
+    
+    const handleAgentComplete = () => {
+      setIsAgentActive(false)
+      // Refresh the current document
+      if (githubHref && selectedDocKey) {
+        documentationApi.get(githubHref, selectedDocKey, 'main')
+          .then((doc: Documentation) => {
+            // Defensive: if content is double-encoded JSON string, parse it
+            let actualContent = doc.content || ''
+            try {
+              // Check if it's a stringified string (starts and ends with quotes)
+              if (actualContent.startsWith('"') && actualContent.endsWith('"')) {
+                actualContent = JSON.parse(actualContent)
+              }
+            } catch (e) {
+              // If parsing fails, use as-is
+            }
+            
+            setDocuments(prev => ({
+              ...prev,
+              [selectedDocKey]: { ...doc, content: actualContent }
+            }))
+            setEditedContent(actualContent)
+          })
+          .catch((err: Error) => {
+            console.error('Failed to refresh document:', err)
+          })
+      }
+    }
+
+    window.addEventListener('agent-started', handleAgentStart)
+    window.addEventListener('agent-completed', handleAgentComplete)
+
+    return () => {
+      window.removeEventListener('agent-started', handleAgentStart)
+      window.removeEventListener('agent-completed', handleAgentComplete)
+    }
+  }, [githubHref, selectedDocKey])
 
   // Determine encoded repo slug for routing back to repo root
   const repoSlug = (() => {
@@ -764,7 +930,72 @@ function DocumentationPage() {
               />
             ) : selectedDocKey && documents[selectedDocKey] ? (
               <div className="documentation-section">
-                <Markdown content={documents[selectedDocKey].content || ''} />
+                {/* Edit/Read mode toggle toolbar */}
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  padding: '12px 0',
+                  borderBottom: '1px solid var(--sidebar-border)',
+                  marginBottom: '20px'
+                }}>
+                  <button
+                    onClick={() => setIsEditMode(!isEditMode)}
+                    disabled={isAgentActive}
+                    style={{
+                      padding: '8px 16px',
+                      borderRadius: '6px',
+                      border: '1px solid var(--sidebar-border)',
+                      background: isEditMode ? 'var(--primary-color)' : 'var(--docs-bg)',
+                      color: isEditMode ? '#fff' : 'var(--docs-text)',
+                      cursor: isAgentActive ? 'not-allowed' : 'pointer',
+                      opacity: isAgentActive ? 0.5 : 1,
+                      fontSize: '14px',
+                      fontWeight: '500',
+                      transition: 'all 0.2s ease'
+                    }}
+                  >
+                    {isEditMode ? '� Markdown Mode' : '📄 Raw Mode'}
+                  </button>
+                  
+                  {isSaving && (
+                    <span style={{ fontSize: '14px', color: 'var(--docs-normal-text)' }}>
+                      💾 Saving...
+                    </span>
+                  )}
+                  
+                  {saveError && (
+                    <span style={{ fontSize: '14px', color: 'var(--danger-color)' }}>
+                      ❌ {saveError}
+                    </span>
+                  )}
+                  
+                  {isAgentActive && (
+                    <span style={{ fontSize: '14px', color: 'var(--primary-color)' }}>
+                      🤖 Agent is updating document...
+                    </span>
+                  )}
+                  
+                  <span style={{ 
+                    fontSize: '12px', 
+                    color: 'var(--docs-normal-text)', 
+                    marginLeft: 'auto',
+                    opacity: 0.7
+                  }}>
+                    {selectedDocKey}
+                  </span>
+                </div>
+
+                {/* Content area - show content even during agent activity */}
+                {isEditMode ? (
+                  <MarkdownEditor
+                    content={editedContent}
+                    onContentChange={handleContentEdit}
+                    placeholder="Start editing your documentation..."
+                  />
+                ) : (
+                  <Markdown content={editedContent || documents[selectedDocKey]?.content || ''} />
+                )}
               </div>
             ) : (
               <div style={{ 

@@ -60,6 +60,9 @@ export const AIChatPanel: React.FC = () => {
       setMessages(prev => [...prev, userMessage])
       setIsTyping(true)
 
+      // Dispatch agent started event
+      window.dispatchEvent(new CustomEvent('agent-started'))
+
       // Process initial message with actual API
       const processInitialMessage = async () => {
         try {
@@ -89,6 +92,9 @@ export const AIChatPanel: React.FC = () => {
           }
           setMessages(prev => [...prev, aiMessage])
           setIsTyping(false)
+          
+          // Dispatch agent completed event
+          window.dispatchEvent(new CustomEvent('agent-completed'))
         } catch (error) {
           console.error('Error processing initial message:', error)
           const errorMessage: Message = {
@@ -99,6 +105,9 @@ export const AIChatPanel: React.FC = () => {
           }
           setMessages(prev => [...prev, errorMessage])
           setIsTyping(false)
+          
+          // Dispatch agent completed event even on error
+          window.dispatchEvent(new CustomEvent('agent-completed'))
         }
       }
 
@@ -122,6 +131,9 @@ export const AIChatPanel: React.FC = () => {
     setMessages(prev => [...prev, userMessage])
     setInputValue('')
     setIsTyping(true)
+
+    // Dispatch agent started event
+    window.dispatchEvent(new CustomEvent('agent-started'))
 
     try {
       // Get repository info from context
@@ -150,6 +162,9 @@ export const AIChatPanel: React.FC = () => {
       }
       setMessages(prev => [...prev, aiMessage])
       setIsTyping(false)
+      
+      // Dispatch agent completed event
+      window.dispatchEvent(new CustomEvent('agent-completed'))
     } catch (error) {
       console.error('Error calling AI API:', error)
       const errorMessage: Message = {
@@ -160,6 +175,9 @@ export const AIChatPanel: React.FC = () => {
       }
       setMessages(prev => [...prev, errorMessage])
       setIsTyping(false)
+      
+      // Dispatch agent completed event even on error
+      window.dispatchEvent(new CustomEvent('agent-completed'))
     }
   }
 
@@ -265,6 +283,12 @@ export const AIChatPanel: React.FC = () => {
             className="ai-chat-textarea"
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault()
+                handleSendMessage()
+              }
+            }}
             placeholder="Ask AI something..."
             rows={1}
           />

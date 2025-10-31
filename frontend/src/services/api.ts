@@ -145,7 +145,8 @@ export const documentationApi = {
       throw new Error(`Failed to fetch documentation for ${key}: ${response.statusText}`)
     }
     
-    return response.json()
+    const result: ApiResponse<Documentation> = await response.json()
+    return result.data
   },
 
   // Create new documentation
