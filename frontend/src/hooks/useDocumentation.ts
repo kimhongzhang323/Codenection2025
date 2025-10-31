@@ -49,6 +49,7 @@ export function useDocumentation({
   
   const retryTimerRef = useRef<number | null>(null)
   const shouldRetryRef = useRef(true)
+  const retryCountRef = useRef(0)
 
   // Generate doc tree from documentation keys
   const generateDocTree = useCallback((docs: Record<string, Documentation>): DocItem[] => {
@@ -109,7 +110,10 @@ export function useDocumentation({
       const docs = await documentationApi.getAll(gitUrl, branch)
       setDocumentation(docs)
       setDocTree(generateDocTree(docs))
-      setRetryCount(0) // Reset retry count on success
+      
+      // Reset retry count on success
+      retryCountRef.current = 0
+      setRetryCount(0)
       shouldRetryRef.current = true // Re-enable retrying for future errors
       
       // Clear any pending retry timer
@@ -121,22 +125,25 @@ export function useDocumentation({
       const errorMessage = err instanceof Error ? err.message : 'Failed to load documentation'
       setError(errorMessage)
       
+      // Increment retry count
+      retryCountRef.current += 1
+      const currentRetry = retryCountRef.current
+      setRetryCount(currentRetry)
+      
       // Schedule retry if enabled and within limits
-      if (shouldRetryRef.current && retryCount < maxRetries) {
-        setRetryCount(prev => prev + 1)
-        
-        console.log(`Documentation fetch failed. Retrying in ${retryInterval}ms... (Attempt ${retryCount + 1}/${maxRetries === Infinity ? '∞' : maxRetries})`)
+      if (shouldRetryRef.current && currentRetry < maxRetries) {
+        console.log(`Documentation fetch failed. Retrying in ${retryInterval}ms... (Attempt ${currentRetry}/${maxRetries === Infinity ? '∞' : maxRetries})`)
         
         retryTimerRef.current = window.setTimeout(() => {
           loadDocumentation()
         }, retryInterval)
-      } else if (retryCount >= maxRetries) {
+      } else if (currentRetry >= maxRetries) {
         console.error('Max retry attempts reached. Stopped retrying.')
       }
     } finally {
       setIsLoading(false)
     }
-  }, [gitUrl, branch, generateDocTree, retryCount, maxRetries, retryInterval])
+  }, [gitUrl, branch, generateDocTree, maxRetries, retryInterval])
 
   // Generate new documentation using agent
   const generateDocumentation = useCallback(async (options: Omit<DocAgentRequest, 'gitUrl' | 'branch'>) => {
@@ -239,6 +246,7 @@ export function useDocumentation({
       window.clearTimeout(retryTimerRef.current)
       retryTimerRef.current = null
     }
+    retryCountRef.current = 0
     setRetryCount(0)
   }, [])
 

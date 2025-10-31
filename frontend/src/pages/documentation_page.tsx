@@ -50,6 +50,8 @@ function DocumentationPage() {
   const [docsError, setDocsError] = useState<string | null>(null)
   const [retryCount, setRetryCount] = useState(0)
   const retryTimerRef = useRef<number | null>(null)
+  const retryCountRef = useRef(0)
+  const isLoadingRef = useRef(false) // Prevent double-loading
   const maxRetries = 10 // Max retry attempts
   const retryInterval = 5000 // 5 seconds between retries
   
@@ -250,7 +252,9 @@ function DocumentationPage() {
       setDocuments({})
       setDocumentKeys([])
       setSelectedDocKey(null)
+      retryCountRef.current = 0
       setRetryCount(0)
+      isLoadingRef.current = false
       if (retryTimerRef.current) {
         window.clearTimeout(retryTimerRef.current)
         retryTimerRef.current = null
@@ -259,6 +263,13 @@ function DocumentationPage() {
     }
 
     const loadDocuments = () => {
+      // Prevent double-loading
+      if (isLoadingRef.current) {
+        console.log('Already loading, skipping...')
+        return
+      }
+      
+      isLoadingRef.current = true
       setIsLoadingDocs(true)
       setDocsError(null)
 
@@ -274,6 +285,7 @@ function DocumentationPage() {
           }
           
           // Success: reset retry count and clear timer
+          retryCountRef.current = 0
           setRetryCount(0)
           if (retryTimerRef.current) {
             window.clearTimeout(retryTimerRef.current)
@@ -287,12 +299,16 @@ function DocumentationPage() {
           setDocuments({})
           setDocumentKeys([])
           
+          // Increment retry count using ref
+          retryCountRef.current += 1
+          const currentRetry = retryCountRef.current
+          setRetryCount(currentRetry)
+          
+          console.log(`[DEBUG] Retry count incremented to: ${currentRetry}`)
+          
           // Schedule retry if within limits
-          if (retryCount < maxRetries) {
-            const nextRetry = retryCount + 1
-            setRetryCount(nextRetry)
-            
-            console.log(`Documentation fetch failed. Retrying in ${retryInterval}ms... (Attempt ${nextRetry}/${maxRetries})`)
+          if (currentRetry < maxRetries) {
+            console.log(`Documentation fetch failed. Retrying in ${retryInterval}ms... (Attempt ${currentRetry}/${maxRetries})`)
             
             retryTimerRef.current = window.setTimeout(() => {
               loadDocuments()
@@ -303,6 +319,7 @@ function DocumentationPage() {
         })
         .finally(() => {
           setIsLoadingDocs(false)
+          isLoadingRef.current = false
         })
     }
 
@@ -314,6 +331,7 @@ function DocumentationPage() {
         window.clearTimeout(retryTimerRef.current)
         retryTimerRef.current = null
       }
+      isLoadingRef.current = false
     }
   }, [githubHref]) // eslint-disable-line react-hooks/exhaustive-deps
 
