@@ -565,7 +565,7 @@ public class McpToolKit {
                 String query = (String) paramsMap.get("query");
                 Number limitValue = paramsMap.get("limit") instanceof Number ? (Number) paramsMap.get("limit") : null;
                 Integer limit = limitValue == null ? null : limitValue.intValue();
-                return mcpToolUtils.searchNodes(context.getGraph(), query, limit);
+                return mcpToolUtils.searchNodes(context.getGraph(), context.getRepo(), query, limit);
             }
             case "summarise_code": {
                 String nodeId = (String) paramsMap.get("node_id");
