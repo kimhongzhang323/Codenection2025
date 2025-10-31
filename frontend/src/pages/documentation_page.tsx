@@ -340,7 +340,7 @@ function DocumentationPage() {
 
   // Poll for document updates when agent is active
   useEffect(() => {
-    if (!isAgentActive || !githubHref || !selectedDocKey) {
+    if (!isAgentActive || !githubHref) {
       if (pollTimerRef.current) {
         window.clearInterval(pollTimerRef.current)
         pollTimerRef.current = null
@@ -348,29 +348,30 @@ function DocumentationPage() {
       return
     }
 
-    // Poll every 2 seconds
+    // Poll every 2 seconds - fetch ALL documents to catch new ones
     pollTimerRef.current = window.setInterval(() => {
-      documentationApi.get(githubHref, selectedDocKey, 'main')
-        .then((doc: Documentation) => {
-          // Defensive: if content is double-encoded JSON string, parse it
-          let actualContent = doc.content || ''
-          try {
-            // Check if it's a stringified string (starts and ends with quotes)
-            if (actualContent.startsWith('"') && actualContent.endsWith('"')) {
-              actualContent = JSON.parse(actualContent)
-            }
-          } catch (e) {
-            // If parsing fails, use as-is
-          }
+      documentationApi.getAll(githubHref, 'main')
+        .then((docs) => {
+          setDocuments(docs)
+          const keys = Object.keys(docs).sort()
+          setDocumentKeys(keys)
           
-          setDocuments(prev => ({
-            ...prev,
-            [selectedDocKey]: { ...doc, content: actualContent }
-          }))
-          setEditedContent(actualContent)
+          // Update edited content if we're still on a document
+          if (selectedDocKey && docs[selectedDocKey]) {
+            // Defensive: if content is double-encoded JSON string, parse it
+            let actualContent = docs[selectedDocKey].content || ''
+            try {
+              if (actualContent.startsWith('"') && actualContent.endsWith('"')) {
+                actualContent = JSON.parse(actualContent)
+              }
+            } catch (e) {
+              // If parsing fails, use as-is
+            }
+            setEditedContent(actualContent)
+          }
         })
         .catch((err: Error) => {
-          console.error('Failed to poll document:', err)
+          console.error('Failed to poll documents:', err)
         })
     }, 2000)
 
@@ -391,29 +392,30 @@ function DocumentationPage() {
     
     const handleAgentComplete = () => {
       setIsAgentActive(false)
-      // Refresh the current document
-      if (githubHref && selectedDocKey) {
-        documentationApi.get(githubHref, selectedDocKey, 'main')
-          .then((doc: Documentation) => {
-            // Defensive: if content is double-encoded JSON string, parse it
-            let actualContent = doc.content || ''
-            try {
-              // Check if it's a stringified string (starts and ends with quotes)
-              if (actualContent.startsWith('"') && actualContent.endsWith('"')) {
-                actualContent = JSON.parse(actualContent)
-              }
-            } catch (e) {
-              // If parsing fails, use as-is
-            }
+      // Refresh ALL documents (in case agent created new ones)
+      if (githubHref) {
+        documentationApi.getAll(githubHref, 'main')
+          .then((docs) => {
+            setDocuments(docs)
+            const keys = Object.keys(docs).sort()
+            setDocumentKeys(keys)
             
-            setDocuments(prev => ({
-              ...prev,
-              [selectedDocKey]: { ...doc, content: actualContent }
-            }))
-            setEditedContent(actualContent)
+            // Update edited content if we're still on a document
+            if (selectedDocKey && docs[selectedDocKey]) {
+              // Defensive: if content is double-encoded JSON string, parse it
+              let actualContent = docs[selectedDocKey].content || ''
+              try {
+                if (actualContent.startsWith('"') && actualContent.endsWith('"')) {
+                  actualContent = JSON.parse(actualContent)
+                }
+              } catch (e) {
+                // If parsing fails, use as-is
+              }
+              setEditedContent(actualContent)
+            }
           })
           .catch((err: Error) => {
-            console.error('Failed to refresh document:', err)
+            console.error('Failed to refresh documents:', err)
           })
       }
     }

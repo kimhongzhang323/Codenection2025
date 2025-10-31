@@ -75,10 +75,7 @@ export const AIChatPanel: React.FC = () => {
           const request: DocAgentRequest = {
             gitUrl: repositoryInfo.gitUrl,
             userPrompt: initialMessage,
-            branch: repositoryInfo.branch,
-            audience: 'developers',
-            tone: 'professional',
-            format: 'markdown'
+            branch: repositoryInfo.branch
           }
 
           // Call the actual API using the service
@@ -145,10 +142,7 @@ export const AIChatPanel: React.FC = () => {
       const request: DocAgentRequest = {
         gitUrl: repositoryInfo.gitUrl,
         userPrompt: userMessage.content,
-        branch: repositoryInfo.branch,
-        audience: 'developers',
-        tone: 'professional',
-        format: 'markdown'
+        branch: repositoryInfo.branch
       }
 
       // Call the actual API using the service
