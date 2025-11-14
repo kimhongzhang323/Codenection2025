@@ -2,11 +2,9 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import './documentation_page.css'
 import { GithubIcon } from '../components/icons/github_icon'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
-
 import { AnimatedThemeToggler } from '../components/theme'
 import { BottomMiniDialog } from '../components/ui/bottom_mini_dialog'
 import { useAIChat } from '../contexts/AIChatContext'
-import ToolsDropdown from '../components/ui/tools_dropdown'
 import SearchDialog from '../components/ui/search_dialog'
 import SuggestionPanel from '../components/ui/suggestion_panel'
 import ContextMenu from '../components/ui/context_menu'
@@ -17,29 +15,18 @@ import { HistoryIcon } from '../components/icons/history_icon'
 import { DiagramIcon } from '../components/icons/diagram_icon'
 import ShareDialog from '../components/ui/share_dialog'
 import ViewCodeDialog from '../components/ui/view_code_dialog'
-import DocumentationSection from '../components/documentation_section'
-
+import Markdown from '../components/markdown'
+import MarkdownEditor from '../components/ui/markdown_editor'
 import ExportDialog from '../components/ui/export_dialog'
 import EmbeddedChangelog from '../components/embedded_changelog'
 import EmbeddedFlowchart from '../components/embedded_flowchart'
-
 import { ExportIcon } from '../components/icons/export_icon'
-import { FeedbackIcon } from '../components/icons/feedback_icon'
-import FeedbackModal from '../components/ui/feedback_modal'
-
-import TranslationDialog from '../components/ui/translation_dialog'
-import { useTranslation } from '../contexts/TranslationContext'
-import { usePageTranslation } from '../hooks/usePageTranslation'
-import DiscordNotificationConfig from '../components/ui/discord_notification_config'
 import { useAutoUpdate } from '../hooks/useAutoUpdate'
 import AutoUpdateNotification from '../components/ui/auto_update_notification'
-import type { GitHubCommit } from '../services/api'
+import type { GitHubCommit, Documentation } from '../services/api'
 import { gitHubWebhookService } from '../services/github-webhook-service'
-
-
-
-
-
+import { documentationApi } from '../services/api'
+import { findNewestDocument, detectNewDocuments, parseDocumentContent } from '../utils/documentUtils'
 
 function DocumentationPage() {
   const location = useLocation()
@@ -54,6 +41,30 @@ function DocumentationPage() {
   // Construct GitHub URL from repo parameter if available
   const repoBasedUrl = repo ? `https://github.com/${decodeURIComponent(repo)}` : undefined
   const githubHref = repoUrl || fallbackUrl || repoBasedUrl || '#'
+  
+  // Document loading state
+  const [documents, setDocuments] = useState<Record<string, Documentation>>({})
+  const [documentKeys, setDocumentKeys] = useState<string[]>([])
+  const [selectedDocKey, setSelectedDocKey] = useState<string | null>(null)
+  const [isLoadingDocs, setIsLoadingDocs] = useState(false)
+  const [docsError, setDocsError] = useState<string | null>(null)
+  const [retryCount, setRetryCount] = useState(0)
+  const retryTimerRef = useRef<number | null>(null)
+  const retryCountRef = useRef(0)
+  const isLoadingRef = useRef(false) // Prevent double-loading
+  const maxRetries = 10 // Max retry attempts
+  const retryInterval = 5000 // 5 seconds between retries
+  
+  // Editing state
+  const [isEditMode, setIsEditMode] = useState(false)
+  const [editedContent, setEditedContent] = useState<string>('')
+  const [isSaving, setIsSaving] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
+  const saveTimerRef = useRef<number | null>(null)
+  
+  // Agent activity tracking
+  const [isAgentActive, setIsAgentActive] = useState(false)
+  const pollTimerRef = useRef<number | null>(null)
   
   // Debug GitHub URL construction
   console.log('[DocumentationPage] GitHub URL construction:', {
@@ -76,14 +87,42 @@ function DocumentationPage() {
     }
     return true // Default to dark mode
   })
-  const [activeLabel, setActiveLabel] = useState<string | null>(null)
+  // Compute initial active label from current pathname to avoid flashing the welcome screen
+  const computeInitialActiveLabel = (): string | null => {
+    try {
+      const pathname = (location && location.pathname ? location.pathname : window.location.pathname).replace(/\/+/g, '/')
+      const parts = pathname.replace(/\/+$/, '').split('/').filter(Boolean)
+      const repoPart = parts[0]
+      const filePart = parts[1]
+
+      if (repoPart && !filePart) {
+        // Default to showing the first documentation file instead of the welcome screen
+        return 'Overview'
+      }
+
+      if (filePart) {
+        const targetSlug = filePart.toLowerCase()
+        if (targetSlug === 'changelog') return 'Changelog'
+        if (targetSlug === 'flowchart') return 'System Diagrams'
+        if (targetSlug === 'documentation') return 'Main Documentation'
+        if (targetSlug === 'docs') {
+          const docsIndex = parts.indexOf('docs')
+          const subSection = parts[docsIndex + 1]
+          if (subSection === 'overview') return 'Overview'
+          if (subSection === 'quickstart') return 'Quick Start'
+          if (subSection === 'requirements') return 'Requirements'
+        }
+      }
+    } catch (err) {
+      // If anything goes wrong, fall back to null so the existing effects handle it
+      console.error('computeInitialActiveLabel error', err)
+    }
+    return null
+  }
+
+  const [activeLabel, setActiveLabel] = useState<string | null>(computeInitialActiveLabel)
   const [viewMode, setViewMode] = useState<'reading' | 'edit'>('reading')
-  
-
-  
-
-
-
+  const [documentationContent, setDocumentationContent] = useState<string>('')
 
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(() => {
     if (typeof window === 'undefined') return false
@@ -109,7 +148,7 @@ function DocumentationPage() {
     // On larger screens, use saved preference or default to open
     return saved ? JSON.parse(saved) : false
   })
-  const { toggleChat, setRepositoryInfo } = useAIChat()
+  const { setRepositoryInfo } = useAIChat()
 
   const [isSearchOpen, setIsSearchOpen] = useState(false)
   const [isSuggestionPanelOpen, setIsSuggestionPanelOpen] = useState(false)
@@ -129,29 +168,16 @@ function DocumentationPage() {
   const [isShareDialogOpen, setIsShareDialogOpen] = useState(false)
   const [isViewCodeDialogOpen, setIsViewCodeDialogOpen] = useState(false)
   const [isExportDialogOpen, setIsExportDialogOpen] = useState(false)
-  const [isFeedbackModalOpen, setIsFeedbackModalOpen] = useState(false)
-  const [isTranslationDialogOpen, setIsTranslationDialogOpen] = useState(false)
-  const [isDiscordConfigOpen, setIsDiscordConfigOpen] = useState(false)
-  const [isDiscordMonitoringActive, setIsDiscordMonitoringActive] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
   
-  // Auto-update functionality
+  // Auto-update functionality (used by changelog/flowchart special pages)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [refreshKey, setRefreshKey] = useState(0)
-  const [lastContentUpdate, setLastContentUpdate] = useState<Date | null>(null)
-  
-  // Export functionality - store current content for export
-  const [currentMarkdownContent, setCurrentMarkdownContent] = useState('')
-  const [currentDocumentationData, setCurrentDocumentationData] = useState<Record<string, unknown>>({})
-  
-
   
   const {
-    isMonitoring,
     lastUpdate,
     newCommitsCount,
     latestCommits,
-    startMonitoring,
-    stopMonitoring,
     forceCheck,
     clearNotifications
   } = useAutoUpdate({
@@ -165,7 +191,6 @@ function DocumentationPage() {
     },
     onContentUpdate: () => {
       console.log('Content update triggered')
-      setLastContentUpdate(new Date())
       // This will trigger re-rendering of documentation content
       setRefreshKey(prev => prev + 1)
     },
@@ -174,12 +199,9 @@ function DocumentationPage() {
     }
   })
 
-
   // GitHub webhook integration
-  const [isGitHubBotEnabled, setIsGitHubBotEnabled] = useState(false)
+  const [, setIsGitHubBotEnabled] = useState(false)
   
-
-
   useEffect(() => {
     // Set up GitHub webhook integration when repo URL is available
     if (githubHref !== '#') {
@@ -205,7 +227,6 @@ function DocumentationPage() {
         if (event.detail.repoUrl === githubHref) {
           console.log('GitHub push detected, refreshing content...')
           setRefreshKey(prev => prev + 1)
-          setLastContentUpdate(new Date())
         }
       }
       
@@ -224,12 +245,273 @@ function DocumentationPage() {
       setRepositoryInfo(githubHref, 'main')
     }
   }, [githubHref, setRepositoryInfo])
-  
-  // Translation context
-  const { isTranslationActive, currentLanguageCode } = useTranslation()
-  
-  // Enable page translation
-  usePageTranslation()
+
+  // Load all documents from API with retry logic
+  useEffect(() => {
+    if (!githubHref || githubHref === '#') {
+      setDocuments({})
+      setDocumentKeys([])
+      setSelectedDocKey(null)
+      retryCountRef.current = 0
+      setRetryCount(0)
+      isLoadingRef.current = false
+      if (retryTimerRef.current) {
+        window.clearTimeout(retryTimerRef.current)
+        retryTimerRef.current = null
+      }
+      return
+    }
+
+    const loadDocuments = () => {
+      // Prevent double-loading
+      if (isLoadingRef.current) {
+        console.log('Already loading, skipping...')
+        return
+      }
+      
+      isLoadingRef.current = true
+      setIsLoadingDocs(true)
+      setDocsError(null)
+
+      documentationApi.getAll(githubHref, 'main')
+        .then((docs) => {
+          setDocuments(docs)
+          const keys = Object.keys(docs).sort()
+          setDocumentKeys(keys)
+          
+          // Auto-select first document if none selected
+          if (!selectedDocKey && keys.length > 0) {
+            setSelectedDocKey(keys[0])
+          }
+          
+          // Success: reset retry count and clear timer
+          retryCountRef.current = 0
+          setRetryCount(0)
+          if (retryTimerRef.current) {
+            window.clearTimeout(retryTimerRef.current)
+            retryTimerRef.current = null
+          }
+        })
+        .catch((err) => {
+          console.error('Failed to load documents:', err)
+          const errorMessage = err.message || 'Failed to load documents'
+          setDocsError(errorMessage)
+          setDocuments({})
+          setDocumentKeys([])
+          
+          // Increment retry count using ref
+          retryCountRef.current += 1
+          const currentRetry = retryCountRef.current
+          setRetryCount(currentRetry)
+          
+          console.log(`[DEBUG] Retry count incremented to: ${currentRetry}`)
+          
+          // Schedule retry if within limits
+          if (currentRetry < maxRetries) {
+            console.log(`Documentation fetch failed. Retrying in ${retryInterval}ms... (Attempt ${currentRetry}/${maxRetries})`)
+            
+            retryTimerRef.current = window.setTimeout(() => {
+              loadDocuments()
+            }, retryInterval)
+          } else {
+            console.error(`Max retry attempts (${maxRetries}) reached. Stopped retrying.`)
+          }
+        })
+        .finally(() => {
+          setIsLoadingDocs(false)
+          isLoadingRef.current = false
+        })
+    }
+
+    loadDocuments()
+
+    // Cleanup on unmount or when githubHref changes
+    return () => {
+      if (retryTimerRef.current) {
+        window.clearTimeout(retryTimerRef.current)
+        retryTimerRef.current = null
+      }
+      isLoadingRef.current = false
+    }
+  }, [githubHref]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Sync edited content when document changes (but NOT during agent activity to prevent overwriting)
+  useEffect(() => {
+    if (selectedDocKey && documents[selectedDocKey] && !isAgentActive) {
+      setEditedContent(parseDocumentContent(documents[selectedDocKey].content || ''))
+      setIsEditMode(false) // Exit edit mode when switching documents
+      setSaveError(null)
+    }
+  }, [selectedDocKey, documents, isAgentActive])
+
+  // Auto-save with debouncing
+  const handleContentEdit = useCallback((newContent: string) => {
+    setEditedContent(newContent)
+    setSaveError(null)
+    
+    // Clear existing timer
+    if (saveTimerRef.current) {
+      window.clearTimeout(saveTimerRef.current)
+    }
+    
+    // Set new timer for auto-save (2 seconds debounce)
+    saveTimerRef.current = window.setTimeout(() => {
+      if (!githubHref || !selectedDocKey) return
+      
+      setIsSaving(true)
+      documentationApi.update(githubHref, selectedDocKey, newContent, 'main')
+        .then(() => {
+          // Update local state
+          setDocuments(prev => ({
+            ...prev,
+            [selectedDocKey]: {
+              ...prev[selectedDocKey],
+              content: newContent,
+              lastUpdated: new Date().toISOString()
+            }
+          }))
+          setIsSaving(false)
+        })
+        .catch((err) => {
+          console.error('Failed to save document:', err)
+          setSaveError(err.message || 'Failed to save changes')
+          setIsSaving(false)
+        })
+    }, 2000)
+  }, [githubHref, selectedDocKey])
+
+  // Cleanup save timer
+  useEffect(() => {
+    return () => {
+      if (saveTimerRef.current) {
+        window.clearTimeout(saveTimerRef.current)
+      }
+    }
+  }, [])
+
+  // Poll for document updates when agent is active
+  useEffect(() => {
+    if (!isAgentActive || !githubHref) {
+      if (pollTimerRef.current) {
+        window.clearInterval(pollTimerRef.current)
+        pollTimerRef.current = null
+      }
+      return
+    }
+
+    // Store previous keys before polling
+    let previousKeys = Object.keys(documents)
+
+    // Poll every 2 seconds - fetch ALL documents to catch new ones
+    pollTimerRef.current = window.setInterval(() => {
+      documentationApi.getAll(githubHref, 'main')
+        .then((docs) => {
+          const keys = Object.keys(docs).sort()
+          
+          // Detect new documents using utility
+          const newKeys = detectNewDocuments(keys, previousKeys)
+          
+          setDocuments(docs)
+          setDocumentKeys(keys)
+          
+          if (newKeys.length > 0) {
+            // Focus on the newest document using utility
+            const newestKey = findNewestDocument(docs, newKeys)
+            
+            if (newestKey) {
+              console.log(`[Polling] Auto-focusing newest document: ${newestKey}`)
+              setSelectedDocKey(newestKey)
+              setEditedContent(parseDocumentContent(docs[newestKey].content || ''))
+            }
+          } else {
+            // No new documents, update edited content if we're still on a document
+            if (selectedDocKey && docs[selectedDocKey]) {
+              setEditedContent(parseDocumentContent(docs[selectedDocKey].content || ''))
+            }
+          }
+          
+          // Update previousKeys for next iteration
+          previousKeys = keys
+        })
+        .catch((err: Error) => {
+          console.error('Failed to poll documents:', err)
+        })
+    }, 2000)
+
+    return () => {
+      if (pollTimerRef.current) {
+        window.clearInterval(pollTimerRef.current)
+        pollTimerRef.current = null
+      }
+    }
+  }, [isAgentActive, githubHref, selectedDocKey, documents])
+
+  // Listen for agent activity from AI chat
+  useEffect(() => {
+    const handleAgentStart = () => {
+      setIsAgentActive(true)
+      setIsEditMode(false) // Disable editing when agent starts
+    }
+    
+    const handleAgentComplete = () => {
+      setIsAgentActive(false)
+      // Refresh ALL documents (in case agent created new ones)
+      if (githubHref) {
+        const previousKeys = Object.keys(documents)
+        
+        documentationApi.getAll(githubHref, 'main')
+          .then((docs) => {
+            setDocuments(docs)
+            const keys = Object.keys(docs).sort()
+            setDocumentKeys(keys)
+            
+            // Detect new documents using utility
+            const newKeys = detectNewDocuments(keys, previousKeys)
+            
+            if (newKeys.length > 0) {
+              // Focus on the newest document using utility
+              const newestKey = findNewestDocument(docs, newKeys)
+              
+              if (newestKey) {
+                console.log(`Auto-focusing newest document: ${newestKey}`)
+                setSelectedDocKey(newestKey)
+                setEditedContent(parseDocumentContent(docs[newestKey].content || ''))
+              }
+            } else {
+              // No new documents, just update current content if we're still on a document
+              if (selectedDocKey && docs[selectedDocKey]) {
+                setEditedContent(parseDocumentContent(docs[selectedDocKey].content || ''))
+              }
+            }
+          })
+          .catch((err: Error) => {
+            console.error('Failed to refresh documents:', err)
+          })
+      }
+    }
+
+    window.addEventListener('agent-started', handleAgentStart)
+    window.addEventListener('agent-completed', handleAgentComplete)
+
+    return () => {
+      window.removeEventListener('agent-started', handleAgentStart)
+      window.removeEventListener('agent-completed', handleAgentComplete)
+    }
+  }, [githubHref, selectedDocKey, documents])
+
+  // Handle Esc key to exit edit mode
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isEditMode) {
+        setIsEditMode(false)
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [isEditMode])
 
   // Determine encoded repo slug for routing back to repo root
   const repoSlug = (() => {
@@ -264,8 +546,6 @@ function DocumentationPage() {
     }
   }
 
-
-
   // On first load or URL changes, ensure we are at /:repo/:file and sync active label
   useEffect(() => {
     const pathname = location.pathname.replace(/\/+$/, '')
@@ -281,11 +561,18 @@ function DocumentationPage() {
       currentActiveLabel: activeLabel
     })
 
-    // Handle root repo path - show welcome screen
+    // Handle root repo path - navigate directly to first documentation file (Overview)
     if (repoPart && !filePart) {
-      console.log('Setting activeLabel to Welcome (root path)')
-      setActiveLabel('Welcome')
-      setRefreshKey(prev => prev + 1) // Force refresh
+      try {
+        const target = `/${repoPart}/docs/overview`
+        console.log('No file specified; redirecting to first documentation page:', target)
+        // Use replace to avoid adding an extra history entry for the welcome page
+        navigate(target, { state: location.state, replace: true })
+      } catch (err) {
+        console.error('Redirect to overview failed, falling back to welcome state', err)
+        setActiveLabel('Welcome')
+        setRefreshKey(prev => prev + 1) // Force refresh
+      }
       return
     }
 
@@ -340,19 +627,11 @@ function DocumentationPage() {
     }
   }, [location.pathname, repoSlug, subpage]) // eslint-disable-line react-hooks/exhaustive-deps
 
-
-
-
-
   const handleSidebarToggle = useCallback(() => {
     const newState = !isSidebarCollapsed
     setIsSidebarCollapsed(newState)
     localStorage.setItem('sidebarCollapsed', JSON.stringify(newState))
   }, [isSidebarCollapsed])
-
-  const handleDiscordMonitoringStateChange = useCallback((isActive: boolean) => {
-    setIsDiscordMonitoringActive(isActive)
-  }, [])
 
   // Handle clicking on overlay to close sidebar on smaller screens
   const handleOverlayClick = () => {
@@ -401,8 +680,6 @@ function DocumentationPage() {
       }
     }
   }
-
-
 
   const handleFolderContextMenuClose = () => {
     setFolderContextMenu({ isVisible: false, x: 0, y: 0, itemType: null })
@@ -458,35 +735,10 @@ function DocumentationPage() {
     setIsViewCodeDialogOpen(true)
   }
 
-  // Handle content loaded from DocumentationSection for export
-  const handleContentLoaded = (content: string, metadata: Record<string, unknown>) => {
-    setCurrentMarkdownContent(content)
-    setCurrentDocumentationData(metadata)
-  }
-
   // Handle export functionality
   const handleExport = () => {
     setIsExportDialogOpen(true)
   }
-
-  // Handle feedback functionality
-  const handleFeedback = () => {
-    setIsFeedbackModalOpen(true)
-  }
-
-  // Global keyboard shortcut for screenshot feedback (Ctrl+Shift+S)
-  useEffect(() => {
-    const handleGlobalScreenshot = (event: KeyboardEvent) => {
-      if (event.ctrlKey && event.shiftKey && event.key === 'S') {
-        event.preventDefault()
-        // Open feedback modal for screenshot
-        setIsFeedbackModalOpen(true)
-      }
-    }
-
-    document.addEventListener('keydown', handleGlobalScreenshot)
-    return () => document.removeEventListener('keydown', handleGlobalScreenshot)
-  }, [])
 
   // Sync document class with theme state
   useEffect(() => {
@@ -569,41 +821,7 @@ function DocumentationPage() {
         </div>
       )}
 
-      {/* Tools Dropdown - Contains all tools */}
-      <div className="docs-tools-dropdown-container">
-        <ToolsDropdown 
-          githubHref={githubHref}
-          pageContent={`Current page: ${activeLabel}`}
-          isTranslationActive={isTranslationActive}
-          currentLanguageCode={currentLanguageCode}
-          onOpenTranslation={() => setIsTranslationDialogOpen(true)}
-          onToggleSuggestions={() => setIsSuggestionPanelOpen(prev => !prev)}
-          isMonitoring={isMonitoring}
-          newCommitsCount={newCommitsCount}
-          onToggleAutoUpdate={() => {
-            if (isMonitoring) {
-              stopMonitoring()
-            } else {
-              startMonitoring()
-            }
-          }}
-          isGitHubBotEnabled={isGitHubBotEnabled}
-          onToggleGitHubBot={() => {
-            if (isGitHubBotEnabled) {
-              gitHubWebhookService.stopWebhookSimulation()
-              setIsGitHubBotEnabled(false)
-            } else {
-              if (githubHref !== '#') {
-                gitHubWebhookService.startWebhookSimulation(githubHref, 3)
-                setIsGitHubBotEnabled(true)
-              }
-            }
-          }}
-          isDiscordMonitoringActive={isDiscordMonitoringActive}
-          onOpenDiscordConfig={() => setIsDiscordConfigOpen(true)}
-          onToggleAIChat={toggleChat}
-        />
-      </div>
+      {/* Tools dropdown removed (user request) */}
 
       {/* View Code Button - Top Right Corner */}
       <div className="docs-view-code-button-container">
@@ -638,18 +856,6 @@ function DocumentationPage() {
         >
           <ExportIcon size={16} />
           <span>Export</span>
-        </button>
-      </div>
-
-      {/* Feedback Button - Top Right Corner */}
-      <div className="docs-feedback-button-container">
-        <button
-          className="docs-feedback-button"
-          onClick={handleFeedback}
-          aria-label="Give feedback"
-        >
-          <FeedbackIcon size={16} />
-          <span>Feedback</span>
         </button>
       </div>
 
@@ -731,70 +937,57 @@ function DocumentationPage() {
                 <DiagramIcon size={16} />
                 <span>System Diagrams</span>
               </button>
+              
+              <button 
+                className={`docs-sidebar__nav-item ${activeLabel === 'System Tracing' ? 'is-active' : ''}`}
+                onClick={() => {
+                  // Check if we're already on the tracing page
+                  if (window.location.pathname === '/tracing') {
+                    // If already on tracing page, just reload to refresh content
+                    setTimeout(() => window.location.reload(), 100)
+                  } else {
+                    // Navigate to tracing page
+                    navigate('/tracing')
+                  }
+                }}
+                aria-label="View System Tracing & Logs"
+              >
+                <HistoryIcon size={16} />
+                <span>System Tracing</span>
+              </button>
             </div>
           </div>
 
           {/* Documentation Tree Section */}
           <div className="docs-sidebar__section">
             <div className="docs-sidebar__section-header">
-              <h3>Documentation</h3>
+              <h3>Documentation Files</h3>
             </div>
             <div className="docs-sidebar__nav">
-              <button 
-                className={`docs-sidebar__nav-item ${activeLabel === 'Overview' ? 'is-active' : ''}`}
-                onClick={() => {
-                  const repoPath = window.location.pathname.split('/')[1]
-                  navigate(`/${repoPath}/docs/overview`, {
-                    state: location.state
-                  })
-                  setTimeout(() => window.location.reload(), 100)
-                }}
-                aria-label="View Overview"
-              >
-                <span>Overview</span>
-              </button>
-              
-              <button 
-                className={`docs-sidebar__nav-item ${activeLabel === 'Quick Start' ? 'is-active' : ''}`}
-                onClick={() => {
-                  const repoPath = window.location.pathname.split('/')[1]
-                  navigate(`/${repoPath}/docs/quickstart`, {
-                    state: location.state
-                  })
-                  setTimeout(() => window.location.reload(), 100)
-                }}
-                aria-label="View Quick Start"
-              >
-                <span>Quick Start</span>
-              </button>
-              
-              <button 
-                className={`docs-sidebar__nav-item ${activeLabel === 'Requirements' ? 'is-active' : ''}`}
-                onClick={() => {
-                  const repoPath = window.location.pathname.split('/')[1]
-                  navigate(`/${repoPath}/docs/requirements`, {
-                    state: location.state
-                  })
-                  setTimeout(() => window.location.reload(), 100)
-                }}
-                aria-label="View Requirements"
-              >
-                <span>Requirements</span>
-              </button>
-              
-              <button 
-                className={`docs-sidebar__nav-item ${activeLabel === 'Main Documentation' ? 'is-active' : ''}`}
-                onClick={() => {
-                  const repoPath = window.location.pathname.split('/')[1]
-                  navigate(`/${repoPath}/documentation`, {
-                    state: location.state
-                  })
-                  setTimeout(() => window.location.reload(), 100)
-                }}
-                aria-label="View Full Documentation"
-              >
-                <span>Full README</span>
-              </button>
+              {isLoadingDocs ? (
+                <div style={{ padding: '12px', textAlign: 'center', color: 'var(--docs-normal-text)' }}>
+                  <div className="spinner" style={{ margin: '0 auto' }} />
+                </div>
+              ) : docsError ? (
+                <div style={{ padding: '12px', color: 'var(--danger-color)', fontSize: '14px' }}>
+                  {docsError}
+                </div>
+              ) : documentKeys.length === 0 ? (
+                <div style={{ padding: '12px', color: 'var(--docs-normal-text)', fontSize: '14px' }}>
+                  No documentation files found
+                </div>
+              ) : (
+                documentKeys.map((key) => (
+                  <button
+                    key={key}
+                    className={`docs-sidebar__nav-item ${selectedDocKey === key ? 'is-active' : ''}`}
+                    onClick={() => setSelectedDocKey(key)}
+                    aria-label={`View ${key}`}
+                  >
+                    <span>{key}</span>
+                  </button>
+                ))
+              )}
             </div>
           </div>
           
@@ -811,147 +1004,134 @@ function DocumentationPage() {
         </aside>
         <main className={`docs-main ${isSidebarCollapsed ? 'is-collapsed' : ''}`}>
           <div className="docs-main__container">
+            {activeLabel === 'Changelog' ? (
+              <EmbeddedChangelog 
+                repo={repo} 
+                repoUrl={githubHref}
+                className="changelog-main"
+              />
+            ) : activeLabel === 'System Diagrams' ? (
+              <EmbeddedFlowchart 
+                className="flowchart-main"
+              />
+            ) : selectedDocKey && documents[selectedDocKey] ? (
+              <div className="documentation-section">
+                {/* Edit/Read mode toggle toolbar */}
+                <div style={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '12px',
+                  padding: '12px 0',
+                  borderBottom: '1px solid var(--sidebar-border)',
+                  marginBottom: '20px'
+                }}>
+                  <button
+                    onClick={() => setIsEditMode(!isEditMode)}
+                    disabled={isAgentActive}
+                    style={{
+                      padding: '8px 16px',
+                      borderRadius: '6px',
+                      border: '1px solid var(--sidebar-border)',
+                      background: isEditMode ? 'var(--primary-color)' : 'var(--docs-bg)',
+                      color: isEditMode ? '#fff' : 'var(--docs-text)',
+                      cursor: isAgentActive ? 'not-allowed' : 'pointer',
+                      opacity: isAgentActive ? 0.5 : 1,
+                      fontSize: '14px',
+                      fontWeight: '500',
+                      transition: 'all 0.2s ease'
+                    }}
+                  >
+                    {isEditMode ? '� Markdown Mode' : '📄 Raw Mode'}
+                  </button>
+                  
+                  {isSaving && (
+                    <span style={{ fontSize: '14px', color: 'var(--docs-normal-text)' }}>
+                      💾 Saving...
+                    </span>
+                  )}
+                  
+                  {saveError && (
+                    <span style={{ fontSize: '14px', color: 'var(--danger-color)' }}>
+                      ❌ {saveError}
+                    </span>
+                  )}
+                  
+                  {isAgentActive && (
+                    <span style={{ fontSize: '14px', color: 'var(--primary-color)' }}>
+                      🤖 Agent is working...
+                    </span>
+                  )}
+                  
+                  <span style={{ 
+                    fontSize: '12px', 
+                    color: 'var(--docs-normal-text)', 
+                    marginLeft: 'auto',
+                    opacity: 0.7
+                  }}>
+                    {selectedDocKey}
+                  </span>
+                </div>
 
-                {activeLabel === 'Changelog' ? (
-                  <EmbeddedChangelog 
-                    repo={repo} 
-                    repoUrl={githubHref}
-                    className="changelog-main"
-                  />
-                ) : activeLabel === 'System Diagrams' ? (
-                  <EmbeddedFlowchart 
-                    className="flowchart-main"
-                  />
-                ) : activeLabel === 'Main Documentation' ? (
-                  <DocumentationSection 
-                    key={`fullreadme-${refreshKey}`}
-                    section="fullreadme" 
-                    githubHref={githubHref}
-                    showTOC={showTOC}
-                    onContentLoaded={handleContentLoaded}
-                  />
-                ) : activeLabel === 'Overview' ? (
-                  <DocumentationSection 
-                    key={`overview-${refreshKey}`}
-                    section="overview" 
-                    githubHref={githubHref}
-                    showTOC={showTOC}
-                    onContentLoaded={handleContentLoaded}
-                  />
-                ) : activeLabel === 'Quick Start' ? (
-                  <DocumentationSection 
-                    key={`quickstart-${refreshKey}`}
-                    section="quickstart" 
-                    githubHref={githubHref}
-                    showTOC={showTOC}
-                    onContentLoaded={handleContentLoaded}
-                  />
-                ) : activeLabel === 'Requirements' ? (
-                  <DocumentationSection 
-                    key={`requirements-${refreshKey}`}
-                    section="requirements" 
-                    githubHref={githubHref}
-                    showTOC={showTOC}
-                    onContentLoaded={handleContentLoaded}
+                {/* Content area - show content even during agent activity */}
+                {isEditMode ? (
+                  <MarkdownEditor
+                    content={editedContent}
+                    onContentChange={handleContentEdit}
+                    placeholder="Start editing your documentation..."
                   />
                 ) : (
-                  <div style={{ 
-                    padding: '60px 40px', 
-                    textAlign: 'center', 
-                    color: 'var(--docs-normal-text)' 
-                  }}>
-                    <h2 style={{ 
-                      fontSize: '24px', 
-                      fontWeight: '600', 
-                      marginBottom: '16px',
-                      color: 'var(--docs-header-text)' 
-                    }}>
-                      Welcome to the Repository
-                    </h2>
-                    <p style={{ 
-                      fontSize: '16px', 
-                      lineHeight: '1.6', 
-                      maxWidth: '600px', 
-                      margin: '0 auto 24px auto' 
-                    }}>
-                      Select an option from the sidebar to view changelog, system diagrams, or documentation.
-                    </p>
-                    <div style={{ 
-                      display: 'flex', 
-                      gap: '16px', 
-                      justifyContent: 'center',
-                      flexWrap: 'wrap'
-                    }}>
-                      <button 
-                        onClick={() => {
-                          const repoPath = window.location.pathname.split('/')[1]
-                          navigate(`/${repoPath}/changelog`, { state: location.state })
-                          setTimeout(() => window.location.reload(), 100)
-                        }}
-                        style={{
-                          padding: '12px 24px',
-                          border: '1px solid var(--sidebar-border)',
-                          borderRadius: '8px',
-                          background: 'var(--docs-bg)',
-                          color: 'var(--docs-text)',
-                          cursor: 'pointer',
-                          fontSize: '14px',
-                          fontWeight: '500',
-                          transition: 'all 0.2s ease'
-                        }}
-                      >
-                        📋 View Changelog
-                      </button>
-                      <button 
-                        onClick={() => {
-                          const repoPath = window.location.pathname.split('/')[1]
-                          navigate(`/${repoPath}/flowchart`, { state: location.state })
-                          setTimeout(() => window.location.reload(), 100)
-                        }}
-                        style={{
-                          padding: '12px 24px',
-                          border: '1px solid var(--sidebar-border)',
-                          borderRadius: '8px',
-                          background: 'var(--docs-bg)',
-                          color: 'var(--docs-text)',
-                          cursor: 'pointer',
-                          fontSize: '14px',
-                          fontWeight: '500',
-                          transition: 'all 0.2s ease'
-                        }}
-                      >
-                        📊 View Diagrams
-                      </button>
-                      <button 
-                        onClick={() => {
-                          const repoPath = window.location.pathname.split('/')[1]
-                          navigate(`/${repoPath}/documentation`, { state: location.state })
-                          setTimeout(() => window.location.reload(), 100)
-                        }}
-                        style={{
-                          padding: '12px 24px',
-                          border: '1px solid var(--sidebar-border)',
-                          borderRadius: '8px',
-                          background: 'var(--docs-bg)',
-                          color: 'var(--docs-text)',
-                          cursor: 'pointer',
-                          fontSize: '14px',
-                          fontWeight: '500',
-                          transition: 'all 0.2s ease'
-                        }}
-                      >
-                        📚 View Documentation
-                      </button>
-                    </div>
+                  <div onDoubleClick={() => !isAgentActive && setIsEditMode(true)}>
+                    <Markdown content={editedContent || documents[selectedDocKey]?.content || ''} />
                   </div>
                 )}
+              </div>
+            ) : (
+              <div style={{ 
+                padding: '60px 40px', 
+                textAlign: 'center', 
+                color: 'var(--docs-normal-text)' 
+              }}>
+                <h2 style={{ 
+                  fontSize: '24px', 
+                  fontWeight: '600', 
+                  marginBottom: '16px',
+                  color: 'var(--docs-header-text)' 
+                }}>
+                  {isLoadingDocs ? 'Loading documentation...' : 
+                   docsError ? 'Error loading documentation' :
+                   documentKeys.length === 0 ? 'No documentation found' :
+                   'Select a file from the sidebar'}
+                </h2>
+                {docsError && (
+                  <div style={{ 
+                    fontSize: '14px', 
+                    color: 'var(--danger-color)',
+                    margin: '16px auto',
+                    maxWidth: '600px',
+                    textAlign: 'center'
+                  }}>
+                    <p style={{ marginBottom: '8px' }}>{docsError}</p>
+                    {retryCount > 0 && retryCount < maxRetries && (
+                      <p style={{ fontSize: '12px', opacity: 0.8 }}>
+                        Retrying... (Attempt {retryCount}/{maxRetries})
+                      </p>
+                    )}
+                    {retryCount >= maxRetries && (
+                      <p style={{ fontSize: '12px', opacity: 0.8 }}>
+                        Maximum retry attempts reached. Please refresh the page.
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </main>
       </div>
       
       {/* Bottom Mini Dialog */}
       <BottomMiniDialog
-        content=""
+        content={documentationContent}
         mode={viewMode}
         onModeChange={(m) => setViewMode(m)}
       />
@@ -1012,30 +1192,8 @@ function DocumentationPage() {
       <ExportDialog
         isOpen={isExportDialogOpen}
         onClose={() => setIsExportDialogOpen(false)}
-        markdownContent={currentMarkdownContent}
-        documentationData={currentDocumentationData}
-      />
-
-      {/* Translation Dialog */}
-      <TranslationDialog
-        isOpen={isTranslationDialogOpen}
-        onClose={() => setIsTranslationDialogOpen(false)}
-      />
-
-      {/* Feedback Modal */}
-      <FeedbackModal
-        isOpen={isFeedbackModalOpen}
-        onClose={() => setIsFeedbackModalOpen(false)}
-      />
-
-      {/* Discord Notification Config Dialog */}
-      <DiscordNotificationConfig
-        isOpen={isDiscordConfigOpen}
-        onClose={() => setIsDiscordConfigOpen(false)}
-        repoUrl={githubHref}
-        repoName={repo || 'Repository'}
-        changelogUrl={`${window.location.origin}/changelog/${encodeURIComponent(githubHref)}`}
-        onMonitoringStateChange={handleDiscordMonitoringStateChange}
+        markdownContent=""
+        documentationData={{}}
       />
 
       {/* Auto Update Notification */}

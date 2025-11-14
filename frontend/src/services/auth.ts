@@ -33,27 +33,34 @@ class AuthService {
     localStorage.removeItem('user_email');
   }
 
-  async getCurrentUser(): Promise<{ id: string; email: string; [key: string]: unknown }> {
+  async getCurrentUser(): Promise<{ id: string; email: string; [key: string]: unknown } | null> {
     const token = this.getToken();
     if (!token) {
-      throw new Error('No authentication token');
+      // Return null instead of throwing error - authentication is optional
+      return null;
     }
 
-    const response = await fetch('http://localhost:8081/api/auth/user', {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-      },
-    });
+    try {
+      const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8081/api'}/auth/user`, {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+        },
+      });
 
-    if (!response.ok) {
-      if (response.status === 401) {
-        this.logout();
-        throw new Error('Authentication expired');
+      if (!response.ok) {
+        if (response.status === 401) {
+          this.logout();
+          return null; // Return null instead of throwing error
+        }
+        console.warn('Failed to get user information');
+        return null;
       }
-      throw new Error('Failed to get user information');
-    }
 
-    return response.json();
+      return response.json();
+    } catch (error) {
+      console.warn('Error fetching user information:', error);
+      return null;
+    }
   }
 
   getAuthHeaders(): Record<string, string> {

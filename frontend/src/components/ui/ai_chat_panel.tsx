@@ -18,8 +18,6 @@ interface Message {
   timestamp: Date
 }
 
-
-
 export const AIChatPanel: React.FC = () => {
   const { isOpen, closeChat, initialMessage, clearInitialMessage, repositoryInfo } = useAIChat()
   const [messages, setMessages] = useState<Message[]>([])
@@ -42,8 +40,6 @@ export const AIChatPanel: React.FC = () => {
     scrollToBottom()
   }, [messages])
 
-
-
   useEffect(() => {
     if (isOpen && inputRef.current) {
       inputRef.current.focus()
@@ -64,6 +60,9 @@ export const AIChatPanel: React.FC = () => {
       setMessages(prev => [...prev, userMessage])
       setIsTyping(true)
 
+      // Dispatch agent started event
+      window.dispatchEvent(new CustomEvent('agent-started'))
+
       // Process initial message with actual API
       const processInitialMessage = async () => {
         try {
@@ -76,10 +75,7 @@ export const AIChatPanel: React.FC = () => {
           const request: DocAgentRequest = {
             gitUrl: repositoryInfo.gitUrl,
             userPrompt: initialMessage,
-            branch: repositoryInfo.branch,
-            audience: 'developers',
-            tone: 'professional',
-            format: 'markdown'
+            branch: repositoryInfo.branch
           }
 
           // Call the actual API using the service
@@ -93,6 +89,9 @@ export const AIChatPanel: React.FC = () => {
           }
           setMessages(prev => [...prev, aiMessage])
           setIsTyping(false)
+          
+          // Dispatch agent completed event
+          window.dispatchEvent(new CustomEvent('agent-completed'))
         } catch (error) {
           console.error('Error processing initial message:', error)
           const errorMessage: Message = {
@@ -103,6 +102,9 @@ export const AIChatPanel: React.FC = () => {
           }
           setMessages(prev => [...prev, errorMessage])
           setIsTyping(false)
+          
+          // Dispatch agent completed event even on error
+          window.dispatchEvent(new CustomEvent('agent-completed'))
         }
       }
 
@@ -127,6 +129,9 @@ export const AIChatPanel: React.FC = () => {
     setInputValue('')
     setIsTyping(true)
 
+    // Dispatch agent started event
+    window.dispatchEvent(new CustomEvent('agent-started'))
+
     try {
       // Get repository info from context
       if (!repositoryInfo?.gitUrl) {
@@ -137,10 +142,7 @@ export const AIChatPanel: React.FC = () => {
       const request: DocAgentRequest = {
         gitUrl: repositoryInfo.gitUrl,
         userPrompt: userMessage.content,
-        branch: repositoryInfo.branch,
-        audience: 'developers',
-        tone: 'professional',
-        format: 'markdown'
+        branch: repositoryInfo.branch
       }
 
       // Call the actual API using the service
@@ -154,6 +156,9 @@ export const AIChatPanel: React.FC = () => {
       }
       setMessages(prev => [...prev, aiMessage])
       setIsTyping(false)
+      
+      // Dispatch agent completed event
+      window.dispatchEvent(new CustomEvent('agent-completed'))
     } catch (error) {
       console.error('Error calling AI API:', error)
       const errorMessage: Message = {
@@ -164,6 +169,9 @@ export const AIChatPanel: React.FC = () => {
       }
       setMessages(prev => [...prev, errorMessage])
       setIsTyping(false)
+      
+      // Dispatch agent completed event even on error
+      window.dispatchEvent(new CustomEvent('agent-completed'))
     }
   }
 
@@ -175,11 +183,23 @@ export const AIChatPanel: React.FC = () => {
     setShowSearch(!showSearch)
   }
 
-
-
   return (
     <>
-      {/* Enhanced chat panel */}
+      {/* Toggle button for sidebar */}
+      {!isOpen && (
+        <button 
+          className="ai-chat-sidebar-toggle"
+          onClick={useAIChat().openChat}
+          aria-label="Open AI Assistant"
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2"/>
+            <line x1="9" y1="3" x2="9" y2="21"/>
+          </svg>
+        </button>
+      )}
+
+      {/* Enhanced chat panel as right sidebar */}
       <div className={`ai-chat-panel ${isOpen ? 'is-open' : ''}`}>
         {/* Top controls */}
         <div className="ai-chat-top-controls">
@@ -257,6 +277,17 @@ export const AIChatPanel: React.FC = () => {
             className="ai-chat-textarea"
             value={inputValue}
             onChange={(e) => setInputValue(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && e.shiftKey) {
+                // Shift+Enter: allow new line (default behavior)
+                return
+              }
+              if (e.key === 'Enter') {
+                // Enter alone: send message
+                e.preventDefault()
+                handleSendMessage()
+              }
+            }}
             placeholder="Ask AI something..."
             rows={1}
           />

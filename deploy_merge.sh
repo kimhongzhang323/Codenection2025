@@ -3,6 +3,7 @@ set -e
 
 # Save current branch name
 CURRENT_BRANCH=$(git rev-parse --abbrev-ref HEAD)
+DATE=$(date +"%Y-%m-%d_%H-%M")
 
 # If already on master, just push
 if [ "$CURRENT_BRANCH" = "master" ]; then
@@ -21,7 +22,7 @@ git checkout master
 git pull origin master
 
 # Merge current branch into master
-git merge "$CURRENT_BRANCH"
+git merge --no-ff -m "deploy_merge ${DATE}" "$CURRENT_BRANCH"
 
 # Push updated master
 git push origin master

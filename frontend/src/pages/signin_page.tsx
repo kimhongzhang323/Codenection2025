@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../services/auth';
+import { getBackendUrl } from '../config/api';
 import Magnet from '../components/magnet';
 import './signup_page.css';
 
@@ -30,14 +31,16 @@ const SignIn: React.FC = () => {
     setIsLoading(true);
     
     try {
-      // Redirect to Spring Boot OAuth2 authorization endpoint
-      const redirectUri = encodeURIComponent(`${window.location.origin}/auth/callback`);
-      const oauthUrl = `http://localhost:8081/oauth2/authorization/github?redirect_uri=${redirectUri}`;
+      // Use centralized API config for consistent URL handling
+      const oauthUrl = getBackendUrl('/oauth2/authorization/github');
+      
+      console.log('Environment:', import.meta.env.MODE);
+      console.log('Redirecting to OAuth URL:', oauthUrl);
       
       window.location.href = oauthUrl;
     } catch (error) {
       setIsLoading(false);
-      console.error('Authentication failed:', error);
+      console.error('GitHub OAuth authentication failed:', error);
     }
   };
 

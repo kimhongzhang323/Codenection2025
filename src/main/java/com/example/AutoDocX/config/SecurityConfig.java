@@ -13,6 +13,7 @@ public class SecurityConfig {
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
                 .csrf(AbstractHttpConfigurer::disable)
+                .cors(cors -> cors.disable())
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/**", "/login/**", "/oauth2/**", "/h2-console/**").permitAll()
                         .anyRequest().authenticated()
@@ -20,9 +21,8 @@ public class SecurityConfig {
                 .formLogin(AbstractHttpConfigurer::disable)
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .oauth2Login(oauth2 -> oauth2
-                        .loginPage("/login")
-                        .defaultSuccessUrl("/api/auth/success", true)
-                        .failureUrl("/login?error=true")
+                        .defaultSuccessUrl("/api/auth/oauth/success", true)
+                        .failureUrl("/api/auth/oauth/failure")
                 );
 
         // For H2 console

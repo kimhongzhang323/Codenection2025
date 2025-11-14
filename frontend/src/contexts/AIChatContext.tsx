@@ -29,7 +29,7 @@ interface AIChatProviderProps {
 }
 
 export const AIChatProvider: React.FC<AIChatProviderProps> = ({ children }) => {
-  const [isOpen, setIsOpen] = useState(false)
+  const [isOpen, setIsOpen] = useState(true) // Changed to true - expanded by default
   const [initialMessage, setInitialMessageState] = useState<string | null>(null)
   const [repositoryInfo, setRepositoryInfoState] = useState<{ gitUrl: string; branch: string } | null>(null)
 

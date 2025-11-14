@@ -55,7 +55,7 @@ const Dashboard: React.FC = () => {
 
     const validateAuthToken = async (token: string, userId: string) => {
       try {
-        const response = await fetch('http://localhost:8081/api/auth/validate', {
+        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8081/api'}/auth/validate`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -86,7 +86,7 @@ const Dashboard: React.FC = () => {
 
     const fetchUserProfile = async (token: string) => {
       try {
-        const response = await fetch('http://localhost:8081/api/auth/user', {
+        const response = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:8081/api'}/auth/user`, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json',

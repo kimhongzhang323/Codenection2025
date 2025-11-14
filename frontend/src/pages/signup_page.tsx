@@ -13,20 +13,12 @@ const SignUp: React.FC = () => {
     setIsLoading(true);
     
     try {
-      // GitHub OAuth URL with required scopes
-      const clientId = 'your_github_client_id';
-      const redirectUri = encodeURIComponent(`${window.location.origin}/auth/callback`);
-      const scopes = encodeURIComponent('read:user repo');
+      // Redirect to Spring Boot OAuth2 authorization endpoint
+      const backendUrl = import.meta.env.VITE_API_BASE_URL?.replace('/api', '') || 'http://localhost:8081';
+      const oauthUrl = `${backendUrl}/oauth2/authorization/github`;
       
-      const githubAuthUrl = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${redirectUri}&scope=${scopes}&state=random_string`;
-      
-      // For demo purposes, navigate to dashboard after delay
-      setTimeout(() => {
-        setIsLoading(false);
-        navigate('/dashboard');
-      }, 2000);
-      
-      console.log('GitHub OAuth URL:', githubAuthUrl);
+      console.log('Redirecting to:', oauthUrl);
+      window.location.href = oauthUrl;
     } catch (error) {
       setIsLoading(false);
       console.error('Authentication failed:', error);

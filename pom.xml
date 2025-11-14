@@ -95,18 +95,6 @@
             <artifactId>spring-ai-openai-spring-boot-starter</artifactId>
         </dependency>
 
-
-        <!-- Pinecone Java client -->
-        <dependency>
-            <groupId>io.pinecone</groupId>
-            <artifactId>pinecone-client</artifactId>
-            <version>5.1.0</version>
-        </dependency>
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-oauth2-client</artifactId>
-        </dependency>
-
         <!-- Database -->
         <dependency>
             <groupId>com.h2database</groupId>
@@ -134,16 +122,10 @@
         </dependency>
 
         <!-- Utilities -->
-        <dependency>
-            <groupId>org.eclipse.jgit</groupId>
-            <artifactId>org.eclipse.jgit</artifactId>
-            <version>6.10.0.202406032230-r</version>
-        </dependency>
         <!-- Lombok -->
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
-            <version>${lombok.version}</version>
             <scope>provided</scope>
         </dependency>
         <dependency>
@@ -167,13 +149,6 @@
             <version>2.0</version>
         </dependency>
 
-        <!-- Lombok -->
-        <dependency>
-            <groupId>org.projectlombok</groupId>
-            <artifactId>lombok</artifactId>
-            <version>1.18.34</version>
-            <scope>provided</scope>
-        </dependency>
 
         <!-- org.json for JSON parsing -->
         <dependency>

@@ -11,10 +11,21 @@ export interface GithubRepoRef {
   name: string;
 }
 
-// Parse a GitHub repository URL into a GithubRepoRef. Returns null if invalid.
+// Parse a GitHub repository URL or owner/repo string into a GithubRepoRef. Returns null if invalid.
 export function parseGithubRepoUrl(input: string): GithubRepoRef | null {
   if (!input) return null;
 
+  // First, try to parse as "owner/repo" format (raw text)
+  const rawMatch = input.trim().match(/^([a-zA-Z0-9_-]+)\/([a-zA-Z0-9_.-]+?)(?:\.git)?$/);
+  if (rawMatch) {
+    const owner = rawMatch[1];
+    const name = rawMatch[2];
+    if (owner && name) {
+      return { owner, name };
+    }
+  }
+
+  // If not raw format, try parsing as URL
   try {
     const url = new URL(input);
     const hostname = url.hostname.toLowerCase();
@@ -40,8 +51,19 @@ export function parseGithubRepoUrl(input: string): GithubRepoRef | null {
 
     return { owner, name };
   } catch {
+    // Not a valid URL, return null
     return null;
   }
+}
+
+// Normalize GitHub repository input to standard URL format
+// Converts "owner/repo" → "https://github.com/owner/repo"
+// Keeps full URLs as-is
+export function normalizeGithubRepoUrl(input: string): string | null {
+  const parsed = parseGithubRepoUrl(input);
+  if (!parsed) return null;
+  
+  return `https://github.com/${parsed.owner}/${parsed.name}`;
 }
 
 // Check via GitHub API whether a repo exists and is public.
@@ -80,7 +102,6 @@ export interface GithubRepoDetails {
   stars: string;
   language?: string;
   topics?: string[];
-  lastUpdated: string;
 }
 
 // Fetch repository details from GitHub API
@@ -107,19 +128,6 @@ export async function fetchGithubRepoDetails(
       ? `${(starCount / 1000).toFixed(1)}k` 
       : starCount.toString();
 
-    // Format last updated date
-    const updatedDate = new Date(data.updated_at);
-    const now = new Date();
-    const diffInDays = Math.floor((now.getTime() - updatedDate.getTime()) / (1000 * 60 * 60 * 24));
-    
-    let lastUpdated: string;
-    if (diffInDays === 0) lastUpdated = 'today';
-    else if (diffInDays === 1) lastUpdated = 'yesterday';
-    else if (diffInDays < 7) lastUpdated = `${diffInDays} days ago`;
-    else if (diffInDays < 30) lastUpdated = `${Math.floor(diffInDays / 7)} weeks ago`;
-    else if (diffInDays < 365) lastUpdated = `${Math.floor(diffInDays / 30)} months ago`;
-    else lastUpdated = `${Math.floor(diffInDays / 365)} years ago`;
-
     return {
       name: `${repo.owner} / ${repo.name}`,
       fullName: data.name || repo.name,
@@ -127,7 +135,6 @@ export async function fetchGithubRepoDetails(
       stars,
       language: data.language,
       topics: data.topics || [],
-      lastUpdated,
     };
   } catch (error) {
     console.error('Error fetching repo details:', error);

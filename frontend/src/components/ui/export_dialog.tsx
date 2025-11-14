@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import './export_dialog.css';
+import { XIcon } from '../icons/close_icon';
+import { ExportIcon } from '../icons/export_icon';
 
 interface ExportDialogProps {
   isOpen: boolean;
@@ -8,13 +10,70 @@ interface ExportDialogProps {
   documentationData: Record<string, unknown>;
 }
 
-export type ExportFormat = 'markdown' | 'html' | 'pdf' | 'json' | 'zip';
+export type ExportFormat = 'markdown' | 'html' | 'pdf' | 'json' | 'zip' | 'txt';
+
+// Icon components for export formats
+const MarkdownIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+    <polyline points="14 2 14 8 20 8"/>
+    <line x1="16" y1="13" x2="8" y2="13"/>
+    <line x1="16" y1="17" x2="8" y2="17"/>
+    <polyline points="10 9 9 9 8 9"/>
+  </svg>
+);
+
+const HtmlIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="16 18 22 12 16 6"/>
+    <polyline points="8 6 2 12 8 18"/>
+  </svg>
+);
+
+const PdfIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+    <polyline points="14 2 14 8 20 8"/>
+    <text x="7" y="16" fontSize="8" fontWeight="bold" fill="currentColor" stroke="none">PDF</text>
+  </svg>
+);
+
+const JsonIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+    <polyline points="14 2 14 8 20 8"/>
+    <path d="M9 11c-.5 0-.8.2-1 .5-.2.3-.3.7-.3 1.2v2.6c0 .5.1.9.3 1.2.2.3.5.5 1 .5" strokeWidth="1.5"/>
+    <path d="M15 11c.5 0 .8.2 1 .5.2.3.3.7.3 1.2v2.6c0 .5-.1.9-.3 1.2-.2.3-.5.5-1 .5" strokeWidth="1.5"/>
+    <circle cx="12" cy="13" r="0.5" fill="currentColor"/>
+    <circle cx="12" cy="16" r="0.5" fill="currentColor"/>
+  </svg>
+);
+
+const ZipIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+    <polyline points="14 2 14 8 20 8"/>
+    <line x1="12" y1="7" x2="12" y2="9"/>
+    <line x1="12" y1="11" x2="12" y2="13"/>
+    <line x1="12" y1="15" x2="12" y2="17"/>
+    <rect x="10.5" y="17" width="3" height="3" rx="0.5"/>
+  </svg>
+);
+
+const TxtIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+    <polyline points="14 2 14 8 20 8"/>
+    <line x1="9" y1="13" x2="15" y2="13"/>
+    <line x1="9" y1="17" x2="15" y2="17"/>
+  </svg>
+);
 
 interface ExportOption {
   format: ExportFormat;
   label: string;
   description: string;
-  icon: string;
+  icon: React.ReactNode;
   available: boolean;
 }
 
@@ -23,41 +82,47 @@ const exportOptions: ExportOption[] = [
     format: 'markdown',
     label: 'Markdown (.md)',
     description: 'Export as Markdown files',
-    icon: '📝',
+    icon: <MarkdownIcon />,
     available: true
   },
   {
     format: 'html',
     label: 'HTML (.html)',
     description: 'Export as HTML files',
-    icon: '🌐',
+    icon: <HtmlIcon />,
     available: true
   },
   {
     format: 'pdf',
     label: 'PDF (.pdf)',
     description: 'Export as PDF document',
-    icon: '📄',
+    icon: <PdfIcon />,
     available: true
   },
   {
     format: 'json',
     label: 'JSON (.json)',
     description: 'Export raw data as JSON',
-    icon: '📋',
+    icon: <JsonIcon />,
+    available: true
+  },
+  {
+    format: 'txt',
+    label: 'Text (.txt)',
+    description: 'Export as plain text file',
+    icon: <TxtIcon />,
     available: true
   },
   {
     format: 'zip',
     label: 'Archive (.zip)',
     description: 'Export all files in a ZIP archive',
-    icon: '🗜️',
+    icon: <ZipIcon />,
     available: true
   }
 ];
 
 export default function ExportDialog({ isOpen, onClose, markdownContent, documentationData }: ExportDialogProps) {
-  const [selectedFormat, setSelectedFormat] = useState<ExportFormat>('markdown');
   const [isExporting, setIsExporting] = useState(false);
 
   if (!isOpen) return null;
@@ -83,6 +148,9 @@ export default function ExportDialog({ isOpen, onClose, markdownContent, documen
         break;
       case 'json':
         await exportAsJSON(data);
+        break;
+      case 'txt':
+        await exportAsTXT(content);
         break;
       case 'zip':
         await exportAsZIP(content, data);
@@ -442,6 +510,42 @@ export default function ExportDialog({ isOpen, onClose, markdownContent, documen
     downloadFile(blob, 'documentation.json');
   };
 
+  const exportAsTXT = async (content: string) => {
+    // Strip markdown formatting to create plain text
+    let plainText = content;
+    
+    // Remove code blocks
+    plainText = plainText.replace(/```[\s\S]*?```/g, (match) => {
+      // Keep the content but remove the backticks
+      return match.replace(/```/g, '');
+    });
+    
+    // Remove inline code formatting
+    plainText = plainText.replace(/`([^`]+)`/g, '$1');
+    
+    // Remove bold/italic formatting
+    plainText = plainText.replace(/\*\*([^*]+)\*\*/g, '$1');
+    plainText = plainText.replace(/\*([^*]+)\*/g, '$1');
+    plainText = plainText.replace(/__([^_]+)__/g, '$1');
+    plainText = plainText.replace(/_([^_]+)_/g, '$1');
+    
+    // Convert links to plain text with URL
+    plainText = plainText.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '$1 ($2)');
+    
+    // Remove headers formatting but keep the text
+    plainText = plainText.replace(/^#{1,6}\s+/gm, '');
+    
+    // Remove blockquote markers
+    plainText = plainText.replace(/^>\s+/gm, '');
+    
+    // Add header
+    const header = `Documentation Export\nGenerated on: ${new Date().toLocaleString()}\n${'='.repeat(60)}\n\n`;
+    const finalText = header + plainText;
+    
+    const blob = new Blob([finalText], { type: 'text/plain' });
+    downloadFile(blob, 'documentation.txt');
+  };
+
   const exportAsZIP = async (content: string, data: Record<string, unknown>) => {
     // Since we don't have a ZIP library, we'll create a structured export
     // by downloading multiple related files with clear naming
@@ -508,86 +612,76 @@ To use these files, organize them in a single folder for easy access.
     URL.revokeObjectURL(url);
   };
 
+  const handleOverlayClick = (e: React.MouseEvent) => {
+    if (e.target === e.currentTarget) {
+      onClose();
+    }
+  };
+
   return (
-    <div className="export-dialog-overlay">
+    <div className="export-dialog-overlay" onClick={handleOverlayClick}>
       <div className="export-dialog">
         <div className="export-dialog-header">
-          <h2>Export Documentation</h2>
+          <div className="export-dialog-title">
+            <ExportIcon size={20} />
+            <h3>Export Documentation</h3>
+          </div>
           <button 
             className="export-dialog-close"
             onClick={onClose}
             aria-label="Close export dialog"
           >
-            ×
+            <XIcon size={16} />
           </button>
         </div>
 
         <div className="export-dialog-content">
+          <p>Choose how you'd like to export the documentation:</p>
+          
           {/* Export Format Selection */}
-          <div className="export-section">
-            <h3>Choose Format to Download</h3>
-            <div className="export-options">
-              {exportOptions.map((option) => (
-                <label 
-                  key={option.format} 
-                  className={`export-option ${selectedFormat === option.format ? 'selected' : ''} ${!option.available ? 'disabled' : ''}`}
-                >
-                  <input
-                    type="radio"
-                    name="exportFormat"
-                    value={option.format}
-                    checked={selectedFormat === option.format}
-                    onChange={async (e) => {
-                      const format = e.target.value as ExportFormat;
-                      setSelectedFormat(format);
-                      // Auto-download when format is selected
-                      if (option.available) {
-                        setIsExporting(true);
-                        try {
-                          await performExport(format, markdownContent, documentationData);
-                          alert(`Successfully exported as ${format.toUpperCase()}`);
-                          onClose();
-                        } catch (error) {
-                          console.error('Export failed:', error);
-                          alert('Export failed. Please try again.');
-                        } finally {
-                          setIsExporting(false);
-                        }
-                      }
-                    }}
-                    disabled={!option.available}
-                  />
-                  <div className="export-option-content">
-                    <div className="export-option-icon">{option.icon}</div>
-                    <div className="export-option-details">
-                      <div className="export-option-label">{option.label}</div>
-                      <div className="export-option-description">{option.description}</div>
-                    </div>
-                  </div>
-                </label>
-              ))}
-            </div>
+          <div className="export-options">
+            {exportOptions.map((option) => (
+              <button 
+                key={option.format} 
+                className={`export-option ${!option.available ? 'disabled' : ''}`}
+                onClick={async () => {
+                  const format = option.format;
+                  // Auto-download when format is selected
+                  if (option.available) {
+                    setIsExporting(true);
+                    try {
+                      await performExport(format, markdownContent, documentationData);
+                      alert(`Successfully exported as ${format.toUpperCase()}`);
+                      onClose();
+                    } catch (error) {
+                      console.error('Export failed:', error);
+                      alert('Export failed. Please try again.');
+                    } finally {
+                      setIsExporting(false);
+                    }
+                  }
+                }}
+                disabled={!option.available}
+              >
+                <div className="export-option-icon">{option.icon}</div>
+                <div className="export-option-content">
+                  <h4>{option.label}</h4>
+                  <p>{option.description}</p>
+                </div>
+              </button>
+            ))}
           </div>
 
           {/* Export Status */}
           {isExporting && (
-            <div className="export-section">
-              <div className="export-status">
-                <span className="export-status-icon">⏳</span>
-                <span className="export-status-text">Exporting...</span>
-              </div>
+            <div className="export-status">
+              <svg className="export-status-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <circle cx="12" cy="12" r="10"/>
+                <path d="M12 6v6l4 2"/>
+              </svg>
+              <span className="export-status-text">Exporting...</span>
             </div>
           )}
-        </div>
-
-        <div className="export-dialog-footer">
-          <button 
-            className="export-dialog-cancel"
-            onClick={onClose}
-            disabled={isExporting}
-          >
-            {isExporting ? 'Exporting...' : 'Close'}
-          </button>
         </div>
       </div>
     </div>

@@ -12,28 +12,11 @@
   position: relative;
 }
 
-.home__signup-container {
+.home__signin-container {
   position: absolute;
   top: 24px;
   right: 80px;
   z-index: 10;
-}
-
-.home__signup-btn {
-  background: #1b1b1b;
-  color: #ffffff;
-  border: 1px solid #2a2a2a;
-  border-radius: 8px;
-  padding: 10px 22px;
-  font-size: 14px;
-  font-weight: 500;
-  line-height: 1.2;
-  cursor: pointer;
-  transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  display: flex;
-  align-items: center;
-  justify-content: center;
 }
 
 .home__tooltip {
@@ -63,26 +46,6 @@
   }
 }
 
-.home__signup-btn:hover {
-  background: #2a2a2a;
-  border-color: #343434;
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
-  transform: translateY(-1px);
-}
-
-.home__signup-btn:active {
-  background: #1b1b1b;
-  border-color: #2a2a2a;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-  transform: translateY(0);
-}
-
-.home__signup-btn:focus,
-.home__signup-btn:focus-visible {
-  outline: none;
-  box-shadow: none;
-}
-
 .home__logo {
   width: 220px;
   height: 220px;
@@ -99,24 +62,26 @@
 }
 
 .home__subtitle {
-  margin: 0 0 8px 0;
+  margin: -12px 0 4px 0;
   color: #bdbdbd;
   text-align: center;
 }
 
 .home__input {
   width: 100%;
-  padding: 12px 14px;
+  padding: 6px 16px;
   border-radius: 8px;
   border: none;
   background: transparent;
   color: #ffffff;
+  font-size: 14px;
   transition: border-color 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
   box-sizing: border-box;
 }
 
 .home__input::placeholder {
-  color: #8a8a8a;
+  color: #ffffff;
+  font-size: 14px;
 }
 
 /* Hover and focus states for wrapper */
@@ -125,7 +90,8 @@
 }
 
 .home__input-wrapper:focus-within {
-  border-color: #09334e; /* subtle bluish accent */
+  border-color: #0d5683;
+  box-shadow: 0 0 0 3px rgba(59, 59, 255, 0.18);
 }
 
 /* Input focus states */
@@ -133,15 +99,12 @@
 .home__input:focus-visible {
   outline: none;
 }
-  box-shadow: 0 0 0 3px rgba(59, 59, 255, 0.18);
-  background: #191919;
-}
 
 /* Wrap input to position the icon at the right edge */
 .home__input-wrapper {
   position: relative !important;
   display: block;
-  width: min(420px, 90vw);
+  width: min(560px, 90vw);
   border-radius: 8px;
   border: 1px solid #2a2a2a;
   background: #1b1b1b;
@@ -183,15 +146,16 @@
 
 /* Left alignment and spacing */
 .home__input-wrapper .home__input-icon--left {
-  left: 12px !important;
+  left: 16px !important;
   z-index: 10;
+  color: #9ca3af;
 }
 
-/* Add right padding so text doesn't overlap the icon */
+/* Add padding so text doesn't overlap the icons */
 .home__input-wrapper .home__input,
 .home__input-wrapper .repo-autocomplete__input {
-  padding-right: 40px;
-  padding-left: 40px;
+  padding-right: 44px;
+  padding-left: 22px;
 }
 
 /* Loading animation for the search icon */
@@ -215,21 +179,37 @@
 }
 
 /* Utility colors */
-.text-success { color: #22c55e; }
-.text-danger { color: #ef4444; }
+.text-success { 
+  color: #22c55e !important; 
+}
+.text-danger { 
+  color: #ef4444 !important; 
+}
+
+/* Ensure utility colors work on input icons */
+.home__input-icon.text-success,
+.home__input-wrapper .home__input-icon.text-success {
+  color: #22c55e !important;
+}
+
+.home__input-icon.text-danger,
+.home__input-wrapper .home__input-icon.text-danger {
+  color: #ef4444 !important;
+}
 
 /* Repository Details Container */
 .home .repo-details {
   width: min(560px, 90vw);
-  margin-top: 24px;
-  padding: 12px 16px;
-  border-radius: 8px;
+  margin-top: 0px;
+  padding: 20px 20px;
+  border-radius: 12px;
   border: 1px solid #2a2a2a;
   background: #1b1b1b;
   color: #ffffff;
   animation: slideInUp 0.4s ease-out;
   text-align: left !important;
   box-sizing: border-box;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
 }
 
 /* Force left alignment with maximum specificity */
@@ -250,82 +230,125 @@
 }
 
 .repo-details__header {
-  margin-bottom: 8px;
+  margin-bottom: 12px;
 }
 
 .home .repo-details__name {
-  font-size: 16px;
-  font-weight: 600;
+  font-size: 18px;
+  font-weight: 500;
   color: #ffffff;
-  margin-bottom: 2px;
+  margin-bottom: 4px;
   text-align: left !important;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
 }
 
-.home .repo-details__full-name {
+.home .repo-details__owner {
   font-size: 13px;
-  color: #bdbdbd;
-  font-weight: 400;
+  color: #8a8a8a;
+  font-weight: 500;
   text-align: left !important;
+  margin-bottom: 2px;
 }
 
 .home .repo-details__description {
   font-size: 13px;
-  line-height: 1.4;
-  color: #e0e0e0;
-  margin-bottom: 16px;
-  min-height: 60px;
+  line-height: 1.5;
+  color: #d4d4d4;
+  margin-bottom: 18px;
+  min-height: auto;
   text-align: left !important;
+  font-weight: 400;
 }
 
-.home .repo-details__footer {
+.home .repo-details__meta {
   display: flex;
   align-items: center;
   justify-content: space-between;
   width: 100%;
 }
 
+.home .repo-details__info {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
 .home .repo-details__stars {
   display: flex;
   align-items: center;
-  gap: 4px;
-  font-size: 12px;
+  gap: 5px;
+  font-size: 13px;
   color: #bdbdbd;
   text-align: left !important;
   justify-content: flex-start !important;
+  font-weight: 500;
+}
+
+.home .repo-details__stars span {
+  color: #bdbdbd;
+  font-weight: 500;
+  transform: translateY(1px);
 }
 
 .home .repo-details__star-icon {
-  width: 12px;
-  height: 12px;
+  width: 14px;
+  height: 14px;
   object-fit: contain;
+  flex-shrink: 0;
+}
+
+.home .repo-details__language {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #bdbdbd;
+  font-weight: 500;
+}
+
+.home .repo-details__language-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
 }
 
 .home .repo-details__arrow-icon {
   color: #ffffff;
   cursor: pointer;
-  transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.home .repo-details__arrow-icon:hover {
-  color: #e0e0e0;
-  transform: scale(1.05);
+  padding: 4px;
+  border-radius: 6px;
+  margin-left: 8px;
 }
 
 /* Responsive adjustments */
 @media (max-width: 640px) {
-  .repo-details {
-    padding: 16px;
+  .home .repo-details {
+    padding: 18px 16px;
   }
   
-  .repo-details__meta {
+  .home .repo-details__info {
     gap: 12px;
   }
   
-  .repo-details__name {
-    font-size: 16px;
+  .home .repo-details__name {
+    font-size: 18px;
   }
   
-  .repo-details__description {
+  .home .repo-details__description {
     font-size: 13px;
+  }
+
+  .home .repo-details__meta {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  
+  .home .repo-details__arrow-icon {
+    align-self: flex-end;
+    margin-left: 0;
   }
 }

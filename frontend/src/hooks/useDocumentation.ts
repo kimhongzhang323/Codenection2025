@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { documentationApi, agentApi } from '../services/api'
 import type { Documentation, DocAgentRequest } from '../services/api'
 
@@ -13,6 +13,8 @@ export interface UseDocumentationOptions {
   gitUrl?: string
   branch?: string
   autoLoad?: boolean
+  retryInterval?: number // milliseconds between retry attempts (default: 5000)
+  maxRetries?: number // max retry attempts (default: unlimited)
 }
 
 export interface UseDocumentationReturn {
@@ -21,24 +23,33 @@ export interface UseDocumentationReturn {
   isLoading: boolean
   isGenerating: boolean
   error: string | null
+  retryCount: number
   loadDocumentation: () => Promise<void>
   generateDocumentation: (options: Omit<DocAgentRequest, 'gitUrl' | 'branch'>) => Promise<void>
   getDocumentationContent: (key: string) => Promise<string | null>
   updateDocumentation: (key: string, content: string) => Promise<void>
   deleteDocumentation: (key: string) => Promise<void>
   clearError: () => void
+  stopRetrying: () => void
 }
 
 export function useDocumentation({
   gitUrl,
   branch,
   autoLoad = false,
+  retryInterval = 5000,
+  maxRetries = Infinity,
 }: UseDocumentationOptions = {}): UseDocumentationReturn {
   const [documentation, setDocumentation] = useState<Record<string, Documentation>>({})
   const [docTree, setDocTree] = useState<DocItem[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [isGenerating, setIsGenerating] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [retryCount, setRetryCount] = useState(0)
+  
+  const retryTimerRef = useRef<number | null>(null)
+  const shouldRetryRef = useRef(true)
+  const retryCountRef = useRef(0)
 
   // Generate doc tree from documentation keys
   const generateDocTree = useCallback((docs: Record<string, Documentation>): DocItem[] => {
@@ -88,7 +99,7 @@ export function useDocumentation({
     return tree
   }, [])
 
-  // Load documentation from API
+  // Load documentation from API with retry logic
   const loadDocumentation = useCallback(async () => {
     if (!gitUrl) return
     
@@ -99,12 +110,40 @@ export function useDocumentation({
       const docs = await documentationApi.getAll(gitUrl, branch)
       setDocumentation(docs)
       setDocTree(generateDocTree(docs))
+      
+      // Reset retry count on success
+      retryCountRef.current = 0
+      setRetryCount(0)
+      shouldRetryRef.current = true // Re-enable retrying for future errors
+      
+      // Clear any pending retry timer
+      if (retryTimerRef.current) {
+        window.clearTimeout(retryTimerRef.current)
+        retryTimerRef.current = null
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load documentation')
+      const errorMessage = err instanceof Error ? err.message : 'Failed to load documentation'
+      setError(errorMessage)
+      
+      // Increment retry count
+      retryCountRef.current += 1
+      const currentRetry = retryCountRef.current
+      setRetryCount(currentRetry)
+      
+      // Schedule retry if enabled and within limits
+      if (shouldRetryRef.current && currentRetry < maxRetries) {
+        console.log(`Documentation fetch failed. Retrying in ${retryInterval}ms... (Attempt ${currentRetry}/${maxRetries === Infinity ? '∞' : maxRetries})`)
+        
+        retryTimerRef.current = window.setTimeout(() => {
+          loadDocumentation()
+        }, retryInterval)
+      } else if (currentRetry >= maxRetries) {
+        console.error('Max retry attempts reached. Stopped retrying.')
+      }
     } finally {
       setIsLoading(false)
     }
-  }, [gitUrl, branch, generateDocTree])
+  }, [gitUrl, branch, generateDocTree, maxRetries, retryInterval])
 
   // Generate new documentation using agent
   const generateDocumentation = useCallback(async (options: Omit<DocAgentRequest, 'gitUrl' | 'branch'>) => {
@@ -200,6 +239,26 @@ export function useDocumentation({
     setError(null)
   }, [])
 
+  // Stop retrying
+  const stopRetrying = useCallback(() => {
+    shouldRetryRef.current = false
+    if (retryTimerRef.current) {
+      window.clearTimeout(retryTimerRef.current)
+      retryTimerRef.current = null
+    }
+    retryCountRef.current = 0
+    setRetryCount(0)
+  }, [])
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (retryTimerRef.current) {
+        window.clearTimeout(retryTimerRef.current)
+      }
+    }
+  }, [])
+
   // Auto-load on mount if enabled
   useEffect(() => {
     if (autoLoad && gitUrl) {
@@ -213,11 +272,13 @@ export function useDocumentation({
     isLoading,
     isGenerating,
     error,
+    retryCount,
     loadDocumentation,
     generateDocumentation,
     getDocumentationContent,
     updateDocumentation,
     deleteDocumentation,
     clearError,
+    stopRetrying,
   }
 }

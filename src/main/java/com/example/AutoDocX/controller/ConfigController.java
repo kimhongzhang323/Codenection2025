@@ -1,7 +1,7 @@
 package com.example.AutoDocX.controller;
 
-import com.example.AutoDocX.model.config.AgentConfig;
-import com.example.AutoDocX.service.Session;
+import com.example.AutoDocX.model.AgentConfig;
+import com.example.AutoDocX.service.agent.data.Session;
 import com.example.AutoDocX.service.SessionManager;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
@@ -24,7 +24,7 @@ public class ConfigController {
     }
 
     @PostMapping
-    public AgentConfig updateConfig(@RequestParam String gitUrl, @RequestParam String branch, @RequestBody AgentConfig newConfig) {
+    public AgentConfig updateConfig(@RequestParam String gitUrl, @RequestParam(required = false) String branch, @RequestBody AgentConfig newConfig) {
         Session session = sessionManager.getSession(gitUrl, branch);
         AgentConfig config = session.getAgentConfig();
 

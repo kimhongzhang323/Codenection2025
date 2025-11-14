@@ -3,6 +3,7 @@ import { discordNotificationService } from '../../services/discord-notifications
 import { componentChangeMonitor, type DependencyMap } from '../../services/component-monitor'
 import { changelogApi } from '../../services/api'
 import BranchIcon from '../icons/branch_icon'
+import { XIcon } from '../icons/close_icon'
 import './discord_notification_config.css'
 
 type FrameworkType = 'react' | 'vue' | 'angular' | 'svelte' | 'custom'
@@ -60,6 +61,9 @@ const DiscordNotificationConfig: React.FC<DiscordNotificationConfigProps> = ({
 
   useEffect(() => {
     if (isOpen) {
+      // Reset test result when dialog opens
+      setTestResult(null)
+      
       // Load existing configuration
       const existingWebhook = discordNotificationService.getWebhookUrl()
       if (existingWebhook) {
@@ -223,19 +227,25 @@ const DiscordNotificationConfig: React.FC<DiscordNotificationConfigProps> = ({
   if (!isOpen) return null
 
   return (
-    <div className="discord-config-overlay">
+    <div className="discord-config-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className="discord-config-dialog">
         <div className="discord-config-header">
-          <h2>Discord Notifications</h2>
-          <p>Get notified when components in <strong>{repoName}</strong> change</p>
-          <button className="discord-config-close" onClick={onClose}>×</button>
+          <div className="discord-config-title">
+            <h2>Discord Notifications</h2>
+          </div>
+          <button className="discord-config-close" onClick={onClose} aria-label="Close">
+            <XIcon size={20} />
+          </button>
+        </div>
+
+        <div className="discord-config-subtitle">
+          Get notified when components in <strong>{repoName}</strong> change
         </div>
 
         <div className="discord-config-content">
           <div className="discord-config-section">
             <label className="discord-config-label">
-              Discord Webhook URL
-              <span className="discord-config-required">*</span>
+              Discord Webhook URL<span className="discord-config-required">*</span>
             </label>
             <input
               type="text"
@@ -253,10 +263,10 @@ const DiscordNotificationConfig: React.FC<DiscordNotificationConfigProps> = ({
                 {isTestingConnection ? 'Testing...' : 'Test Connection'}
               </button>
               {testResult === 'success' && (
-                <span className="discord-config-status success">✅ Connection successful!</span>
+                <span className="discord-config-status success">✓ Connected</span>
               )}
               {testResult === 'failure' && (
-                <span className="discord-config-status failure">❌ Connection failed</span>
+                <span className="discord-config-status failure">✕ Failed</span>
               )}
             </div>
             <p className="discord-config-help">
@@ -272,7 +282,7 @@ const DiscordNotificationConfig: React.FC<DiscordNotificationConfigProps> = ({
 
           <div className="discord-config-section">
             <label className="discord-config-label">
-              <BranchIcon style={{ marginRight: '8px' }} />
+              <BranchIcon style={{ width: '16px', height: '16px' }} />
               Branch to Monitor
             </label>
             <div className="discord-branch-selector-container">
@@ -300,15 +310,17 @@ const DiscordNotificationConfig: React.FC<DiscordNotificationConfigProps> = ({
                 className="discord-config-button secondary discord-refresh-branches"
                 title="Refresh branches"
               >
-                🔄
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M13.65 2.35C12.2 0.9 10.21 0 8 0 3.58 0 0 3.58 0 8s3.58 8 8 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L9 7h7V0l-2.35 2.35z" fill="currentColor"/>
+                </svg>
               </button>
             </div>
-            <div className="discord-config-help">
-              Select the branch to monitor for component changes. Click refresh to update the branch list.
-            </div>
+            <p className="discord-config-help">
+              Select the branch to monitor for component changes
+            </p>
             {branch && (
               <div className="discord-branch-preview">
-                <strong>📋 Changelog URL for notifications:</strong>
+                <strong>Changelog URL for notifications:</strong>
                 <pre>{`${changelogUrl}?branch=${encodeURIComponent(branch)}`}</pre>
               </div>
             )}
@@ -381,22 +393,20 @@ Utils: src/utils/**/*.ts`}
           </div>
 
           {isMonitoringActive && (
-            <div className="discord-config-status-section">
-              <div className="discord-config-status active">
-                ✅ Monitoring is active for this repository
-              </div>
-              <div className="discord-config-actions">
+            <div className="discord-config-status-banner">
+              ✓ Monitoring is active for this repository
+              <div className="discord-config-actions" style={{ marginTop: '12px' }}>
                 <button
                   onClick={handleForceCheck}
                   className="discord-config-button secondary"
                 >
-                  🔍 Check Now
+                  Check Now
                 </button>
                 <button
                   onClick={handleStopMonitoring}
                   className="discord-config-button danger"
                 >
-                  🛑 Stop Monitoring
+                  Stop Monitoring
                 </button>
               </div>
             </div>

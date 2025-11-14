@@ -1,6 +1,6 @@
 package com.example.AutoDocX.controller;
 
-import com.example.AutoDocX.model.repo.Model;
+import com.example.AutoDocX.model.Model;
 import com.example.AutoDocX.service.ApiResponse; // Added import for ApiResponse
 import com.example.AutoDocX.service.GlobalExceptionHandler; // Added import for GlobalExceptionHandler
 import com.google.genai.types.Content;     // Added import for Content
@@ -59,7 +59,7 @@ public class ChatController {
             }
 
         } catch (Exception e) {
-            return GlobalExceptionHandler.errorResponseEntity("Sorry, an error occurred while communicating with the AI service: " + e.getMessage(), HttpStatus.INTERNAL_SERVER_ERROR);
+            return new ResponseEntity<>(new ApiResponse<>("FAIL", "Sorry, an error occurred while communicating with the AI service", e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 }
